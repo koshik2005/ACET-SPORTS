@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
-import State from "./models.js";
+import State from "../models.js";
 
 const app = express();
 app.use(helmet());
