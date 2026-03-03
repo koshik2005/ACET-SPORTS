@@ -2,8 +2,6 @@ import "dotenv/config";
 import express from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
-import fs from "fs";
-import path from "path";
 import jwt from "jsonwebtoken";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -33,7 +31,6 @@ const loginLimiter = rateLimit({
 app.use("/api/", globalLimiter);
 
 
-const DB_PATH = path.join(process.cwd(), "db.json");
 const otpStore = {}; // { [email]: { otp, expires } }
 
 // ─── MongoDB Connection ───────────────────────────────────────────────────
@@ -41,23 +38,8 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/achari
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log("🍃 Connected to MongoDB");
-    migrateFromJSON();
   })
   .catch(err => console.error("❌ MongoDB connection error:", err));
-
-async function migrateFromJSON() {
-  try {
-    const count = await State.countDocuments();
-    if (count === 0 && fs.existsSync(DB_PATH)) {
-      console.log("📦 Migrating data from db.json to MongoDB...");
-      const data = JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
-      await State.create(data);
-      console.log("✅ Migration complete.");
-    }
-  } catch (err) {
-    console.error("❌ Migration failed:", err);
-  }
-}
 
 // ─── Database Helpers ──────────────────────────────────────────────────────
 const getInitialState = () => ({
