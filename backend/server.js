@@ -17,7 +17,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
 app.use(helmet({ contentSecurityPolicy: false })); // disable CSP so Cloudinary images load
-app.use(cors());
+// Configure CORS for all routes (allows frontend to talk to backend from different subdomains)
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+app.options("*", cors()); // Handle preflight requests for all routes
 app.use(express.json({ limit: "20mb" })); // allow larger payloads for image base64
 
 // ─── Cloudinary Config ────────────────────────────────────────────────────────
