@@ -569,9 +569,9 @@ app.post("/api/upload-image", authenticateAdmin, async (req, res) => {
 // This is what makes relative /api paths work — same origin, same server.
 const distPath = path.join(__dirname, "../dist");
 app.use(express.static(distPath));
-app.get("/{*splat}", (req, res) => {
+app.get(/.*/, (req, res) => {
   // Don't intercept API routes
-  if (req.path.startsWith("/api/")) return;
+  if (req.path.startsWith("/api/")) return res.status(404).json({ error: "API endpoint not found" });
   res.sendFile(path.join(distPath, "index.html"));
 });
 
