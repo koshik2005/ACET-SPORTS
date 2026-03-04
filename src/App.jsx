@@ -30,7 +30,7 @@ export default function App() {
   const [eventDate, setEventDate] = useState({ date: "", time: "" });
   const [emptyGame, setEmptyGame] = useState({ name: "", type: "game", venue: "", official: "", status: "Upcoming", start: "", end: "", participants: "" });
 
-  const API_BASE = import.meta.env.VITE_API_URL || "";
+  const API_BASE = "https://api.acet-sports.favoflex.com/";
 
   useEffect(() => {
     fetch(`${API_BASE}/api/public-state`)
