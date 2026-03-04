@@ -479,7 +479,6 @@ export function AdminPage({
                 <input type="text" value={adminName} onChange={e => setAdminName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="Enter your Name" style={{ ...iS, marginBottom: 12 }} />
                 <input type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="Enter admin password" style={{ ...iS, marginBottom: 8 }} />
                 {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
-                <div style={{ fontSize: 12, color: dark ? "#666" : "#aaa", marginBottom: 14 }}>Default: AcEt@sports</div>
                 <button onClick={handleLogin} style={{ width: "100%", background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: "pointer", fontWeight: 700, fontSize: 16 }}>Login</button>
             </div>
         </div>
