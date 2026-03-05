@@ -7,7 +7,6 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import compression from "compression";
-import { v2 as cloudinary } from "cloudinary";
 import path from "path";
 import { fileURLToPath } from "url";
 import State from "../models.js";
@@ -25,14 +24,6 @@ app.use(cors({
 }));
 app.options("*", cors()); // Handle preflight requests for all routes
 app.use(express.json({ limit: "20mb" })); // allow larger payloads for image base64
-
-// ─── Cloudinary Config ────────────────────────────────────────────────────────
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-production";
 
@@ -602,29 +593,38 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
   }
 });
 
-// ─── Cloudinary Image Upload ──────────────────────────────────────────────────
-// Admin sends base64 image → we upload it to Cloudinary → return the CDN URL
-// This replaces storing large base64 strings in MongoDB.
+// ─── ImgBB Image Upload ──────────────────────────────────────────────────
+// Admin sends base64 image → we upload it to ImgBB → return the public URL
 app.post("/api/upload-image", authenticateAdmin, async (req, res) => {
   try {
-    const { data, folder = "acet-sports" } = req.body;
+    const { data } = req.body;
     if (!data) return res.status(400).json({ error: "No image data provided" });
 
-    if (!process.env.CLOUDINARY_CLOUD_NAME) {
-      return res.status(503).json({ error: "Cloudinary not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to .env" });
+    if (!process.env.IMGBB_API_KEY) {
+      return res.status(503).json({ error: "ImgBB not configured. Add IMGBB_API_KEY to .env" });
     }
 
-    const result = await cloudinary.uploader.upload(data, {
-      folder,
-      resource_type: "image",
-      // Auto-optimize quality and format for fastest loads
-      quality: "auto",
-      fetch_format: "auto",
+    // data may be a full Data URI like "data:image/jpeg;base64,/9j/4AA...". Extract just the base64 part.
+    const base64Image = data.includes("base64,") ? data.split("base64,")[1] : data;
+
+    const formData = new FormData();
+    formData.append("key", process.env.IMGBB_API_KEY);
+    formData.append("image", base64Image);
+
+    const imgbbRes = await fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: formData
     });
 
-    res.json({ success: true, url: result.secure_url, publicId: result.public_id });
+    const imgbbData = await imgbbRes.json();
+
+    if (imgbbData.success) {
+      res.json({ success: true, url: imgbbData.data.url });
+    } else {
+      res.status(500).json({ error: "ImgBB upload failed: " + (imgbbData.error?.message || "Unknown error") });
+    }
   } catch (err) {
-    console.error("Cloudinary upload error:", err.message);
+    console.error("ImgBB upload error:", err.message);
     res.status(500).json({ error: "Image upload failed: " + err.message });
   }
 });
