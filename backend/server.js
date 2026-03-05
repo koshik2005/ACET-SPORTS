@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 import compression from "compression";
 import path from "path";
 import { fileURLToPath } from "url";
-import State from "../models.js";
+import State from "./models.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -54,8 +54,8 @@ const CACHE_TTL_MS = 10 * 1000; // 10 seconds
 const invalidateCache = () => { stateCache = { data: null, ts: 0 }; };
 
 // ─── MongoDB Connection ───────────────────────────────────────────────────
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/achariya_sports";
-mongoose.connect(MONGODB_URI)
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/achariya_sports";
+mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
   .then(() => {
     console.log("🍃 Connected to MongoDB");
   })
@@ -177,7 +177,8 @@ app.get("/api/public-state", async (req, res) => {
     stateCache = { data: result, ts: Date.now() }; // update cache
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Failed to load state" });
+    console.error("STATE ERROR:", err);
+    res.status(500).json({ error: "Failed to load state", details: err.message });
   }
 });
 
