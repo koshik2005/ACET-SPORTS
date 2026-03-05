@@ -657,16 +657,9 @@ app.get("/api/download-admin-logs", authenticateAdmin, async (req, res) => {
   }
 });
 
-// ─── Serve Frontend (Production) ─────────────────────────────────────────────
-// In production, the backend also serves the Vite-built frontend.
-// This is what makes relative /api paths work — same origin, same server.
-const distPath = path.join(__dirname, "../dist");
-app.use(express.static(distPath));
-app.get(/(.*)/, (req, res) => {
-  // Don't intercept API routes
-  if (req.path.startsWith("/api/")) return res.status(404).json({ error: "API endpoint not found" });
-  res.sendFile(path.join(distPath, "index.html"));
-});
-
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+}
+
+export default app;
