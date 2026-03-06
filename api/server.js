@@ -382,30 +382,52 @@ app.post("/api/admin-login", loginLimiter, async (req, res) => {
 });
 
 app.post("/api/captain-login", loginLimiter, async (req, res) => {
-  const { house, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!house || !password) return res.status(400).json({ error: "Missing house or password." });
+  if (!email || !password) return res.status(400).json({ error: "Missing email or password." });
 
+  const em = email.trim().toLowerCase();
   const state = await loadDb();
-  const houseObj = state.houses.find(h => h.id === Number(house) || h.id === house);
-
-  if (!houseObj) return res.status(404).json({ error: "House not found." });
 
   let valid = false;
   let loggedInRole = "";
+  let houseId = "";
 
-  ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
-    if (houseObj[role] && houseObj[role].password === password) {
-      valid = true;
-      loggedInRole = role;
-    }
-  });
+  // Search all houses and all roles for this email
+  for (const houseObj of state.houses) {
+    ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
+      const captain = houseObj[role];
+      if (captain && captain.email && captain.email.trim().toLowerCase() === em) {
+        if (captain.password === password) {
+          valid = true;
+          loggedInRole = role;
+          houseId = houseObj.id;
+        } else {
+          console.log(`❌ Login failed for ${em}: Password mismatch.`);
+        }
+      }
+    });
+    if (valid) break;
+  }
 
   if (valid) {
-    const token = jwt.sign({ role: "captain", house, houseRole: loggedInRole }, JWT_SECRET, { expiresIn: "12h" });
-    res.json({ success: true, token, houseRole: loggedInRole });
+    console.log(`✅ Captain logged in: ${em} (${loggedInRole} in House ${houseId})`);
+    const token = jwt.sign({ role: "captain", house: houseId, houseRole: loggedInRole }, JWT_SECRET, { expiresIn: "12h" });
+
+    // Find house details to return
+    const houseObj = state.houses.find(h => h.id === houseId);
+
+    res.json({
+      success: true,
+      token,
+      houseRole: loggedInRole,
+      houseName: houseObj?.name || "House",
+      houseColor: houseObj?.color || "#8B0000",
+      captainName: houseObj?.[loggedInRole]?.name || "Captain"
+    });
   } else {
-    res.status(401).json({ success: false, error: "Invalid captain password." });
+    console.log(`❌ Login failed for ${em}: No matching email/password found in any house.`);
+    res.status(401).json({ success: false, error: "Invalid email or password." });
   }
 });
 

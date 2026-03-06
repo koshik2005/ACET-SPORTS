@@ -23,23 +23,9 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
 
     const login = async () => {
         setError("");
-
-        // Find which house the entered email belongs to on the frontend 
-        // (Just to send the house ID to the backend to help it identify the captain)
-        const em = email.trim().toLowerCase();
-        let targetHouse = null;
-        for (const h of houses) {
-            for (const key of ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"]) {
-                const c = h[key];
-                if (c && c.email && c.email.trim().toLowerCase() === em) {
-                    targetHouse = h;
-                    break;
-                }
-            }
-        }
-
-        if (!targetHouse) {
-            setError("No captain account found for that email. Ask your admin to register your email in the Houses tab.");
+        const em = email.trim();
+        if (!em || !password) {
+            setError("Email and password are required.");
             return;
         }
 
@@ -47,29 +33,25 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
             const res = await fetch(`${API_BASE}/api/captain-login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ house: targetHouse.id, password })
+                body: JSON.stringify({ email: em, password })
             });
             const data = await res.json();
 
             if (data.success) {
                 localStorage.setItem("captainToken", data.token);
-
-                // For the Captain UI, find the name associated with that email in the house object we have
-                let captainName = "Captain";
-                for (const key of ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"]) {
-                    if (targetHouse[key] && targetHouse[key].email.trim().toLowerCase() === em) {
-                        captainName = targetHouse[key].name;
-                        break;
-                    }
-                }
-
-                setCaptain({ name: captainName, role: ROLE_LABELS[data.houseRole], house: targetHouse.name, houseColor: targetHouse.color });
+                setCaptain({
+                    name: data.captainName,
+                    role: ROLE_LABELS[data.houseRole],
+                    house: data.houseName,
+                    houseColor: data.houseColor
+                });
                 setEmail(""); setPassword("");
             } else {
-                setError(data.error || "Incorrect password.");
+                setError(data.error || "Incorrect email or password.");
             }
         } catch (err) {
-            setError("Failed to reach server");
+            console.error("CAPTAIN LOGIN ERROR:", err);
+            setError(`Failed to reach server: ${err.message}`);
         }
     };
 
