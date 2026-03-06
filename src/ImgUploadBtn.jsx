@@ -1,42 +1,60 @@
 import { useState, useRef } from "react";
 import { API_BASE } from "./api.js";
+import { ImageCropper } from "./ImageCropper.jsx";
 
 export function ImgUploadBtn({ img, onUpload, size = 64, dark }) {
     const ref = useRef();
     const [uploading, setUploading] = useState(false);
+    const [tempImage, setTempImage] = useState(null);
 
     const onChange = async e => {
         const file = e.target.files[0];
         if (!file) return;
-        setUploading(true);
 
         const reader = new FileReader();
-        reader.onload = async ev => {
-            const base64Src = ev.target.result;
-            try {
-                const token = localStorage.getItem("adminToken");
-                const res = await fetch(`${API_BASE}/api/upload-image`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                    body: JSON.stringify({ data: base64Src }),
-                });
-                const result = await res.json();
-                if (!res.ok) throw new Error(result.error || "Upload failed");
-                onUpload(result.url);
-            } catch (err) {
-                alert("Upload failed. Using local browser view instead.");
-                onUpload(base64Src);
-            } finally {
-                setUploading(false);
-            }
+        reader.onload = ev => {
+            setTempImage(ev.target.result);
         };
         reader.readAsDataURL(file);
         e.target.value = "";
     };
 
+    const handleCropComplete = async (croppedBase64) => {
+        setTempImage(null);
+        setUploading(true);
+
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await fetch(`${API_BASE}/api/upload-image`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ data: croppedBase64 }),
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || "Upload failed");
+            onUpload(result.url);
+        } catch (err) {
+            console.error("UPLOAD ERROR:", err);
+            alert("Upload failed. Using local browser view instead.");
+            onUpload(croppedBase64);
+        } finally {
+            setUploading(false);
+        }
+    };
+
     return (
         <>
             <input type="file" accept="image/*" ref={ref} onChange={onChange} style={{ display: "none" }} />
+
+            {tempImage && (
+                <ImageCropper
+                    image={tempImage}
+                    onCancel={() => setTempImage(null)}
+                    onCropComplete={handleCropComplete}
+                    dark={dark}
+                />
+            )}
+
             <div
                 onClick={() => ref.current?.click()}
                 title="Tap to upload photo"

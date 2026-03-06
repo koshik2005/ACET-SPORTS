@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { useIsMobile, hi, tint, Sheet } from "./utils.jsx";
 import { ImgUploadBtn } from "./ImgUploadBtn.jsx";
+import { ImageCropper } from "./ImageCropper.jsx";
 import { API_BASE } from "./api.js";
 import * as XLSX from "xlsx";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } from "docx";
@@ -563,9 +564,17 @@ export function AdminPage({
                                 <input value={galForm.label} onChange={e => setGalForm(f => ({ ...f, label: e.target.value }))} placeholder="e.g. Football Final 2025" style={iS} /></div>
                         </div>
                         <input type="file" accept="image/*" ref={galleryInputRef} style={{ display: "none" }} onChange={e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => setGalFile({ src: ev.target.result, name: file.name }); reader.readAsDataURL(file); e.target.value = ""; }} />
-                        {galFile ? (
+                        {galFile && !galFile.cropped && (
+                            <ImageCropper
+                                image={galFile.src}
+                                onCancel={() => setGalFile(null)}
+                                onCropComplete={(croppedData) => setGalFile({ ...galFile, src: croppedData, cropped: true })}
+                                dark={dark}
+                            />
+                        )}
+                        {galFile && galFile.cropped ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                                <img src={galFile.src} alt="" style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover", border: `2px solid ${dark ? "#444" : "#ddd"}`, flexShrink: 0 }} />
+                                <img src={galFile.src} alt="" style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", border: `2px solid ${dark ? "#444" : "#ddd"}`, flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, color: dark ? "#ccc" : "#333", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{galFile.name}</div><div style={{ fontSize: 12, color: dark ? "#888" : "#aaa" }}>Ready to upload</div></div>
                                 <button onClick={() => setGalFile(null)} style={{ background: "transparent", border: "none", color: dark ? "#aaa" : "#999", cursor: "pointer", fontSize: 20, flexShrink: 0 }}>✕</button>
                             </div>
@@ -1545,8 +1554,7 @@ export function AdminPage({
                     <div><label style={lS}>Email</label><input type="email" value={authForm.email} onChange={e => setAuthForm({ ...authForm, email: e.target.value })} style={iS} /></div>
                     <div><label style={lS}>Display Order (Priority)</label><input type="number" value={authForm.priority} onChange={e => setAuthForm({ ...authForm, priority: Number(e.target.value) })} style={iS} /></div>
                     <div><label style={lS}>Profile Photo (Optional)</label>
-                        <ImgUploadBtn onUpload={d => setAuthForm({ ...authForm, img: d })} />
-                        {authForm.img && <img src={authForm.img} alt="" style={{ width: 64, height: 64, borderRadius: "50%", marginTop: 8, objectFit: "cover", border: `2px solid ${dark ? "#444" : "#ddd"}` }} />}
+                        <ImgUploadBtn img={authForm.img} onUpload={d => setAuthForm({ ...authForm, img: d })} dark={dark} />
                     </div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
@@ -1576,8 +1584,7 @@ export function AdminPage({
                     <div><label style={lS}>Email</label><input type="email" value={managementForm.email} onChange={e => setManagementForm({ ...managementForm, email: e.target.value })} style={iS} /></div>
                     <div><label style={lS}>Display Order (Priority)</label><input type="number" value={managementForm.priority} onChange={e => setManagementForm({ ...managementForm, priority: Number(e.target.value) })} style={iS} /></div>
                     <div><label style={lS}>Profile Photo (Optional)</label>
-                        <ImgUploadBtn onUpload={d => setManagementForm({ ...managementForm, img: d })} />
-                        {managementForm.img && <img src={managementForm.img} alt="" style={{ width: 64, height: 64, borderRadius: "50%", marginTop: 8, objectFit: "cover", border: `2px solid ${dark ? "#444" : "#ddd"}` }} />}
+                        <ImgUploadBtn img={managementForm.img} onUpload={d => setManagementForm({ ...managementForm, img: d })} dark={dark} />
                     </div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
@@ -1611,8 +1618,7 @@ export function AdminPage({
                     <div><label style={lS}>Email</label><input type="email" value={committeeForm.email} onChange={e => setCommitteeForm({ ...committeeForm, email: e.target.value })} style={iS} /></div>
                     <div><label style={lS}>Display Order (Priority)</label><input type="number" value={committeeForm.priority} onChange={e => setCommitteeForm({ ...committeeForm, priority: Number(e.target.value) })} style={iS} /></div>
                     <div><label style={lS}>Profile Photo (Optional)</label>
-                        <ImgUploadBtn onUpload={d => setCommitteeForm({ ...committeeForm, img: d })} />
-                        {committeeForm.img && <img src={committeeForm.img} alt="" style={{ width: 64, height: 64, borderRadius: "50%", marginTop: 8, objectFit: "cover", border: `2px solid ${dark ? "#444" : "#ddd"}` }} />}
+                        <ImgUploadBtn img={committeeForm.img} onUpload={d => setCommitteeForm({ ...committeeForm, img: d })} dark={dark} />
                     </div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
