@@ -2,7 +2,7 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "functions": {
-        "backend/server.js": {
+        "api/server.js": {
             "memory": 512,
             "maxDuration": 30
         }
@@ -10,7 +10,7 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "/backend/server.js"
+            "destination": "/api/server.js"
         },
         {
             "source": "/(.*)",
