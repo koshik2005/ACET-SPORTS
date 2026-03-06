@@ -50,7 +50,7 @@ export function AdminPage({
     const [announcementStatus, setAnnouncementStatus] = useState("idle"); // idle|sending|sent|error
     const [invitationFile, setInvitationFile] = useState(null);
     const [invitationFileName, setInvitationFileName] = useState("");
-    const [portalUrl, setPortalUrl] = useState(window.location.origin);
+    const [portalUrl, setPortalUrl] = useState(window.location.origin + "/captain");
     const [confirmDelete, setConfirmDelete] = useState(null);
 
     const [managementModal, setManagementModal] = useState(null);

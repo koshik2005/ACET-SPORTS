@@ -30,7 +30,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-prod
 // Rate Limiters
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 2000, // allow 2000 req per IP per 15 min — enough for 1000 active users
+  max: 5000, // allow 5000 req per IP per 15 min — enough for 3000 active users (many may share school nat IP)
   message: { error: "Too many requests from this IP, please try again after 15 minutes" }
 });
 
@@ -46,16 +46,19 @@ app.use("/api/", globalLimiter);
 const otpStore = {}; // { [email]: { otp, expires } }
 
 // ─── In-Memory State Cache ─────────────────────────────────────────────────────
-// Cache the public state for 10 seconds so 1000 simultaneous page loads
+// Cache the public state for 30 seconds so 3000 simultaneous page loads
 // don't all hammer MongoDB at exactly the same time.
 let stateCache = { data: null, ts: 0 };
-const CACHE_TTL_MS = 10 * 1000; // 10 seconds
+const CACHE_TTL_MS = 30 * 1000; // 30 seconds
 
 const invalidateCache = () => { stateCache = { data: null, ts: 0 }; };
 
 // ─── MongoDB Connection ───────────────────────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/achariya_sports";
-mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
+mongoose.connect(MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000,
+  maxPoolSize: 500 // Increased connection pool to handle 3000 concurrent database connection requests
+})
   .then(() => {
     console.log("🍃 Connected to MongoDB");
   })
@@ -360,7 +363,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
     return res.status(500).json({ error: "SMTP not configured. Set SMTP_USER and SMTP_PASS in .env" });
   }
 
-  const loginUrl = portalUrl || process.env.PORTAL_URL || "http://localhost:5173";
+  const loginUrl = portalUrl || process.env.PORTAL_URL || "http://localhost:5173/captain";
   // Attempt to find student year/dept
   const student = studentsDB?.find(s => s.email?.toLowerCase() === captainEmail.toLowerCase());
   const studentYear = student?.year || "Student";
