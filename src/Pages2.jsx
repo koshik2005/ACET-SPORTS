@@ -108,7 +108,7 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                     <>
                         <div style={{ background: dark ? tint(hObj?.color || "#888888") : `rgba(${parseInt((hObj?.color || "#888888").slice(1, 3), 16)},${parseInt((hObj?.color || "#888888").slice(3, 5), 16)},${parseInt((hObj?.color || "#888888").slice(5, 7), 16)},.08)`, border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{hi(student.house)}</div>
-                            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{student.house} · {student.email}</div></div>
+                            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
                             <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
                         </div>
 
@@ -176,14 +176,14 @@ export function ScoreboardPage({ dark, houses, pointLog }) {
                     <div style={{ width: isMobile ? 34 : 44, height: isMobile ? 34 : 44, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: isMobile ? 12 : 16, flexShrink: 0 }}>{hi(h.name)}</div>
                     <div style={{ flex: 1, minWidth: 80 }}>
                         <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22, color: dark ? "#fff" : h.color }}>{h.name} House</div>
-                        {i === 0 && <div style={{ fontSize: 10, color: h.color }}>👑 LEADING</div>}
+                        {i === 0 && h.points > 0 && <div style={{ fontSize: 10, color: h.color }}>👑 LEADING</div>}
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                         <div style={{ fontSize: isMobile ? 28 : 44, fontWeight: 900, fontFamily: "'Georgia',serif", color: i === 0 ? h.color : dark ? "#fff" : "#222", lineHeight: 1 }}><Count v={h.points} /></div>
                         <div style={{ fontSize: 9, color: dark ? "#aaa" : "#888", letterSpacing: 2 }}>POINTS</div>
                     </div>
                     <div style={{ width: "100%", height: 6, background: dark ? "#333" : "#f0f0f0", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ height: "100%", background: i === 0 ? `linear-gradient(90deg,${h.color},${tint(h.color)})` : h.color, borderRadius: 3, width: `${(h.points / sh[0].points) * 100}%`, transition: "width .8s ease" }} />
+                        <div style={{ height: "100%", background: i === 0 && h.points > 0 ? `linear-gradient(90deg,${h.color},${tint(h.color)})` : h.color, borderRadius: 3, width: `${sh[0].points > 0 ? (h.points / sh[0].points) * 100 : 0}%`, transition: "width .8s ease" }} />
                     </div>
                 </div>
             ))}

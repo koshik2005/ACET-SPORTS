@@ -18,8 +18,10 @@ export function AdminPage({
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
-    const [adminName, setAdminName] = useState("");
-    const [pw, setPw] = useState("");
+    const [adminEmail, setAdminEmail] = useState("");
+    const [otpSent, setOtpSent] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [isVerifying, setIsVerifying] = useState(false);
     const [tab, setTab] = useState("Gallery");
     const [exportType, setExportType] = useState("All");
     const [exportVal, setExportVal] = useState("All");
@@ -89,29 +91,55 @@ export function AdminPage({
                         regNo: n.regno || n["reg.no"] || n["register number"] || n["id"] || n.mobile || "",
                         house: n.house || n["house name"] || "",
                         year: n.year || n.class || n.batch || n.y || "",
+                        dept: n.dept || n.department || n.branch || n.course || "",
                         shirtSize: n["t-shirt size"] || n["tshirt size"] || n["tshirt"] || n.size || "",
                         gender: n.gender || n.sex || n.g || n.mf || n["m/f"] || "",
                         shirtIssued: false
                     };
                 }).filter(r => r.name || r.email || r.regNo);
-                if (rows.length === 0) { setXlError("Could not find required columns. Ensure headers match: s.no, name, reg.no, email, year, house, gender, t-shirt size."); return; }
+                if (rows.length === 0) { setXlError("Could not find required columns. Ensure headers match: s.no, name, reg.no, email, year, department, house, gender, t-shirt size."); return; }
                 setXlPreview(rows);
             } catch (e) { setXlError("Failed to read file: " + e.message); }
         };
         reader.readAsBinaryString(file);
     };
 
+    const handleSendOtp = async () => {
+        if (!adminEmail || !adminEmail.includes("@")) {
+            setLoginError("Please enter a valid Admin Email address");
+            return;
+        }
+        setLoginError(""); setIsVerifying(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/admin-send-otp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: adminEmail.trim() })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOtpSent(true);
+            } else {
+                setLoginError(data.error || "Failed to send OTP.");
+            }
+        } catch (err) {
+            setLoginError("Failed to reach server");
+        }
+        setIsVerifying(false);
+    };
+
     const handleLogin = async () => {
-        setLoginError("");
-        if (!adminName.trim()) {
-            setLoginError("Admin Name is required");
+        setLoginError(""); setIsVerifying(true);
+        if (!adminEmail.trim()) {
+            setLoginError("Admin Email is required");
+            setIsVerifying(false);
             return;
         }
         try {
             const res = await fetch(`${API_BASE}/api/admin-login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password: pw, name: adminName.trim() })
+                body: JSON.stringify({ email: adminEmail.trim(), otp })
             });
             const data = await res.json();
             if (data.success) {
@@ -127,11 +155,12 @@ export function AdminPage({
 
                 setLoggedIn(true);
             } else {
-                setLoginError(data.error || "Invalid password");
+                setLoginError(data.error || "Incorrect OTP");
             }
         } catch (err) {
             setLoginError("Failed to reach server");
         }
+        setIsVerifying(false);
     };
 
     const sendCaptainEmail = async (house, captainKey, roleLabel) => {
@@ -228,6 +257,7 @@ export function AdminPage({
                 "S.No": i + 1,
                 "Name": r.name,
                 "Year": student?.year || "N/A",
+                "Department": student?.dept || "—",
                 "Team": r.house,
                 "Game": r.game || "—",
                 "Athletic Event": r.athletic || "—",
@@ -250,6 +280,7 @@ export function AdminPage({
                 "Register No": s.regNo,
                 "Email": s.email,
                 "Year": s.year || "N/A",
+                "Department": s.dept || "—",
                 "Gender": s.gender || "—",
                 "House": s.house,
                 "T-Shirt Size": s.shirtSize || "—",
@@ -265,6 +296,7 @@ export function AdminPage({
         XLSX.utils.book_append_sheet(wb, ws, "MasterRoster");
         XLSX.writeFile(wb, `Master_Roster_Full.xlsx`);
     };
+
     const exportFilteredTShirts = () => {
         const list = studentsDB.filter(s => {
             if (tsHouse !== "All" && s.house !== tsHouse) return false;
@@ -280,6 +312,7 @@ export function AdminPage({
             "Register No": s.regNo,
             "Gender": s.gender || "—",
             "Year": s.year || "N/A",
+            "Department": s.dept || "—",
             "House": s.house,
             "T-Shirt Size": s.shirtSize || "—",
             "T-Shirt Status": s.shirtIssued ? "✅ ISSUED" : "❌ PENDING"
@@ -317,6 +350,8 @@ export function AdminPage({
                                     new TableCell({ children: [new Paragraph({ text: "Girls Captain", bold: true })] }),
                                     new TableCell({ children: [new Paragraph({ text: "Boys Vice Captain", bold: true })] }),
                                     new TableCell({ children: [new Paragraph({ text: "Girls Vice Captain", bold: true })] }),
+                                    new TableCell({ children: [new Paragraph({ text: "Staff Captain (M)", bold: true })] }),
+                                    new TableCell({ children: [new Paragraph({ text: "Staff Captain (F)", bold: true })] }),
                                     new TableCell({ children: [new Paragraph({ text: "Total Points", bold: true })] }),
                                 ]
                             }),
@@ -327,6 +362,8 @@ export function AdminPage({
                                     new TableCell({ children: [new Paragraph(h.girlsCaptain?.name || "—")] }),
                                     new TableCell({ children: [new Paragraph(h.viceCaptainBoys?.name || "—")] }),
                                     new TableCell({ children: [new Paragraph(h.viceCaptainGirls?.name || "—")] }),
+                                    new TableCell({ children: [new Paragraph(h.staffCaptainMale?.name || "—")] }),
+                                    new TableCell({ children: [new Paragraph(h.staffCaptainFemale?.name || "—")] }),
                                     new TableCell({ children: [new Paragraph((h.points || 0).toString())] }),
                                 ]
                             }))
@@ -397,9 +434,10 @@ export function AdminPage({
                     new Paragraph({ text: "Student Participation by Event", heading: HeadingLevel.HEADING_2 }),
                     ...games.map(g => [
                         new Paragraph({ text: g.name, heading: HeadingLevel.HEADING_3, spacing: { before: 200 } }),
-                        ...registrations.filter(r => (g.type === "game" ? r.game === g.name : r.athletic === g.name)).map(r =>
-                            new Paragraph({ text: `• ${r.name} (${r.regNo}) - ${r.house} House`, bullet: { level: 0 } })
-                        ),
+                        ...registrations.filter(r => (g.type === "game" ? r.game === g.name : r.athletic === g.name)).map(r => {
+                            const s = studentsDB.find(st => st.regNo === r.regNo);
+                            return new Paragraph({ text: `• ${r.name} (${r.regNo}) - ${s?.year || ""} ${s?.dept ? `(${s.dept})` : ""} - ${r.house} House`, bullet: { level: 0 } });
+                        }),
                         registrations.filter(r => (g.type === "game" ? r.game === g.name : r.athletic === g.name)).length === 0 ? new Paragraph({ text: "No registrations for this event.", italics: true }) : null
                     ]).flat().filter(Boolean),
 
@@ -411,6 +449,7 @@ export function AdminPage({
                                 children: [
                                     new TableCell({ children: [new Paragraph({ text: "Student Name", bold: true })] }),
                                     new TableCell({ children: [new Paragraph({ text: "Reg No", bold: true })] }),
+                                    new TableCell({ children: [new Paragraph({ text: "Year (Dept)", bold: true })] }),
                                     new TableCell({ children: [new Paragraph({ text: "House", bold: true })] }),
                                     new TableCell({ children: [new Paragraph({ text: "Size", bold: true })] }),
                                     new TableCell({ children: [new Paragraph({ text: "Status", bold: true })] }),
@@ -420,6 +459,7 @@ export function AdminPage({
                                 children: [
                                     new TableCell({ children: [new Paragraph(s.name)] }),
                                     new TableCell({ children: [new Paragraph(s.regNo)] }),
+                                    new TableCell({ children: [new Paragraph(`${s.year || ""} ${s.dept ? `(${s.dept})` : ""}`)] }),
                                     new TableCell({ children: [new Paragraph(s.house)] }),
                                     new TableCell({ children: [new Paragraph(s.shirtSize)] }),
                                     new TableCell({ children: [new Paragraph(s.shirtIssued ? "✅ Issued" : "⏳ Pending")] }),
@@ -476,10 +516,21 @@ export function AdminPage({
         <div style={{ maxWidth: 400, margin: isMobile ? "24px auto" : "80px auto", padding: isMobile ? "16px 14px" : "40px 20px" }}>
             <div style={{ textAlign: "center", marginBottom: 20 }}><div style={{ fontSize: 48 }}>🔐</div><h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", fontSize: isMobile ? 20 : 24 }}>Admin Login</h2></div>
             <div style={cS}>
-                <input type="text" value={adminName} onChange={e => setAdminName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="Enter your Name" style={{ ...iS, marginBottom: 12 }} />
-                <input type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="Enter admin password" style={{ ...iS, marginBottom: 8 }} />
-                {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
-                <button onClick={handleLogin} style={{ width: "100%", background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: "pointer", fontWeight: 700, fontSize: 16 }}>Login</button>
+                {!otpSent ? (
+                    <>
+                        <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSendOtp()} placeholder="Enter Admin Email" style={{ ...iS, marginBottom: 12 }} />
+                        {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
+                        <button onClick={handleSendOtp} disabled={isVerifying} style={{ width: "100%", background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: isVerifying ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 16 }}>{isVerifying ? "Sending..." : "Send Verification Code"}</button>
+                    </>
+                ) : (
+                    <>
+                        <div style={{ fontSize: 13, color: dark ? "#aaa" : "#555", marginBottom: 12, textAlign: "center" }}>Enter the 6-digit code sent to {adminEmail}</div>
+                        <input type="text" value={otp} onChange={e => setOtp(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} maxLength={6} placeholder="······" style={{ ...iS, marginBottom: 8, textAlign: "center", letterSpacing: 6, fontSize: 24, fontWeight: 800 }} />
+                        {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
+                        <button onClick={handleLogin} disabled={isVerifying || otp.length < 6} style={{ width: "100%", background: "#2E8B57", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: (isVerifying || otp.length < 6) ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 16 }}>{isVerifying ? "Verifying..." : "Login"}</button>
+                        <button onClick={() => { setOtpSent(false); setOtp(""); setLoginError(""); }} style={{ width: "100%", background: "transparent", color: "#1E90FF", border: "none", marginTop: 12, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Back</button>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -606,7 +657,7 @@ export function AdminPage({
                                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, flex: 1 }}>
                                     {["staffCaptainMale", "staffCaptainFemale", "boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls"].map(role => {
                                         const isStaff = role.startsWith("staffCaptain");
-                                        const isMale = role.toLowerCase().includes("boys") || role.toLowerCase().includes("male");
+                                        const isMale = role.includes("Boys") || role.includes("Male");
                                         const roleIcon = isStaff ? (isMale ? "🎓♂" : "🎓♀") : (isMale ? "♂" : "♀");
                                         const roleColor = isStaff ? (isMale ? "#1E3A8A" : "#8B0000") : (isMale ? "#1E90FF" : "#FF69B4");
                                         const roleLabel = isStaff ? (isMale ? "Staff Captain (M)" : "Staff Captain (F)") : role.replace(/([A-Z])/g, ' $1').trim().replace(/Boys|Girls/gi, "");
@@ -632,20 +683,28 @@ export function AdminPage({
                                                     </div>
                                                 </div>
 
-                                                {!isStaff && (
-                                                    <>
+                                                <>
+                                                    {isStaff ? (
+                                                        <div style={{ marginBottom: 8 }}>
+                                                            <input value={h[role]?.designation || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], designation: e.target.value } } : x))} placeholder="Designation (e.g., Asst. Professor CSE)" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
+                                                        </div>
+                                                    ) : (
                                                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
-                                                            <input value={h[role]?.email || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], email: e.target.value } } : x))} placeholder="Email" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
-                                                            <input value={h[role]?.password || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], password: e.target.value } } : x))} placeholder="PW" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
+                                                            <input value={h[role]?.year || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], year: e.target.value } } : x))} placeholder="Year (e.g., III)" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
+                                                            <input value={h[role]?.dept || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], dept: e.target.value } } : x))} placeholder="Dept (e.g., CSE)" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
                                                         </div>
-                                                        <div style={{ width: "100%", marginTop: 10 }}>
-                                                            <button onClick={() => sendCaptainEmail(h, role, role.replace(/([A-Z])/g, ' $1').trim())} disabled={!h[role]?.email || !h[role]?.password} style={{ width: "100%", padding: "6px 0", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: (!h[role]?.email || !h[role]?.password) ? "not-allowed" : "pointer", border: `1px solid ${dark ? "#444" : "#ddd"}`, background: emailStatus[`${h.id}-${role}`] === "sent" ? "#228B22" : emailStatus[`${h.id}-${role}`]?.startsWith("error") ? "#c00" : "transparent", color: emailStatus[`${h.id}-${role}`] === "sent" ? "#fff" : dark ? "#ccc" : "#666" }}>
-                                                                {emailStatus[`${h.id}-${role}`] === "sending" ? "⏳ Sending..." : emailStatus[`${h.id}-${role}`] === "sent" ? "✅ Sent!" : emailStatus[`${h.id}-${role}`]?.startsWith("error") ? "❌ Failed" : "📧 Send Link"}
-                                                            </button>
-                                                            {emailStatus[`${h.id}-${role}`]?.startsWith("error:") && <div style={{ fontSize: 9, color: "#ff4444", marginTop: 4, textAlign: "center" }}>{emailStatus[`${h.id}-${role}`].replace("error:", "")}</div>}
-                                                        </div>
-                                                    </>
-                                                )}
+                                                    )}
+                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+                                                        <input value={h[role]?.email || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], email: e.target.value } } : x))} placeholder="Email" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
+                                                        <input value={h[role]?.password || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], password: e.target.value } } : x))} placeholder="PW" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
+                                                    </div>
+                                                    <div style={{ width: "100%", marginTop: 10 }}>
+                                                        <button onClick={() => sendCaptainEmail(h, role, role.replace(/([A-Z])/g, ' $1').trim())} disabled={!h[role]?.email || !h[role]?.password} style={{ width: "100%", padding: "6px 0", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: (!h[role]?.email || !h[role]?.password) ? "not-allowed" : "pointer", border: `1px solid ${dark ? "#444" : "#ddd"}`, background: emailStatus[`${h.id}-${role}`] === "sent" ? "#228B22" : emailStatus[`${h.id}-${role}`]?.startsWith("error") ? "#c00" : "transparent", color: emailStatus[`${h.id}-${role}`] === "sent" ? "#fff" : dark ? "#ccc" : "#666" }}>
+                                                            {emailStatus[`${h.id}-${role}`] === "sending" ? "⏳ Sending..." : emailStatus[`${h.id}-${role}`] === "sent" ? "✅ Sent!" : emailStatus[`${h.id}-${role}`]?.startsWith("error") ? "❌ Failed" : "📧 Send Link"}
+                                                        </button>
+                                                        {emailStatus[`${h.id}-${role}`]?.startsWith("error:") && <div style={{ fontSize: 9, color: "#ff4444", marginTop: 4, textAlign: "center" }}>{emailStatus[`${h.id}-${role}`].replace("error:", "")}</div>}
+                                                    </div>
+                                                </>
                                             </div>
                                         );
                                     })}
@@ -883,7 +942,7 @@ export function AdminPage({
                                     if (h.name === winner.first) add += ptsFirst;
                                     if (h.name === winner.second) add += ptsSecond;
                                     if (h.name === winner.third) add += ptsThird;
-                                    return { ...h, points: (h.points || 0) + add };
+                                    return { ...h, points: Math.max(0, (h.points || 0) + add) };
                                 }));
 
                                 // Point Log
@@ -977,7 +1036,7 @@ export function AdminPage({
                             <button onClick={() => {
                                 if (!manualPts.house || !manualPts.pts) { alert("House and Points required"); return; }
                                 const p = parseInt(manualPts.pts);
-                                setHouses(hs => hs.map(h => h.name === manualPts.house ? { ...h, points: (h.points || 0) + p } : h));
+                                setHouses(hs => hs.map(h => h.name === manualPts.house ? { ...h, points: Math.max(0, (h.points || 0) + p) } : h));
 
                                 const d = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                 setPointLog([{ type: p > 0 ? "bonus" : "penalty", house: manualPts.house, reason: manualPts.reason || "Manual Adjustment", pts: p, time: d }, ...pointLog]);
@@ -1042,7 +1101,7 @@ export function AdminPage({
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}`, marginBottom: 16 }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                                         <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                            {["S.No", "Name", "Reg No", "House", "Year", "Gender", "Size"].map(h => <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                            {["S.No", "Name", "Reg No", "House", "Year", "Dept", "Gender", "Size"].map(h => <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
                                             {xlPreview.slice(0, 5).map((s, i) => (
@@ -1052,6 +1111,7 @@ export function AdminPage({
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.regNo}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.house}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.year}</td>
+                                                    <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.dept}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.gender}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.shirtSize}</td>
                                                 </tr>
@@ -1090,7 +1150,7 @@ export function AdminPage({
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                                         <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                            {["S.No", "Name", "Reg No", "House", "Year", "Gender", "Size", "Issued T-Shirt"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                            {["S.No", "Name", "Reg No", "House", "Year", "Dept", "Gender", "Size", "Issued T-Shirt"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
                                             {studentsDB.slice(0, 100).map((s, idx) => (
@@ -1099,7 +1159,20 @@ export function AdminPage({
                                                     <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
                                                     <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
                                                     <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.year}</td>
+                                                    <td style={{ padding: "8px 12px" }}>
+                                                        <input
+                                                            value={s.year || ""}
+                                                            onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, year: e.target.value } : x))}
+                                                            style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: "8px 12px" }}>
+                                                        <input
+                                                            value={s.dept || ""}
+                                                            onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, dept: e.target.value } : x))}
+                                                            style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
+                                                        />
+                                                    </td>
                                                     <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender}</td>
                                                     <td style={{ padding: "8px 12px", fontWeight: 700, color: "#8B0000" }}>{s.shirtSize}</td>
                                                     <td style={{ padding: "8px 12px" }}>
@@ -1179,7 +1252,7 @@ export function AdminPage({
                         <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
                             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: isMobile ? 11 : 13 }}>
                                 <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                    {["S.No", "Name", "Reg No", "Year", "Gender", "House", "Size", "Status"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                    {["S.No", "Name", "Reg No", "Year", "Dept", "Gender", "House", "Size", "Status"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                 </tr></thead>
                                 <tbody>
                                     {studentsDB.filter(s => {
@@ -1193,7 +1266,20 @@ export function AdminPage({
                                             <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || idx + 1}</td>
                                             <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
                                             <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
-                                            <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.year}</td>
+                                            <td style={{ padding: "8px 12px" }}>
+                                                <input
+                                                    value={s.year || ""}
+                                                    onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, year: e.target.value } : x))}
+                                                    style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: "8px 12px" }}>
+                                                <input
+                                                    value={s.dept || ""}
+                                                    onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, dept: e.target.value } : x))}
+                                                    style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
+                                                />
+                                            </td>
                                             <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender}</td>
                                             <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
                                             <td style={{ padding: "8px 12px", fontWeight: 800, color: "#8B0000" }}>{s.shirtSize}</td>

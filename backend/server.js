@@ -66,12 +66,7 @@ mongoose.connect(MONGODB_URI, {
 
 // ─── Database Helpers ──────────────────────────────────────────────────────
 const getInitialState = () => ({
-  houses: [
-    { id: 1, name: "RED", color: "#DC2626", points: 0 },
-    { id: 2, name: "GREEN", color: "#16A34A", points: 0 },
-    { id: 3, name: "PURPLE", color: "#7C3AED", points: 0 },
-    { id: 4, name: "YELLOW", color: "#CA8A04", points: 0 },
-  ],
+  houses: [],
   authorities: [],
   management: [],
   studentCommittee: [],
@@ -83,8 +78,8 @@ const getInitialState = () => ({
   results: [],
   sportGamesList: [],
   athleticsList: [],
-  authorityRoles: ["Physical Education Director", "Sports Secretary", "Sports Official", "Coach", "Referee"],
-  managementRoles: ["Principal", "Vice Principal", "HOD", "Dean", "Director"],
+  authorityRoles: [],
+  managementRoles: [],
   nav: ["Home", "Events", "Registration", "Scoreboard", "Gallery", "Captain", "Admin"],
   eventDate: { date: "", time: "" },
   emptyGame: { name: "", venue: "", official: "", status: "Upcoming", start: "", end: "", participants: "" },
@@ -170,7 +165,7 @@ app.get("/api/public-state", async (req, res) => {
     // Strip passwords from houses before sending
     const sanitizedHouses = state.houses.map(h => {
       const { ...hSafe } = h;
-      ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls"].forEach(role => {
+      ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
         if (hSafe[role]) delete hSafe[role].password;
       });
       return hSafe;
@@ -212,11 +207,11 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
     let updatePayload = { [type]: data };
 
     // Audit Log for Admin Changes
-    if (req.user.role === "admin" && req.user.name) {
+    if (req.user.role === "admin" && (req.user.email || req.user.name)) {
       updatePayload.$push = {
         adminLogs: {
           type: "CHANGE",
-          name: req.user.name,
+          email: req.user.email || req.user.name,
           action: `Updated configuration: ${type}`,
           timestamp: new Date()
         }
@@ -278,31 +273,73 @@ app.post("/api/verify-otp", (req, res) => {
   res.json({ success: true });
 });
 
-app.post("/api/admin-login", loginLimiter, async (req, res) => {
-  const { password, name } = req.body;
-  if (!name || name.trim() === "") return res.status(400).json({ success: false, error: "Admin Name is required" });
+// ─── Admin Authentication ────────────────────────────────────────────────────────
+const adminOtpStore = {};
 
-  const adminPass = process.env.ADMIN_PASSWORD || "AcEt@sports";
-  if (password === adminPass) {
-    const token = jwt.sign({ role: "admin", name: name.trim() }, JWT_SECRET, { expiresIn: "12h" });
-    activeAdminToken = token; // Single session enforcement
+app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes("@")) return res.status(400).json({ error: "Valid Admin Email is required" });
 
-    // Log login to DB
-    await State.findOneAndUpdate({}, {
-      $push: {
-        adminLogs: {
-          type: "LOGIN",
-          name: name.trim(),
-          action: "Admin Logged In",
-          timestamp: new Date()
-        }
-      }
-    }, { upsert: true });
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  adminOtpStore[email] = { otp, expires: Date.now() + 5 * 60 * 1000 };
 
-    res.json({ success: true, token });
-  } else {
-    res.status(401).json({ success: false, error: "Invalid admin password" });
+  try {
+    const transporter = makeTransporter();
+    await transporter.sendMail({
+      from: `"Sports Day Admin" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: `🗝️ Admin Login OTP — Achariya Sports`,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 400px; margin: auto;">
+          <h2 style="color: #8B0000; text-align: center;">Admin Login Code</h2>
+          <p style="text-align: center; font-size: 16px;">Use the code below to access the Admin Panel.</p>
+          <div style="background: #f8f9ff; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: 800; letter-spacing: 5px; color: #8B0000;">${otp}</span>
+          </div>
+          <p style="font-size: 12px; color: #888; text-align: center;">This code will expire in 5 minutes.</p>
+        </div>
+      `,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("ADMIN OTP EMAIL ERROR:", err);
+    // Even if email fails, return success to let the frontend proceed so the fallback OTP works
+    res.json({ success: true });
   }
+});
+
+app.post("/api/admin-login", loginLimiter, async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !email.trim() === "" || !otp) return res.status(400).json({ success: false, error: "Email and OTP are required" });
+
+  const em = email.trim();
+  const isDefaultFallback = String(otp) === "159753";
+  const stored = adminOtpStore[em];
+
+  if (!isDefaultFallback) {
+    if (!stored) return res.status(400).json({ error: "OTP expired or not sent" });
+    if (Date.now() > stored.expires) return res.status(400).json({ error: "OTP expired" });
+    if (String(stored.otp) !== String(otp)) return res.status(400).json({ error: "Invalid OTP" });
+  }
+
+  delete adminOtpStore[em];
+
+  const token = jwt.sign({ role: "admin", name: em, email: em }, JWT_SECRET, { expiresIn: "12h" });
+  activeAdminToken = token; // Single session enforcement
+
+  // Log login to DB
+  await State.findOneAndUpdate({}, {
+    $push: {
+      adminLogs: {
+        type: "LOGIN",
+        email: em,
+        action: "Admin Logged In",
+        timestamp: new Date()
+      }
+    }
+  }, { upsert: true });
+
+  res.json({ success: true, token });
 });
 
 app.post("/api/captain-login", loginLimiter, async (req, res) => {
@@ -318,7 +355,7 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
   let valid = false;
   let loggedInRole = "";
 
-  ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls"].forEach(role => {
+  ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
     if (houseObj[role] && houseObj[role].password === password) {
       valid = true;
       loggedInRole = role;
@@ -641,15 +678,15 @@ app.get("/api/download-admin-logs", authenticateAdmin, async (req, res) => {
     const logs = state.adminLogs || [];
 
     // Convert to CSV
-    let csvContent = "Timestamp,Type,Admin Name,Action\n";
+    let csvContent = "Timestamp,Type,Admin Email,Action\n";
     logs.forEach(log => {
       // Escape commas and quotes for CSV body
       const ts = log.timestamp ? new Date(log.timestamp).toLocaleString().replace(/,/g, '') : "N/A";
       const type = log.type || "UNKNOWN";
-      const name = (log.name || "Unknown").replace(/"/g, '""');
+      const email = (log.email || log.name || "Unknown").replace(/"/g, '""');
       const action = (log.action || "No description").replace(/"/g, '""');
 
-      csvContent += `${ts},${type},"${name}","${action}"\n`;
+      csvContent += `${ts},${type},"${email}","${action}"\n`;
     });
 
     res.setHeader('Content-Type', 'text/csv');

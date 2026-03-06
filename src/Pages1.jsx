@@ -223,7 +223,8 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                                                 <div style={{ display: "flex", justifyContent: "center", marginBottom: isMobile ? 6 : 8 }}>
                                                     <Avatar img={c.p?.img} name={c.p?.name} size={isMobile ? 52 : 72} color={h.color} />
                                                 </div>
-                                                <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.p.name}</div>
+                                                <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{c.p.name}</div>
+                                                <div style={{ fontSize: isMobile ? 9 : 11, color: dark ? "#aaa" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.p.designation}</div>
                                             </div>
                                         ) : <div key={i} />
                                     ))}
@@ -238,7 +239,12 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                                         <div style={{ display: "flex", justifyContent: "center", marginBottom: isMobile ? 6 : 8 }}>
                                             <Avatar img={c.p?.img} name={c.p?.name || "?"} size={isMobile ? 52 : 72} color={h.color} />
                                         </div>
-                                        <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.p?.name || "—"}</div>
+                                        <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{c.p?.name || "—"}</div>
+                                        {c.p?.name && (c.p.year || c.p.dept) && (
+                                            <div style={{ fontSize: isMobile ? 9 : 11, color: dark ? "#aaa" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                {c.p.year} {c.p.dept ? `(${c.p.dept})` : ""}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

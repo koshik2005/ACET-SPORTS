@@ -18,6 +18,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
     const ROLE_LABELS = {
         boysCaptain: "♂ Captain", girlsCaptain: "♀ Captain",
         viceCaptainBoys: "♂ Vice Captain", viceCaptainGirls: "♀ Vice Captain",
+        staffCaptainMale: "🎓 Staff Captain (M)", staffCaptainFemale: "🎓 Staff Captain (F)",
     };
 
     const login = async () => {
@@ -28,7 +29,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
         const em = email.trim().toLowerCase();
         let targetHouse = null;
         for (const h of houses) {
-            for (const key of ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls"]) {
+            for (const key of ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"]) {
                 const c = h[key];
                 if (c && c.email && c.email.trim().toLowerCase() === em) {
                     targetHouse = h;
@@ -55,7 +56,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
 
                 // For the Captain UI, find the name associated with that email in the house object we have
                 let captainName = "Captain";
-                for (const key of ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls"]) {
+                for (const key of ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"]) {
                     if (targetHouse[key] && targetHouse[key].email.trim().toLowerCase() === em) {
                         captainName = targetHouse[key].name;
                         break;
@@ -96,6 +97,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                 "Register No": s.regNo,
                 "Gender": s.gender || "—",
                 "Year": s.year || "N/A",
+                "Department": s.dept || "—",
                 "House": s.house,
                 "T-Shirt Size": s.shirtSize || "—",
                 "T-Shirt Issued": s.shirtIssued ? "✅ YES" : "❌ NO",
@@ -122,6 +124,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
             "Register No": s.regNo,
             "Gender": s.gender || "—",
             "Year": s.year || "N/A",
+            "Department": s.dept || "—",
             "House": s.house,
             "T-Shirt Size": s.shirtSize || "—",
             "T-Shirt Status": s.shirtIssued ? "✅ ISSUED" : "❌ PENDING"
@@ -268,7 +271,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: 700, color: dark ? "#fff" : "#1a1a1a", fontSize: 14 }}>{s.name}</div>
-                                            <div style={{ fontSize: 11, color: dark ? "#888" : "#777", marginTop: 2 }}>{s.gender || "?"} · {s.regNo} · {s.year || "N/A"} · Size: {s.shirtSize || "—"}</div>
+                                            <div style={{ fontSize: 11, color: dark ? "#888" : "#777", marginTop: 2 }}>{s.gender || "?"} · {s.regNo} · {s.year || "N/A"} {s.dept ? `(${s.dept})` : ""} · Size: {s.shirtSize || "—"}</div>
                                         </div>
                                         <div style={{ textAlign: "right", marginRight: 8 }}>
                                             <div style={{ fontSize: 10, fontWeight: 800, color: dark ? "#ccc" : "#444" }}>SHIRT: {s.shirtSize || "—"}</div>
@@ -375,7 +378,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontWeight: 750, color: dark ? "#fff" : "#1a1a1a", fontSize: 15 }}>{s.name}</div>
                                         <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginTop: 2 }}>
-                                            <span style={{ fontWeight: 700, color: captain.houseColor }}>{s.shirtSize}</span> · {s.gender} · {s.year} · {s.regNo}
+                                            <span style={{ fontWeight: 700, color: captain.houseColor }}>{s.shirtSize}</span> · {s.gender} · {s.year} {s.dept ? `(${s.dept})` : ""} · {s.regNo}
                                         </div>
                                     </div>
                                     <button
