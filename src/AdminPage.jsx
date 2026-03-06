@@ -659,7 +659,7 @@ export function AdminPage({
                                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, flex: 1 }}>
                                     {["staffCaptainMale", "staffCaptainFemale", "boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls"].map(role => {
                                         const isStaff = role.startsWith("staffCaptain");
-                                        const isMale = role.includes("Boys") || role.includes("Male");
+                                        const isMale = role.toLowerCase().includes("boys") || role.toLowerCase().includes("male");
                                         const roleIcon = isStaff ? (isMale ? "🎓♂" : "🎓♀") : (isMale ? "♂" : "♀");
                                         const roleColor = isStaff ? (isMale ? "#1E3A8A" : "#8B0000") : (isMale ? "#1E90FF" : "#FF69B4");
                                         const roleLabel = isStaff ? (isMale ? "Staff Captain (M)" : "Staff Captain (F)") : role.replace(/([A-Z])/g, ' $1').trim().replace(/Boys|Girls/gi, "");
