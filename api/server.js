@@ -36,7 +36,7 @@ const globalLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, // Max 10 login attempts
+  max: 50, // Increased from 10 to 50 to support multi-user NAT and debugging
   message: { error: "Too many login attempts, please try again later" }
 });
 
