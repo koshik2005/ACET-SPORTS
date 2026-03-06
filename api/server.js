@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 import compression from "compression";
 import path from "path";
 import { fileURLToPath } from "url";
-import State from "./models.js";
+import { State, Otp } from "./models.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,7 +43,7 @@ const loginLimiter = rateLimit({
 app.use("/api/", globalLimiter);
 
 
-const otpStore = {}; // { [email]: { otp, expires } }
+const otpStore = {}; // DEPRECATED: Use Otp model
 
 // ─── In-Memory State Cache ─────────────────────────────────────────────────────
 // Cache the public state for 30 seconds so 3000 simultaneous page loads
@@ -113,33 +113,33 @@ function makeTransporter() {
   });
 }
 
-// ─── Single Admin Session Tracking ───────────────────────────────────────────
-let activeAdminToken = null;
-
 // ─── Middleware ────────────────────────────────────────────────────────────
-const authenticateAdmin = (req, res, next) => {
+const authenticateAdmin = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token provided" });
-  if (token !== activeAdminToken) return res.status(401).json({ error: "Session expired. Another admin has logged in." });
+
   try {
+    const state = await loadDb();
+    if (token !== state.activeAdminToken) return res.status(401).json({ error: "Session expired. Another admin has logged in." });
+
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.role !== "admin") return res.status(403).json({ error: "Access denied" });
     req.user = decoded;
     next();
   } catch (err) {
-    if (token === activeAdminToken) activeAdminToken = null; // Clear if it was the active one but expired
     res.status(401).json({ error: "Invalid or expired token" });
   }
 };
 
-const authenticateCaptainOrAdmin = (req, res, next) => {
+const authenticateCaptainOrAdmin = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token provided" });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.role === "admin") {
-      if (token !== activeAdminToken) return res.status(401).json({ error: "Session expired. Another admin has logged in." });
+      const state = await loadDb();
+      if (token !== state.activeAdminToken) return res.status(401).json({ error: "Session expired. Another admin has logged in." });
       req.user = decoded;
       return next();
     }
@@ -251,6 +251,10 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
         </div>
       `,
     });
+
+    // Persistent storage
+    await Otp.findOneAndUpdate({ email, type: "student" }, { otp, createdAt: new Date() }, { upsert: true });
+
     res.json({ success: true });
   } catch (err) {
     console.error("OTP Error:", err);
@@ -258,23 +262,19 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
   }
 });
 
-app.post("/api/verify-otp", (req, res) => {
+app.post("/api/verify-otp", async (req, res) => {
   const { email, otp } = req.body;
-  const stored = otpStore[email];
+  const stored = await Otp.findOne({ email, type: "student" });
 
   if (!stored) return res.status(400).json({ success: false, error: "No OTP found for this email" });
-  if (Date.now() > stored.expires) {
-    delete otpStore[email];
-    return res.status(400).json({ success: false, error: "OTP expired" });
-  }
   if (stored.otp !== otp) return res.status(400).json({ success: false, error: "Invalid OTP" });
 
-  delete otpStore[email];
+  await Otp.deleteOne({ _id: stored._id });
   res.json({ success: true });
 });
 
 // ─── Admin Authentication ────────────────────────────────────────────────────────
-const adminOtpStore = {};
+const adminOtpStore = {}; // DEPRECATED: Use Otp model
 
 app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
   const { email } = req.body;
@@ -300,6 +300,10 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
         </div>
       `,
     });
+
+    // Persistent storage
+    await Otp.findOneAndUpdate({ email, type: "admin" }, { otp, createdAt: new Date() }, { upsert: true });
+
     res.json({ success: true });
   } catch (err) {
     console.error("ADMIN OTP EMAIL ERROR:", err);
@@ -314,21 +318,20 @@ app.post("/api/admin-login", loginLimiter, async (req, res) => {
 
   const em = email.trim();
   const isDefaultFallback = String(otp) === "159753";
-  const stored = adminOtpStore[em];
+  const stored = await Otp.findOne({ email: em, type: "admin" });
 
   if (!isDefaultFallback) {
     if (!stored) return res.status(400).json({ error: "OTP expired or not sent" });
-    if (Date.now() > stored.expires) return res.status(400).json({ error: "OTP expired" });
     if (String(stored.otp) !== String(otp)) return res.status(400).json({ error: "Invalid OTP" });
   }
 
-  delete adminOtpStore[em];
+  if (stored) await Otp.deleteOne({ _id: stored._id });
 
   const token = jwt.sign({ role: "admin", name: em, email: em }, JWT_SECRET, { expiresIn: "12h" });
-  activeAdminToken = token; // Single session enforcement
 
-  // Log login to DB
+  // Log login to DB and set active token
   await State.findOneAndUpdate({}, {
+    $set: { activeAdminToken: token },
     $push: {
       adminLogs: {
         type: "LOGIN",
