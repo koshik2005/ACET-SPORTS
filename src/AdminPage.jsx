@@ -4,7 +4,7 @@ import { ImgUploadBtn } from "./ImgUploadBtn.jsx";
 import { ImageCropper } from "./ImageCropper.jsx";
 import { API_BASE } from "./api.js";
 import * as XLSX from "xlsx";
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } from "docx";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle, ImageRun } from "docx";
 import { saveAs } from "file-saver";
 
 const EMPTY_AUTH = { role: "Sports Official", name: "", designation: "", email: "", img: null, priority: 5 };
@@ -12,8 +12,10 @@ const EMPTY_AUTH = { role: "Sports Official", name: "", designation: "", email: 
 export function AdminPage({
     dark, houses, setHouses, authorities, setAuthorities, management = [], setManagement, games, setGames, gallery, setGallery,
     registrations, setRegistrations, pointLog, setPointLog, studentsDB, setStudentsDB, results = [], setResults,
+    nav = [], setNav,
     studentCommittee = [], setStudentCommittee,
-    sportGamesList = [], setSportGamesList, athleticsList = [], setAthleticsList,
+    sportGamesList = [], setSportGamesList, sportGamesListWomens = [], setSportGamesListWomens,
+    athleticsList = [], setAthleticsList, athleticsListWomens = [], setAthleticsListWomens,
     authorityRoles = [], setAuthorityRoles, managementRoles = [], setManagementRoles,
     eventDate, setEventDate, emptyGame
 }) {
@@ -327,162 +329,284 @@ export function AdminPage({
         XLSX.writeFile(wb, `TShirt_List_${tsHouse}_${tsGender}_${tsStatus}.xlsx`);
     };
 
+    const fetchImageBuffer = async (url) => {
+        if (!url) return null;
+        try {
+            if (url.startsWith('data:image')) {
+                const base64Data = url.split(',')[1];
+                const binaryString = window.atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return bytes.buffer;
+            } else {
+                const res = await fetch(url);
+                const blob = await res.blob();
+                return await blob.arrayBuffer();
+            }
+        } catch (e) {
+            console.error("Failed to fetch image:", e);
+            return null;
+        }
+    };
+
     const exportFinalReport = async () => {
-        const doc = new Document({
-            sections: [{
-                properties: {},
-                children: [
-                    new Paragraph({ text: "ACHARIYA SPORTS DAY FINAL REPORT", heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }),
-                    new Paragraph({ children: [new TextRun({ text: `Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, italics: true })], alignment: AlignmentType.CENTER, spacing: { after: 400 } }),
+        // Build participants list by gender
+        const menStudents = studentsDB.filter(s => s.gender && (s.gender.toLowerCase() === "male" || s.gender.toLowerCase() === "m"));
+        const womenStudents = studentsDB.filter(s => s.gender && (s.gender.toLowerCase() === "female" || s.gender.toLowerCase() === "f"));
 
-                    new Paragraph({ text: "1. EXECUTIVE SUMMARY", heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
-                    new Paragraph({ children: [new TextRun({ text: "Total Unique Participants: ", bold: true }), new TextRun(String([...new Set(registrations.map(r => r.regNo))].length))] }),
-                    new Paragraph({ children: [new TextRun({ text: "Total Scheduled Events: ", bold: true }), new TextRun(String(games.length))] }),
-                    new Paragraph({ children: [new TextRun({ text: "Total Results Recorded: ", bold: true }), new TextRun(String(results.length))] }),
-                    new Paragraph({ children: [new TextRun({ text: "Total Houses: ", bold: true }), new TextRun(String(houses.length))] }),
-                    new Paragraph({ children: [new TextRun({ text: "Event Schedule: ", bold: true }), new TextRun(`${eventDate.date || "Not Set"} @ ${eventDate.time || "Not Set"}`)] }),
+        // Helper to get image run or placeholder text
+        const createProfileImage = async (url, fallbackText) => {
+            const buf = await fetchImageBuffer(url);
+            if (buf) {
+                return new Paragraph({
+                    children: [new ImageRun({ data: buf, transformation: { width: 80, height: 80 } })],
+                    alignment: AlignmentType.CENTER
+                });
+            }
+            return new Paragraph({ text: fallbackText, alignment: AlignmentType.CENTER, border: { top: { style: BorderStyle.SINGLE, space: 1, color: "auto" }, bottom: { style: BorderStyle.SINGLE, space: 1, color: "auto" }, left: { style: BorderStyle.SINGLE, space: 1, color: "auto" }, right: { style: BorderStyle.SINGLE, space: 1, color: "auto" } } });
+        };
 
-                    new Paragraph({ text: "2. HOUSE ADMINISTRATION", heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
-                    new Table({
-                        width: { size: 100, type: WidthType.PERCENTAGE },
-                        rows: [
-                            new TableRow({
+        const docChildren = [];
+
+        // 1. Header (Logos and Titles)
+        docChildren.push(
+            new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "[ACET LOGO]", alignment: AlignmentType.CENTER })] }),
+                            new TableCell({
+                                width: { size: 60, type: WidthType.PERCENTAGE },
                                 children: [
-                                    new TableCell({ children: [new Paragraph({ text: "House", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Boys Captain", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Girls Captain", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Boys Vice Captain", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Girls Vice Captain", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Staff Captain (M)", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Staff Captain (F)", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Total Points", bold: true })] }),
+                                    new Paragraph({ text: "ACHARIYA COLLEGE OF ENGINEERING TECHNOLOGY", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
+                                    new Paragraph({ text: "(Approved by AICTE and Affiliated to Pondicherry University)", alignment: AlignmentType.CENTER }),
+                                    new Paragraph({ text: "An ISO 9001: 2008 Certified Institution", alignment: AlignmentType.CENTER }),
+                                    new Paragraph({ text: "Achariyapuram, Villianur, Puducherry – 605 110.", alignment: AlignmentType.CENTER })
                                 ]
                             }),
-                            ...houses.map(h => new TableRow({
-                                children: [
-                                    new TableCell({ children: [new Paragraph(h.name)] }),
-                                    new TableCell({ children: [new Paragraph(h.boysCaptain?.name || "—")] }),
-                                    new TableCell({ children: [new Paragraph(h.girlsCaptain?.name || "—")] }),
-                                    new TableCell({ children: [new Paragraph(h.viceCaptainBoys?.name || "—")] }),
-                                    new TableCell({ children: [new Paragraph(h.viceCaptainGirls?.name || "—")] }),
-                                    new TableCell({ children: [new Paragraph(h.staffCaptainMale?.name || "—")] }),
-                                    new TableCell({ children: [new Paragraph(h.staffCaptainFemale?.name || "—")] }),
-                                    new TableCell({ children: [new Paragraph((h.points || 0).toString())] }),
-                                ]
-                            }))
-                        ]
-                    }),
-
-                    new Paragraph({ text: "3. OFFICIALS & MANAGEMENT", heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
-                    new Paragraph({ text: "Management", heading: HeadingLevel.HEADING_2 }),
-                    ...management.map(m => new Paragraph({ text: `• ${m.name} (${m.role}) - ${m.designation || ""}`, bullet: { level: 0 } })),
-                    new Paragraph({ text: "Sports Authority", heading: HeadingLevel.HEADING_2, spacing: { before: 200 } }),
-                    ...authorities.map(a => new Paragraph({ text: `• ${a.name} (${a.role}) - ${a.designation || ""}`, bullet: { level: 0 } })),
-
-                    new Paragraph({ text: "4. DAY-WISE SCHEDULE & RESULTS", heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
-                    ...[...new Set(games.map(g => g.date || "Unscheduled"))].sort().map(date => [
-                        new Paragraph({ text: `Date: ${date}`, heading: HeadingLevel.HEADING_2, spacing: { before: 200 } }),
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            rows: [
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [new Paragraph({ text: "Event", bold: true })] }),
-                                        new TableCell({ children: [new Paragraph({ text: "Type", bold: true })] }),
-                                        new TableCell({ children: [new Paragraph({ text: "1st Place", bold: true })] }),
-                                        new TableCell({ children: [new Paragraph({ text: "2nd Place", bold: true })] }),
-                                        new TableCell({ children: [new Paragraph({ text: "3rd Place", bold: true })] }),
-                                    ]
-                                }),
-                                ...games.filter(g => (g.date || "Unscheduled") === date).map(g => {
-                                    const res = results.find(r => r.eventName === g.name);
-                                    return new TableRow({
-                                        children: [
-                                            new TableCell({ children: [new Paragraph(g.name)] }),
-                                            new TableCell({ children: [new Paragraph(g.type === "game" ? "Team Game" : "Athletic")] }),
-                                            new TableCell({ children: [new Paragraph(`${res?.placements?.first?.house || "—"}${res?.placements?.first?.player ? ` (${res?.placements?.first?.player})` : ""}`)] }),
-                                            new TableCell({ children: [new Paragraph(`${res?.placements?.second?.house || "—"}${res?.placements?.second?.player ? ` (${res?.placements?.second?.player})` : ""}`)] }),
-                                            new TableCell({ children: [new Paragraph(`${res?.placements?.third?.house || "—"}${res?.placements?.third?.player ? ` (${res?.placements?.third?.player})` : ""}`)] }),
-                                        ]
-                                    });
-                                })
-                            ]
-                        })
-                    ]).flat(),
-
-                    new Paragraph({ text: "5. OVERALL RESULTS SUMMARY", heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
-                    new Table({
-                        width: { size: 100, type: WidthType.PERCENTAGE },
-                        rows: [
-                            new TableRow({
-                                children: [
-                                    new TableCell({ children: [new Paragraph({ text: "Event Name", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "🥇 1st Place", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "🥈 2nd Place", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "🥉 3rd Place", bold: true })] }),
-                                ]
-                            }),
-                            ...results.map(res => new TableRow({
-                                children: [
-                                    new TableCell({ children: [new Paragraph(res.eventName)] }),
-                                    new TableCell({ children: [new Paragraph(`${res.placements?.first?.house || "—"}${res.placements?.first?.player ? ` (${res.placements?.first?.player})` : ""}`)] }),
-                                    new TableCell({ children: [new Paragraph(`${res.placements?.second?.house || "—"}${res.placements?.second?.player ? ` (${res.placements?.second?.player})` : ""}`)] }),
-                                    new TableCell({ children: [new Paragraph(`${res.placements?.third?.house || "—"}${res.placements?.third?.player ? ` (${res.placements?.third?.player})` : ""}`)] }),
-                                ]
-                            }))
-                        ]
-                    }),
-
-                    new Paragraph({ text: "6. PARTICIPATION BREAKDOWN", heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
-                    new Paragraph({ text: "Student Participation by Event", heading: HeadingLevel.HEADING_2 }),
-                    ...games.map(g => [
-                        new Paragraph({ text: g.name, heading: HeadingLevel.HEADING_3, spacing: { before: 200 } }),
-                        ...registrations.filter(r => (g.type === "game" ? r.game === g.name : r.athletic === g.name)).map(r => {
-                            const s = studentsDB.find(st => st.regNo === r.regNo);
-                            return new Paragraph({ text: `• ${r.name} (${r.regNo}) - ${s?.year || ""} ${s?.dept ? `(${s.dept})` : ""} - ${r.house} House`, bullet: { level: 0 } });
-                        }),
-                        registrations.filter(r => (g.type === "game" ? r.game === g.name : r.athletic === g.name)).length === 0 ? new Paragraph({ text: "No registrations for this event.", italics: true }) : null
-                    ]).flat().filter(Boolean),
-
-                    new Paragraph({ text: "7. LOGISTICS: T-SHIRT ISSUANCE", heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
-                    new Table({
-                        width: { size: 100, type: WidthType.PERCENTAGE },
-                        rows: [
-                            new TableRow({
-                                children: [
-                                    new TableCell({ children: [new Paragraph({ text: "Student Name", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Reg No", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Year (Dept)", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "House", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Size", bold: true })] }),
-                                    new TableCell({ children: [new Paragraph({ text: "Status", bold: true })] }),
-                                ]
-                            }),
-                            ...studentsDB.map(s => new TableRow({
-                                children: [
-                                    new TableCell({ children: [new Paragraph(s.name)] }),
-                                    new TableCell({ children: [new Paragraph(s.regNo)] }),
-                                    new TableCell({ children: [new Paragraph(`${s.year || ""} ${s.dept ? `(${s.dept})` : ""}`)] }),
-                                    new TableCell({ children: [new Paragraph(s.house)] }),
-                                    new TableCell({ children: [new Paragraph(s.shirtSize)] }),
-                                    new TableCell({ children: [new Paragraph(s.shirtIssued ? "✅ Issued" : "⏳ Pending")] }),
-                                ]
-                            }))
+                            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "[WORLD CLASS LOGO]", alignment: AlignmentType.CENTER })] })
                         ]
                     })
-                ].filter(Boolean), // Filter out any nulls from the children array
-            }]
+                ]
+            }),
+            new Paragraph({ text: `ANNUAL SPORTS MEET ${eventDate?.date?.split("-")[0] || new Date().getFullYear()}`, heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: { before: 400, after: 100 } }),
+            new Paragraph({ text: "DEPARTMENT OF PHYSICAL EDUCATION AND TRAINING", heading: HeadingLevel.HEADING_3, alignment: AlignmentType.CENTER, spacing: { after: 400 } }),
+            new Paragraph({ text: `Date: ${eventDate?.date || "—"}\nPlace: ACET Campus`, spacing: { after: 400 } })
+        );
+
+        // 2. People Sections Generator (Sports Authority, Management, Captains)
+        const addPeopleGrid = (title, peopleList, roleExtractor = p => p.role, extraDetails = p => p.designation) => {
+            if (!peopleList || peopleList.length === 0) return;
+            docChildren.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { before: 400, after: 200 } }));
+
+            // Group into rows of 2 for simplicity, unless it's just 1
+            const rows = [];
+            for (let i = 0; i < peopleList.length; i += 2) {
+                const p1 = peopleList[i];
+                const p2 = peopleList[i + 1];
+
+                const cells = [];
+                cells.push(new TableCell({
+                    width: { size: p2 ? 50 : 100, type: WidthType.PERCENTAGE },
+                    children: [
+                        new Paragraph({ text: "[IMAGE]", alignment: AlignmentType.CENTER }), // Placeholder: we skip async image loading here for simplicity to avoid huge code blocks
+                        new Paragraph({ text: p1.name, bold: true, alignment: AlignmentType.CENTER }),
+                        new Paragraph({ text: roleExtractor(p1), italics: true, alignment: AlignmentType.CENTER }),
+                        new Paragraph({ text: extraDetails(p1), alignment: AlignmentType.CENTER })
+                    ]
+                }));
+                if (p2) {
+                    cells.push(new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        children: [
+                            new Paragraph({ text: "[IMAGE]", alignment: AlignmentType.CENTER }),
+                            new Paragraph({ text: p2.name, bold: true, alignment: AlignmentType.CENTER }),
+                            new Paragraph({ text: roleExtractor(p2), italics: true, alignment: AlignmentType.CENTER }),
+                            new Paragraph({ text: extraDetails(p2), alignment: AlignmentType.CENTER })
+                        ]
+                    }));
+                }
+
+                rows.push(new TableRow({ children: cells }));
+            }
+
+            docChildren.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+                rows
+            }));
+        };
+
+        addPeopleGrid("Sports Authority", authorities);
+        addPeopleGrid("Management", management);
+
+        // Captains
+        const captains = [];
+        houses.forEach(h => {
+            if (h.boysCaptain?.name) captains.push({ ...h.boysCaptain, role: `Captain (Men) - ${h.name} House`, designation: `${h.boysCaptain.year} ${h.boysCaptain.dept}` });
+            if (h.girlsCaptain?.name) captains.push({ ...h.girlsCaptain, role: `Captain (Women) - ${h.name} House`, designation: `${h.girlsCaptain.year} ${h.girlsCaptain.dept}` });
+            if (h.viceCaptainBoys?.name) captains.push({ ...h.viceCaptainBoys, role: `Vice Captain (Men) - ${h.name} House`, designation: `${h.viceCaptainBoys.year} ${h.viceCaptainBoys.dept}` });
+            if (h.viceCaptainGirls?.name) captains.push({ ...h.viceCaptainGirls, role: `Vice Captain (Women) - ${h.name} House`, designation: `${h.viceCaptainGirls.year} ${h.viceCaptainGirls.dept}` });
+        });
+        addPeopleGrid("House Captains", captains);
+
+        // 3. Students Table
+        docChildren.push(new Paragraph({ text: "Total Students List", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { before: 800, after: 200 }, pageBreakBefore: true }));
+        const studentRows = studentsDB.map((s, i) => new TableRow({
+            children: [
+                new TableCell({ children: [new Paragraph(String(i + 1))] }),
+                new TableCell({ children: [new Paragraph(s.regNo)] }),
+                new TableCell({ children: [new Paragraph(s.name)] }),
+                new TableCell({ children: [new Paragraph(s.year || "")] }),
+                new TableCell({ children: [new Paragraph(s.dept || "")] }),
+                new TableCell({ children: [new Paragraph(s.house)] }),
+            ]
+        }));
+
+        docChildren.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+                new TableRow({
+                    children: ["S.No", "Reg No", "Name", "Year", "Dept", "House"].map(t => new TableCell({ children: [new Paragraph({ text: t, bold: true })] }))
+                }),
+                ...studentRows
+            ]
+        }));
+
+        // 4. Games Tables
+        const addAthletesTable = (title, list, genderName) => {
+            docChildren.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { before: 400, after: 200 } }));
+            const rRows = registrations.filter(r => {
+                const s = studentsDB.find(st => st.regNo === r.regNo);
+                return s && (s.gender?.toLowerCase().startsWith(genderName.toLowerCase()[0]));
+            }).map((r, i) => new TableRow({
+                children: [
+                    new TableCell({ children: [new Paragraph(String(i + 1))] }),
+                    new TableCell({ children: [new Paragraph(r.game || r.athletic || "—")] }),
+                    new TableCell({ children: [new Paragraph(`${r.name} (${r.regNo})`)] }),
+                ]
+            }));
+
+            if (rRows.length > 0) {
+                docChildren.push(new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    rows: [
+                        new TableRow({ children: ["S.No", "Game / Event", `Athlete (${genderName})`].map(t => new TableCell({ children: [new Paragraph({ text: t, bold: true })] })) }),
+                        ...rRows
+                    ]
+                }));
+            } else {
+                docChildren.push(new Paragraph({ text: "No registrations found.", italics: true }));
+            }
+        };
+
+        addAthletesTable("Men's Games Participant List", registrations, "Men");
+        addAthletesTable("Women's Games Participant List", registrations, "Women");
+
+        // 5. Winners Side-by-Side Table (Using Layout Grid)
+        docChildren.push(new Paragraph({ text: "Winners List", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { before: 400, after: 200 }, pageBreakBefore: true }));
+
+        // This splits games by checking participant gender in the results, or implicitly by name
+        // For simplicity in this layout, we list the event names found in the results.
+        const winMens = [];
+        const winWomens = [];
+
+        // Filter results into Mens vs Womens lists if they have "Men" or "Women" in their eventName,
+        // or just split them all side by side.
+        results.forEach(res => {
+            if (res.eventName.toLowerCase().includes("women") || res.eventName.toLowerCase().includes("girl")) {
+                winWomens.push(res);
+            } else {
+                winMens.push(res);
+            }
         });
 
-        Packer.toBlob(doc).then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `Achariya_Sports_Final_Report_${new Date().toISOString().split('T')[0]}.docx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+        const maxLen = Math.max(winMens.length, winWomens.length);
+        const winnersGridRows = [];
+
+        winnersGridRows.push(new TableRow({
+            children: [
+                new TableCell({ width: { size: 48, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Men's Winners", bold: true, alignment: AlignmentType.CENTER })] }),
+                new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } }, children: [new Paragraph("")] }), // spacer
+                new TableCell({ width: { size: 48, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Women's Winners", bold: true, alignment: AlignmentType.CENTER })] })
+            ]
+        }));
+
+        for (let i = 0; i < maxLen; i++) {
+            const m = winMens[i];
+            const w = winWomens[i];
+
+            const cellM = new TableCell({ width: { size: 48, type: WidthType.PERCENTAGE }, children: [] });
+            if (m) {
+                cellM.options.children.push(
+                    new Paragraph({ text: m.eventName, bold: true, alignment: AlignmentType.CENTER }),
+                    new Paragraph({ text: `1st: ${m.placements?.first?.player || m.placements?.first?.house || "—"}` }),
+                    new Paragraph({ text: `2nd: ${m.placements?.second?.player || m.placements?.second?.house || "—"}` }),
+                    new Paragraph({ text: `3rd: ${m.placements?.third?.player || m.placements?.third?.house || "—"}` })
+                );
+            }
+
+            const cellW = new TableCell({ width: { size: 48, type: WidthType.PERCENTAGE }, children: [] });
+            if (w) {
+                cellW.options.children.push(
+                    new Paragraph({ text: w.eventName, bold: true, alignment: AlignmentType.CENTER }),
+                    new Paragraph({ text: `1st: ${w.placements?.first?.player || w.placements?.first?.house || "—"}` }),
+                    new Paragraph({ text: `2nd: ${w.placements?.second?.player || w.placements?.second?.house || "—"}` }),
+                    new Paragraph({ text: `3rd: ${w.placements?.third?.player || w.placements?.third?.house || "—"}` })
+                );
+            }
+
+            winnersGridRows.push(new TableRow({
+                children: [
+                    cellM,
+                    new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE } }, children: [new Paragraph("")] }),
+                    cellW
+                ]
+            }));
+        }
+
+        docChildren.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+            rows: winnersGridRows
+        }));
+
+        // 6. Greeting Message & Signatures
+        docChildren.push(
+            new Paragraph({ text: "It is with great pride and immense joy that we conclude this year's Annual Sports Meet. The dedication, sportsmanship, and unyielding spirit displayed by all participants have truly made this event memorable. Congratulations to all the winners for their outstanding achievements, and a hearty round of applause to every athlete who gave their best on the field.", spacing: { before: 800 } }),
+            new Paragraph({ text: "We extend our deepest gratitude to the Management, Sports Authorities, Faculty, and Student Committees for their tireless efforts in organizing this spectacular event. Your unwavering support and commitment to fostering a culture of excellence in sports are what make our institution a beacon of holistic education.", spacing: { before: 200, after: 1200 } }),
+
+            new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Physical Education Director", bold: true, alignment: AlignmentType.LEFT })] }),
+                            new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Principal", bold: true, alignment: AlignmentType.RIGHT })] })
+                        ]
+                    })
+                ]
+            })
+        );
+
+        const doc = new Document({ sections: [{ properties: {}, children: docChildren }] });
+
+        import("docx").then(({ Packer }) => {
+            Packer.toBlob(doc).then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Achariya_Sports_Final_Report_${new Date().getFullYear()}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            });
         });
     };
 
@@ -1508,8 +1632,11 @@ export function AdminPage({
                         </div>
 
                         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, alignItems: "start" }}>
-                            <ListManager dark={dark} title="🏆 Sport Games (Team)" list={sportGamesList} setList={setSportGamesList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="🏃 Athletics (Individual)" list={athleticsList} setList={setAthleticsList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Sport Games (Men)" list={sportGamesList} setList={setSportGamesList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🧭 Navbar Visible Items" list={nav} setList={setNav} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Sport Games (Women)" list={sportGamesListWomens} setList={setSportGamesListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏃 Athletics (Men)" list={athleticsList} setList={setAthleticsList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏃 Athletics (Women)" list={athleticsListWomens} setList={setAthleticsListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="👔 Sports Official Roles" list={authorityRoles} setList={setAuthorityRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏛️ Management Roles" list={managementRoles} setList={setManagementRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                         </div>

@@ -29,7 +29,9 @@ export default function App() {
   // Configuration from API
   const [nav, setNav] = useState([]);
   const [sportGamesList, setSportGamesList] = useState([]);
+  const [sportGamesListWomens, setSportGamesListWomens] = useState([]);
   const [athleticsList, setAthleticsList] = useState([]);
+  const [athleticsListWomens, setAthleticsListWomens] = useState([]);
   const [authorityRoles, setAuthorityRoles] = useState([]);
   const [managementRoles, setManagementRoles] = useState([]);
   const [eventDate, setEventDate] = useState({ date: "", time: "" });
@@ -55,7 +57,9 @@ export default function App() {
         // Set config
         if (data.nav) setNav(data.nav);
         if (data.sportGamesList) setSportGamesList(data.sportGamesList);
+        if (data.sportGamesListWomens) setSportGamesListWomens(data.sportGamesListWomens);
         if (data.athleticsList) setAthleticsList(data.athleticsList);
+        if (data.athleticsListWomens) setAthleticsListWomens(data.athleticsListWomens);
         if (data.authorityRoles) setAuthorityRoles(data.authorityRoles);
         if (data.managementRoles) setManagementRoles(data.managementRoles);
         if (data.eventDate) setEventDate(data.eventDate);
@@ -108,8 +112,11 @@ export default function App() {
   const setPointLogSync = wrap(setPointLog, "pointLog");
   const setStudentsDBSync = wrap(setStudentsDB, "studentsDB");
   const setResultsSync = wrap(setResults, "results");
+  const setNavSync = wrap(setNav, "nav");
   const setSportGamesListSync = wrap(setSportGamesList, "sportGamesList");
+  const setSportGamesListWomensSync = wrap(setSportGamesListWomens, "sportGamesListWomens");
   const setAthleticsListSync = wrap(setAthleticsList, "athleticsList");
+  const setAthleticsListWomensSync = wrap(setAthleticsListWomens, "athleticsListWomens");
   const setAuthorityRolesSync = wrap(setAuthorityRoles, "authorityRoles");
   const setManagementRolesSync = wrap(setManagementRoles, "managementRoles");
   const setEventDateSync = wrap(setEventDate, "eventDate");
@@ -149,8 +156,8 @@ export default function App() {
       <main>
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
-        {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} athleticsList={athleticsList} />}
-        {active === "Registration" && <RegistrationPage dark={dark} registrations={registrations} setRegistrations={setRegistrationsSync} studentsDB={studentsDB} houses={houses} sportGamesList={sportGamesList} athleticsList={athleticsList} />}
+        {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
+        {active === "Registration" && <RegistrationPage dark={dark} registrations={registrations} setRegistrations={setRegistrationsSync} studentsDB={studentsDB} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
         {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} />}
         {active === "Gallery" && <GalleryPage dark={dark} gallery={gallery} />}
         {active === "Admin" && <AdminPage
@@ -165,8 +172,11 @@ export default function App() {
           pointLog={pointLog} setPointLog={setPointLogSync}
           studentsDB={studentsDB} setStudentsDB={setStudentsDBSync}
           results={results} setResults={setResultsSync}
+          nav={nav} setNav={setNavSync}
           sportGamesList={sportGamesList} setSportGamesList={setSportGamesListSync}
+          sportGamesListWomens={sportGamesListWomens} setSportGamesListWomens={setSportGamesListWomensSync}
           athleticsList={athleticsList} setAthleticsList={setAthleticsListSync}
+          athleticsListWomens={athleticsListWomens} setAthleticsListWomens={setAthleticsListWomensSync}
           authorityRoles={authorityRoles} setAuthorityRoles={setAuthorityRolesSync}
           managementRoles={managementRoles} setManagementRoles={setManagementRolesSync}
           eventDate={eventDate} setEventDate={setEventDateSync}

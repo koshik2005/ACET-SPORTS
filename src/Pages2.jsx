@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIsMobile, hi, tint, Count, Sheet } from "./utils.jsx";
 import { API_BASE } from "./api.js";
-export function RegistrationPage({ dark, registrations, setRegistrations, studentsDB, houses = [], sportGamesList = [], athleticsList = [] }) {
+export function RegistrationPage({ dark, registrations, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [] }) {
     const [input, setInput] = useState("");
     const [student, setStudent] = useState(null);
     const [game, setGame] = useState("");
@@ -137,13 +137,13 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                                 <div style={{ marginBottom: 16 }}>
                                     <label style={{ fontWeight: 700, color: dark ? "#ccc" : "#444", display: "block", marginBottom: 8, fontSize: 14 }}>⚽ Select Game</label>
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                        {sportGamesList.map(sg => <button key={sg} onClick={() => setGame(g => g === sg ? "" : sg)} style={{ padding: "8px 12px", borderRadius: 20, cursor: "pointer", fontSize: 13, fontWeight: 600, background: game === sg ? "#8B0000" : "transparent", color: game === sg ? "#fff" : dark ? "#ccc" : "#444", border: `2px solid ${game === sg ? "#8B0000" : dark ? "#444" : "#ddd"}` }}>{game === sg ? "✓ " : ""}{sg}</button>)}
+                                        {(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f" ? sportGamesListWomens : sportGamesList).map(sg => <button key={sg} onClick={() => setGame(g => g === sg ? "" : sg)} style={{ padding: "8px 12px", borderRadius: 20, cursor: "pointer", fontSize: 13, fontWeight: 600, background: game === sg ? "#8B0000" : "transparent", color: game === sg ? "#fff" : dark ? "#ccc" : "#444", border: `2px solid ${game === sg ? "#8B0000" : dark ? "#444" : "#ddd"}` }}>{game === sg ? "✓ " : ""}{sg}</button>)}
                                     </div>
                                 </div>
                                 <div style={{ marginBottom: 18 }}>
                                     <label style={{ fontWeight: 700, color: dark ? "#ccc" : "#444", display: "block", marginBottom: 8, fontSize: 14 }}>🏃 Select Athletic Event</label>
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                        {athleticsList.map(a => <button key={a} onClick={() => setAthletic(at => at === a ? "" : a)} style={{ padding: "8px 12px", borderRadius: 20, cursor: "pointer", fontSize: 13, fontWeight: 600, background: athletic === a ? "#4B0082" : "transparent", color: athletic === a ? "#fff" : dark ? "#ccc" : "#444", border: `2px solid ${athletic === a ? "#4B0082" : dark ? "#444" : "#ddd"}` }}>{athletic === a ? "✓ " : ""}{a}</button>)}
+                                        {(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f" ? athleticsListWomens : athleticsList).map(a => <button key={a} onClick={() => setAthletic(at => at === a ? "" : a)} style={{ padding: "8px 12px", borderRadius: 20, cursor: "pointer", fontSize: 13, fontWeight: 600, background: athletic === a ? "#4B0082" : "transparent", color: athletic === a ? "#fff" : dark ? "#ccc" : "#444", border: `2px solid ${athletic === a ? "#4B0082" : dark ? "#444" : "#ddd"}` }}>{athletic === a ? "✓ " : ""}{a}</button>)}
                                     </div>
                                 </div>
                                 {error && <div style={{ marginBottom: 10, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
@@ -254,7 +254,7 @@ export function GalleryPage({ dark, gallery }) {
         </div>
     );
 }
-export function WinnersPage({ dark, results, houses, sportGamesList, athleticsList }) {
+export function WinnersPage({ dark, results, houses, sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [] }) {
     const [hFilter, setHFilter] = useState("All");
     const [eFilter, setEFilter] = useState("All");
     const isMobile = useIsMobile();
@@ -286,11 +286,17 @@ export function WinnersPage({ dark, results, houses, sportGamesList, athleticsLi
                         <option value="game">Team Games</option>
                         <option value="athletic">Athletic Events</option>
                     </optgroup>
-                    <optgroup label="Specific Games">
+                    <optgroup label="Specific Games (Men)">
                         {sportGamesList.map(g => <option key={g} value={g}>{g}</option>)}
                     </optgroup>
-                    <optgroup label="Athletics">
+                    <optgroup label="Specific Games (Women)">
+                        {sportGamesListWomens.map(g => <option key={g} value={g}>{g}</option>)}
+                    </optgroup>
+                    <optgroup label="Athletics (Men)">
                         {athleticsList.map(a => <option key={a} value={a}>{a}</option>)}
+                    </optgroup>
+                    <optgroup label="Athletics (Women)">
+                        {athleticsListWomens.map(a => <option key={a} value={a}>{a}</option>)}
                     </optgroup>
                 </select>
             </div>
