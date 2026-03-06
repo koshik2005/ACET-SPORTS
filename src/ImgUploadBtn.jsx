@@ -40,7 +40,7 @@ export function ImgUploadBtn({ img, onUpload, size = 64, dark }) {
             <div
                 onClick={() => ref.current?.click()}
                 title="Tap to upload photo"
-                style={{ width: size, height: size, borderRadius: "50%", cursor: uploading ? "not-allowed" : "pointer", flexShrink: 0, border: `2px dashed ${img && !uploading ? "transparent" : dark ? "#555" : "#ccc"}`, background: img ? "transparent" : dark ? "#2a2a3e" : "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", transition: "opacity 0.2s", opacity: uploading ? 0.6 : 1 }}
+                style={{ width: size, height: size, borderRadius: 16, cursor: uploading ? "not-allowed" : "pointer", flexShrink: 0, border: `2px dashed ${img && !uploading ? "transparent" : dark ? "#555" : "#ccc"}`, background: img ? "transparent" : dark ? "#2a2a3e" : "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", transition: "opacity 0.2s", opacity: uploading ? 0.6 : 1 }}
                 onMouseEnter={e => { if (img && !uploading) e.currentTarget.querySelector(".ov").style.opacity = "1"; }}
                 onMouseLeave={e => { if (img && !uploading) e.currentTarget.querySelector(".ov").style.opacity = "0"; }}
             >

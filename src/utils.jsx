@@ -65,7 +65,7 @@ export function Confetti({ show }) {
 
 export function Avatar({ img, name, size = 64, color = "#888" }) {
     return (
-        <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: img ? "transparent" : color, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${color}`, boxShadow: "0 2px 8px rgba(0,0,0,.15)" }}>
+        <div style={{ width: size, height: size, borderRadius: 16, overflow: "hidden", flexShrink: 0, background: img ? "transparent" : color, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${color}`, boxShadow: "0 4px 12px rgba(0,0,0,.15)" }}>
             {img
                 ? <img src={img} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <span style={{ color: "#fff", fontWeight: 800, fontSize: size * .3 }}>{hi(name)}</span>
