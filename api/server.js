@@ -53,16 +53,34 @@ const CACHE_TTL_MS = 30 * 1000; // 30 seconds
 
 const invalidateCache = () => { stateCache = { data: null, ts: 0 }; };
 
-// ─── MongoDB Connection ───────────────────────────────────────────────────
+// ─── MongoDB Connection (Singleton for Vercel) ──────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/achariya_sports";
-mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000,
-  maxPoolSize: 500 // Increased connection pool to handle 3000 concurrent database connection requests
-})
-  .then(() => {
-    console.log("🍃 Connected to MongoDB");
-  })
-  .catch(err => console.error("❌ MongoDB connection error:", err));
+
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedDb && mongoose.connection.readyState === 1) return cachedDb;
+
+  console.log("📡 Connecting to MongoDB...");
+  cachedDb = await mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000,
+  });
+  console.log("🍃 Connected to MongoDB");
+  return cachedDb;
+}
+
+// Middleware to ensure DB is connected before any request
+const withDb = async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    console.error("❌ DB CONNECTION ERROR:", err.message);
+    res.status(503).json({ error: "Database temporarily unavailable", details: err.message });
+  }
+};
+
+app.use("/api/", withDb); // Apply to all /api routes
 
 // ─── Database Helpers ──────────────────────────────────────────────────────
 const getInitialState = () => ({
@@ -325,8 +343,8 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("ADMIN OTP EMAIL ERROR:", err);
-    // Even if email fails, return success to let the frontend proceed so the fallback OTP works
-    res.json({ success: true });
+    // Return the actual error so user can debug (e.g. SMTP failures)
+    res.status(500).json({ success: false, error: "Failed to send email: " + err.message });
   }
 });
 
