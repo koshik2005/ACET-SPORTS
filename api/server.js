@@ -154,6 +154,24 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
 };
 
 // ─── Health / config check ─────────────────────────────────────────────────
+app.get("/api/health", async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? "Connected" : "Disconnected";
+    res.json({
+      status: "OK",
+      db: dbStatus,
+      env: {
+        node: process.version,
+        env: process.env.NODE_ENV,
+        hasMongo: !!process.env.MONGODB_URI,
+        hasSmtp: !!(process.env.SMTP_USER && process.env.SMTP_PASS)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ status: "ERROR", error: err.message });
+  }
+});
+
 app.get("/api/public-state", async (req, res) => {
   try {
     // Serve from cache if fresh

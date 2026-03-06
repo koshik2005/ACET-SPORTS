@@ -123,7 +123,8 @@ export function AdminPage({
                 setLoginError(data.error || "Failed to send OTP.");
             }
         } catch (err) {
-            setLoginError("Failed to reach server");
+            console.error("OTP REQUEST ERROR:", err);
+            setLoginError(`Failed to reach server: ${err.message}`);
         }
         setIsVerifying(false);
     };
@@ -158,7 +159,8 @@ export function AdminPage({
                 setLoginError(data.error || "Incorrect OTP");
             }
         } catch (err) {
-            setLoginError("Failed to reach server");
+            console.error("ADMIN LOGIN ERROR:", err);
+            setLoginError(`Failed to reach server: ${err.message}`);
         }
         setIsVerifying(false);
     };
