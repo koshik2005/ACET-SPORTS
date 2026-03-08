@@ -56,12 +56,19 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
     };
 
     const houseRegs = captain
-        ? registrations.filter(r => (r.house || "").toLowerCase() === captain.house.toLowerCase())
+        ? registrations.filter(r => {
+            const isStaff = studentsDB.find(s => s.regNo === r.regNo)?.role === "Staff";
+            return !isStaff && (r.house || "").toLowerCase() === captain.house.toLowerCase();
+        })
         : [];
 
     const houseStudents = captain
-        ? studentsDB.filter(s => (s.house || "").toLowerCase() === captain.house.toLowerCase())
+        ? studentsDB.filter(s => s.role !== "Staff" && (s.house || "").toLowerCase() === captain.house.toLowerCase())
         : [];
+
+    const staffRegs = registrations.filter(r => {
+        return studentsDB.find(s => s.regNo === r.regNo)?.role === "Staff";
+    });
 
     const filteredHouseRegs = houseRegs.filter(r => {
         if (filterType === "All") return true;
@@ -183,12 +190,15 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
             </div>
 
             {/* Navigation Tabs */}
-            <div style={{ display: "flex", borderBottom: `1px solid ${dark ? "#333" : "#eee"}`, marginBottom: 24, gap: 10, overflowX: "auto", scrollbarWidth: "thin", paddingBottom: 2, WebkitOverflowScrolling: "touch" }}>
+            <div style={{ display: "flex", borderBottom: `1px solid ${dark ? "#333" : "#eee"}`, gap: 10, overflowX: "auto", scrollbarWidth: "thin", paddingBottom: 2, WebkitOverflowScrolling: "touch" }}>
                 <button onClick={() => setActiveTab("Dashboard")} style={{ ...(activeTab === "Dashboard" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>📊 DASHBOARD</button>
                 <button onClick={() => setActiveTab("Roster")} style={{ ...(activeTab === "Roster" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>🏠 HOUSE ROSTER</button>
                 <button onClick={() => setActiveTab("Participation")} style={{ ...(activeTab === "Participation" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>⚽ PARTICIPATION</button>
                 <button onClick={() => setActiveTab("T-Shirt Issue")} style={{ ...(activeTab === "T-Shirt Issue" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>👕 T-SHIRT ISSUE</button>
+                <button onClick={() => setActiveTab("Staff")} style={{ ...(activeTab === "Staff" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>👨‍🏫 STAFF REGS</button>
             </div>
+
+            <div style={{ marginBottom: 24 }} />
 
             {activeTab === "Dashboard" && (
                 <div>
@@ -377,6 +387,46 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+            {activeTab === "Staff" && (
+                <div>
+                    <h3 style={{ color: dark ? "#fff" : "#222", marginBottom: 16, fontSize: 18, fontWeight: 800 }}>👨‍🏫 Staff Registrations ({staffRegs.length})</h3>
+                    {staffRegs.length === 0 ? (
+                        <div style={{ ...cS, textAlign: "center", padding: 60 }}>
+                            <div style={{ fontSize: 60, marginBottom: 15 }}>👨‍🏫</div>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: dark ? "#aaa" : "#666" }}>No staff have registered yet</div>
+                            <div style={{ fontSize: 14, color: dark ? "#666" : "#888", marginTop: 8 }}>Staff registrations for all events will appear here.</div>
+                        </div>
+                    ) : (
+                        <div style={{ display: "grid", gap: 10 }}>
+                            {staffRegs.map((r, idx) => (
+                                <div key={r.regNo || r.email} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderLeft: `5px solid #8B0000`, borderRadius: 14, padding: "16px 20px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                                        <div>
+                                            <div style={{ fontWeight: 800, fontSize: 16, color: dark ? "#fff" : "#1a1a1a" }}>{r.name}</div>
+                                            <div style={{ fontSize: 12, color: dark ? "#888" : "#666", marginTop: 2 }}>{r.gender || "?"} · {r.regNo} · Dept: {studentsDB.find(s => s.regNo === r.regNo)?.dept || "N/A"}</div>
+                                        </div>
+                                        <div style={{ fontSize: 10, color: dark ? "#555" : "#bbb", fontWeight: 600 }}>{r.registeredAt}</div>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                        {r.game && (
+                                            <div style={{ background: "#8B000012", border: "1.5px solid #8B000025", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                                                <span style={{ fontSize: 16 }}>⚽</span>
+                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#8B0000" }}>{r.game}</span>
+                                            </div>
+                                        )}
+                                        {r.athletic && (
+                                            <div style={{ background: "#4B008212", border: "1.5px solid #4B008225", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                                                <span style={{ fontSize: 16 }}>🏃</span>
+                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#4B0082" }}>{r.athletic}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

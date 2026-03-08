@@ -10,14 +10,30 @@ import { saveAs } from "file-saver";
 const EMPTY_AUTH = { role: "Sports Official", name: "", designation: "", email: "", img: null, priority: 5 };
 
 export function AdminPage({
-    dark, houses, setHouses, authorities, setAuthorities, management = [], setManagement, games, setGames, gallery, setGallery,
-    registrations, setRegistrations, pointLog, setPointLog, studentsDB, setStudentsDB, results = [], setResults,
-    nav = [], setNav,
-    studentCommittee = [], setStudentCommittee,
-    sportGamesList = [], setSportGamesList, sportGamesListWomens = [], setSportGamesListWomens,
-    athleticsList = [], setAthleticsList, athleticsListWomens = [], setAthleticsListWomens,
-    authorityRoles = [], setAuthorityRoles, managementRoles = [], setManagementRoles,
-    eventDate, setEventDate, emptyGame
+    dark,
+    houses, setHouses,
+    authorities, setAuthorities,
+    management, setManagement,
+    studentCommittee, setStudentCommittee,
+    games, setGames,
+    gallery, setGallery,
+    registrations, setRegistrations,
+    pointLog, setPointLog,
+    studentsDB, setStudentsDB,
+    results, setResults,
+    nav, setNav,
+    sportGamesList, setSportGamesList,
+    sportGamesListWomens, setSportGamesListWomens,
+    staffGamesList, setStaffGamesList,
+    staffGamesListWomens, setStaffGamesListWomens,
+    athleticsList, setAthleticsList,
+    athleticsListWomens, setAthleticsListWomens,
+    authorityRoles, setAuthorityRoles,
+    managementRoles, setManagementRoles,
+    registrationOpen, setRegistrationOpen,
+    registrationCloseTime, setRegistrationCloseTime,
+    eventDate, setEventDate,
+    emptyGame
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -75,7 +91,7 @@ export function AdminPage({
 
     const TABS = ["Gallery", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config"];
 
-    const parseFile = (file) => {
+    const parseFile = (file, isStaffUpload = false) => {
         const reader = new FileReader();
         reader.onload = (evt) => {
             try {
@@ -97,10 +113,11 @@ export function AdminPage({
                         dept: n.dept || n.department || n.branch || n.course || "",
                         shirtSize: n["t-shirt size"] || n["tshirt size"] || n["tshirt"] || n.size || "",
                         gender: n.gender || n.sex || n.g || n.mf || n["m/f"] || "",
-                        shirtIssued: false
+                        shirtIssued: false,
+                        role: isStaffUpload ? "Staff" : (n.role || "Student")
                     };
                 }).filter(r => r.name || r.email || r.regNo);
-                if (rows.length === 0) { setXlError("Could not find required columns. Ensure headers match: s.no, name, reg.no, email, year, department, house, gender, t-shirt size."); return; }
+                if (rows.length === 0) { setXlError(`Could not find required columns. Ensure headers match: s.no, name, reg.no, email, ${isStaffUpload ? 'gender, department' : 'year, department, house, gender, t-shirt size'}.`); return; }
                 setXlPreview(rows);
             } catch (e) { setXlError("Failed to read file: " + e.message); }
         };
@@ -1215,17 +1232,32 @@ export function AdminPage({
                         </div>
 
                         {!xlPreview && studentsDB.length === 0 && (
-                            <div
-                                onDragOver={e => { e.preventDefault(); setXlDrag(true); }}
-                                onDragLeave={() => setXlDrag(false)}
-                                onDrop={e => { e.preventDefault(); setXlDrag(false); const file = e.dataTransfer.files[0]; if (file) parseFile(file); }}
-                                style={{ border: `2px dashed ${xlDrag ? "#1E3A8A" : dark ? "#444" : "#ccc"}`, borderRadius: 12, padding: isMobile ? 30 : 60, textAlign: "center", background: xlDrag ? (dark ? "rgba(30,58,138,.1)" : "#f0f8ff") : dark ? "rgba(255,255,255,.02)" : "#fafafa", transition: "all 0.2s" }}
-                            >
-                                <div style={{ fontSize: 40, marginBottom: 10 }}>📊</div>
-                                <h4 style={{ margin: "0 0 8px", color: dark ? "#ccc" : "#444" }}>Upload Student Data</h4>
-                                <div style={{ fontSize: 12, color: dark ? "#888" : "#999", marginBottom: 20 }}>Drag and drop your Excel/CSV file here. <br />Required columns: S.No, Name, Email, Reg.No, House, Year, Gender, T-Shirt Size</div>
-                                <button onClick={() => xlInputRef.current?.click()} style={{ background: "#fff", color: "#1E3A8A", border: "1px solid #1E3A8A", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Browse File</button>
-                            </div>
+                            <>
+                                <div
+                                    onDragOver={e => { e.preventDefault(); setXlDrag(true); }}
+                                    onDragLeave={() => setXlDrag(false)}
+                                    onDrop={e => { e.preventDefault(); setXlDrag(false); const file = e.dataTransfer.files[0]; if (file) parseFile(file, false); }}
+                                    style={{ border: `2px dashed ${xlDrag ? "#1E3A8A" : dark ? "#444" : "#ccc"}`, borderRadius: 12, padding: isMobile ? 30 : 60, textAlign: "center", background: xlDrag ? (dark ? "rgba(30,58,138,.1)" : "#f0f8ff") : dark ? "rgba(255,255,255,.02)" : "#fafafa", transition: "all 0.2s", marginBottom: 20 }}
+                                >
+                                    <div style={{ fontSize: 40, marginBottom: 10 }}>📊</div>
+                                    <h4 style={{ margin: "0 0 8px", color: dark ? "#ccc" : "#444" }}>Upload Student Data</h4>
+                                    <div style={{ fontSize: 12, color: dark ? "#888" : "#999", marginBottom: 20 }}>Drag and drop your Excel/CSV file here. <br />Required columns: S.No, Name, Email, Reg.No, House, Year, Gender, T-Shirt Size</div>
+                                    <button onClick={() => xlInputRef.current?.click()} style={{ background: "#fff", color: "#1E3A8A", border: "1px solid #1E3A8A", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Browse File</button>
+                                </div>
+
+                                <div
+                                    onDragOver={e => { e.preventDefault(); setXlDrag(true); }}
+                                    onDragLeave={() => setXlDrag(false)}
+                                    onDrop={e => { e.preventDefault(); setXlDrag(false); const file = e.dataTransfer.files[0]; if (file) parseFile(file, true); }}
+                                    style={{ border: `2px dashed ${xlDrag ? "#8B0000" : dark ? "#444" : "#ccc"}`, borderRadius: 12, padding: isMobile ? 30 : 60, textAlign: "center", background: xlDrag ? (dark ? "rgba(139,0,0,.1)" : "#fff0f0") : dark ? "rgba(255,255,255,.02)" : "#fafafa", transition: "all 0.2s" }}
+                                >
+                                    <div style={{ fontSize: 40, marginBottom: 10 }}>🧑‍🏫</div>
+                                    <h4 style={{ margin: "0 0 8px", color: dark ? "#ccc" : "#444" }}>Upload Staff Data</h4>
+                                    <div style={{ fontSize: 12, color: dark ? "#888" : "#999", marginBottom: 20 }}>Drag and drop Staff Excel/CSV file here. <br />Required columns: S.No, Name, Reg.No, Email, Gender, Department</div>
+                                    <input type="file" accept=".xlsx,.xls,.csv" id="staffXlInput" style={{ display: "none" }} onChange={e => { const file = e.target.files[0]; if (file) parseFile(file, true); e.target.value = ""; }} />
+                                    <button onClick={() => document.getElementById("staffXlInput").click()} style={{ background: "#fff", color: "#8B0000", border: "1px solid #8B0000", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Browse Staff File</button>
+                                </div>
+                            </>
                         )}
 
                         {xlError && <div style={{ background: "#cc000018", color: "#c00", padding: 16, borderRadius: 10, marginBottom: 20, fontSize: 13, border: "1px solid #cc000044" }}><strong>Error:</strong> {xlError} <button onClick={() => setXlError("")} style={{ background: "none", border: "none", color: "#c00", cursor: "pointer", float: "right", fontWeight: 900 }}>✕</button></div>}
@@ -1236,7 +1268,7 @@ export function AdminPage({
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}`, marginBottom: 16 }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                                         <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                            {["S.No", "Name", "Reg No", "House", "Year", "Dept", "Gender", "Size"].map(h => <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                            {["S.No", "Name", "Reg No", "Role", "House", "Year", "Dept", "Gender", "Size"].map(h => <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
                                             {xlPreview.slice(0, 5).map((s, i) => (
@@ -1244,6 +1276,7 @@ export function AdminPage({
                                                     <td style={{ padding: "6px 10px", color: dark ? "#888" : "#999" }}>{s.sno}</td>
                                                     <td style={{ padding: "6px 10px", fontWeight: 700, color: dark ? "#ccc" : "#333" }}>{s.name}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.regNo}</td>
+                                                    <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666", fontWeight: 600 }}>{s.role}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.house}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.year}</td>
                                                     <td style={{ padding: "6px 10px", color: dark ? "#aaa" : "#666" }}>{s.dept}</td>
@@ -1285,7 +1318,7 @@ export function AdminPage({
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                                         <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                            {["S.No", "Name", "Reg No", "House", "Year", "Dept", "Gender", "Size", "Issued T-Shirt"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                            {["S.No", "Name", "Reg No", "Role", "House", "Year", "Dept", "Gender", "Size"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
                                             {studentsDB.slice(0, 100).map((s, idx) => (
@@ -1293,6 +1326,7 @@ export function AdminPage({
                                                     <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || idx + 1}</td>
                                                     <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
                                                     <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
+                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555", fontWeight: 600 }}>{s.role || "Student"}</td>
                                                     <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
                                                     <td style={{ padding: "8px 12px" }}>
                                                         <input
@@ -1310,12 +1344,6 @@ export function AdminPage({
                                                     </td>
                                                     <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender}</td>
                                                     <td style={{ padding: "8px 12px", fontWeight: 700, color: "#8B0000" }}>{s.shirtSize}</td>
-                                                    <td style={{ padding: "8px 12px" }}>
-                                                        <input type="checkbox" checked={s.shirtIssued} onChange={e => {
-                                                            const isChecked = e.target.checked;
-                                                            setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, shirtIssued: isChecked } : x));
-                                                        }} style={{ cursor: "pointer", width: 16, height: 16 }} />
-                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -1438,6 +1466,39 @@ export function AdminPage({
                         <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: 18 }}>⚙️ System Settings</h3>
                         <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginBottom: 20 }}>Configure portal URLs, email connections, and other global features</div>
 
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "16px", background: dark ? "rgba(255,255,255,.05)" : "#f9f9f9", borderRadius: "12px", border: `1px solid ${dark ? "#333" : "#eee"}`, marginBottom: 20 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: dark ? "#fff" : "#333", marginBottom: 4 }}>Event Registration Status</div>
+                                    <div style={{ fontSize: 11, color: dark ? "#aaa" : "#777" }}>Toggle whether students and staff can register for events.</div>
+                                </div>
+                                <button
+                                    onClick={() => setRegistrationOpen(!registrationOpen)}
+                                    style={{
+                                        background: registrationOpen ? "#2E8B57" : "#c00", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, minWidth: 100
+                                    }}>
+                                    {registrationOpen ? "✅ OPEN" : "❌ CLOSED"}
+                                </button>
+                            </div>
+                            <div style={{ borderTop: `1px solid ${dark ? "#333" : "#ddd"}`, paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#444", marginBottom: 4 }}>Auto-Close Timer</div>
+                                    <div style={{ fontSize: 11, color: dark ? "#aaa" : "#777" }}>Automatically lock registrations after this time.</div>
+                                </div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <input
+                                        type="datetime-local"
+                                        value={registrationCloseTime || ""}
+                                        onChange={e => setRegistrationCloseTime(e.target.value)}
+                                        style={{ ...iS, marginBottom: 0, padding: "8px 12px" }}
+                                    />
+                                    {registrationCloseTime && (
+                                        <button onClick={() => setRegistrationCloseTime("")} style={{ background: "#c00", color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Clear</button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         <div style={{ ...cS, marginBottom: 20 }}>
                             <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>Captain Portal Settings</h4>
                             <label style={lS}>Captain Portal URL (for emails)</label>
@@ -1497,6 +1558,59 @@ export function AdminPage({
                                 <button onClick={exportAdminExcel} style={{ background: "linear-gradient(135deg,#8B0000,#C41E3A)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 18px", cursor: "pointer", fontWeight: 700, fontSize: 14, width: "100%", marginTop: 8 }}>📥 Export Participation List</button>
                             </div>
 
+                            <div style={{ ...cS, border: "2px solid #6B7280" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                                    <h4 style={{ color: dark ? "#fff" : "#4B5563", margin: "0", fontSize: 14 }}>Staff Registrations</h4>
+                                    <div style={{ background: "#4B556322", color: "#4B5563", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 800 }}>Staff Only</div>
+                                </div>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 20 }}>
+                                    Export a list of all staff members who have registered for events.
+                                </div>
+                                <button onClick={() => {
+                                    const staffRegs = registrations.filter(r => {
+                                        const dbStaff = studentsDB.find(s => s.regNo === r.regNo);
+                                        return dbStaff?.role === "Staff";
+                                    });
+                                    if (staffRegs.length === 0) return alert("No staff registrations found.");
+
+                                    const data = staffRegs.map(r => ({
+                                        "Name": r.name,
+                                        "Reg No": r.regNo,
+                                        "Gender": r.gender,
+                                        "Role": "Staff",
+                                        "Game Registration": r.game || "None",
+                                        "Athletic Registration": r.athletic || "None"
+                                    }));
+
+                                    const ws = XLSX.utils.json_to_sheet(data);
+                                    const wbook = XLSX.utils.book_new();
+                                    XLSX.utils.book_append_sheet(wbook, ws, "Staff Registrations");
+                                    XLSX.writeFile(wbook, `Staff_Registrations_${Date.now()}.xlsx`);
+                                }} style={{ background: "linear-gradient(135deg,#4B5563,#6B7280)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 18px", cursor: "pointer", fontWeight: 700, fontSize: 14, width: "100%", marginTop: "auto" }}>📥 Export Staff Regs</button>
+                            </div>
+                            <div style={{ ...cS, border: "2px solid #8B0000" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                                    <h4 style={{ color: dark ? "#fff" : "#8B0000", margin: "0", fontSize: 14 }}>T-Shirt Distribution</h4>
+                                    <div style={{ background: "#8B000022", color: "#8B0000", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 800 }}>T-Shirts</div>
+                                </div>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 20 }}>
+                                    Export a detailed list of all students with their T-shirt size and issuance status.
+                                </div>
+                                <button onClick={() => {
+                                    const tShirtData = studentsDB.map(s => ({
+                                        "Name": s.name,
+                                        "Reg No": s.regNo,
+                                        "Gender": s.gender,
+                                        "House": s.house,
+                                        "T-Shirt Size": s.shirtSize,
+                                        "T-Shirt Status": s.shirtIssued ? "Issued" : "Pending"
+                                    }));
+                                    const ws = XLSX.utils.json_to_sheet(tShirtData);
+                                    const wbook = XLSX.utils.book_new();
+                                    XLSX.utils.book_append_sheet(wbook, ws, "T-Shirt Distribution");
+                                    XLSX.writeFile(wbook, `T-Shirt_Distribution_${Date.now()}.xlsx`);
+                                }} style={{ background: "linear-gradient(135deg,#8B0000,#C41E3A)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 18px", cursor: "pointer", fontWeight: 700, fontSize: 14, width: "100%", marginTop: "auto" }}>📥 Export T-Shirt List</button>
+                            </div>
                             <div style={{ ...cS, border: "2px solid #1E3A8A" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                                     <h4 style={{ color: dark ? "#fff" : "#1E3A8A", margin: "0", fontSize: 14 }}>Master Reference Roster</h4>
@@ -1635,6 +1749,8 @@ export function AdminPage({
                             <ListManager dark={dark} title="🏆 Sport Games (Men)" list={sportGamesList} setList={setSportGamesList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🧭 Navbar Visible Items" list={nav} setList={setNav} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏆 Sport Games (Women)" list={sportGamesListWomens} setList={setSportGamesListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Staff Games (Men)" list={staffGamesList || []} setList={setStaffGamesList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Staff Games (Women)" list={staffGamesListWomens || []} setList={setStaffGamesListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏃 Athletics (Men)" list={athleticsList} setList={setAthleticsList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏃 Athletics (Women)" list={athleticsListWomens} setList={setAthleticsListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="👔 Sports Official Roles" list={authorityRoles} setList={setAuthorityRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />

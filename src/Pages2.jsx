@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useIsMobile, hi, tint, Count, Sheet } from "./utils.jsx";
 import { API_BASE } from "./api.js";
-export function RegistrationPage({ dark, registrations, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [] }) {
+export function RegistrationPage({ dark, registrations, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime }) {
     const [input, setInput] = useState("");
     const [student, setStudent] = useState(null);
     const [game, setGame] = useState("");
     const [athletic, setAthletic] = useState("");
+    const [otp, setOtp] = useState("");
     const [error, setError] = useState("");
     const [otpSent, setOtpSent] = useState(false);
-    const [otp, setOtp] = useState("");
-    const [isVerifying, setIsVerifying] = useState(false);
     const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
     const isMobile = useIsMobile();
+
+    const isClosed = !registrationOpen || (registrationCloseTime && new Date() > new Date(registrationCloseTime));
 
     const existing = student ? registrations.find(r => r.email === student.email) : null;
     const hObj = houses.find(h => h.name === student?.house);
@@ -93,82 +95,119 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
     return (
         <div style={{ maxWidth: 600, margin: "0 auto", padding: isMobile ? "16px 12px" : "40px 20px" }}>
             <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 6, fontSize: isMobile ? 21 : 28 }}>📝 Event Registration</h1>
-            <p style={{ color: dark ? "#aaa" : "#666", marginBottom: isMobile ? 14 : 32, fontSize: isMobile ? 13 : 15 }}>Enter your register number or email</p>
-            <div style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 14, padding: isMobile ? 16 : 28, boxShadow: "0 4px 24px rgba(0,0,0,.08)" }}>
-                {!student ? (
-                    <>
-                        <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Email or University Register Number</label>
-                        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-                            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder={isMobile ? "Email or Reg No" : "e.g. 23TD0578 or student@achariya.edu"} style={{ flex: 1, padding: "12px 14px", borderRadius: 8, fontSize: 16, border: `1px solid ${dark ? "#555" : "#ddd"}`, background: dark ? "#2a2a3e" : "#f8f8f8", color: dark ? "#fff" : "#333" }} />
-                            <button onClick={lookup} style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "12px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>Lookup</button>
-                        </div>
-                        {error && <div style={{ marginTop: 8, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
-                    </>
+            <div style={{ marginBottom: isMobile ? 14 : 24 }}>
+                {isClosed ? (
+                    <div style={{ display: "inline-block", background: dark ? "rgba(204,0,0,.15)" : "#fff0f0", border: "1px solid #cc000066", borderRadius: 50, padding: "6px 16px", color: "#c00", fontSize: 13, fontWeight: 700 }}>
+                        🔴 REGISTRATIONS CLOSED
+                    </div>
                 ) : (
-                    <>
-                        <div style={{ background: dark ? tint(hObj?.color || "#888888") : `rgba(${parseInt((hObj?.color || "#888888").slice(1, 3), 16)},${parseInt((hObj?.color || "#888888").slice(3, 5), 16)},${parseInt((hObj?.color || "#888888").slice(5, 7), 16)},.08)`, border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{hi(student.house)}</div>
-                            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
-                            <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
-                        </div>
-
-                        {!isOtpVerified ? (
-                            <div style={{ textAlign: "center", padding: "10px 0" }}>
-                                {!otpSent ? (
-                                    <>
-                                        <p style={{ color: dark ? "#ccc" : "#444", fontSize: 14, marginBottom: 16 }}>Privacy Check: Verify its you via Email OTP</p>
-                                        <button onClick={sendOtp} disabled={isVerifying} style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 50, padding: "12px 30px", cursor: "pointer", fontWeight: 700, transition: "transform .2s" }}>{isVerifying ? "Sending..." : "🔑 Send Verification Code"}</button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p style={{ color: dark ? "#ccc" : "#444", fontSize: 14, marginBottom: 8 }}>Enter the 6-digit code sent to your email</p>
-                                        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12 }}>
-                                            <input value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} placeholder="······" style={{ width: 140, textAlign: "center", letterSpacing: 4, padding: "12px", borderRadius: 8, fontSize: 20, fontWeight: 800, border: `2px solid ${dark ? "#555" : "#ddd"}`, background: dark ? "#2a2a3e" : "#fff", color: dark ? "#fff" : "#222" }} />
-                                            <button onClick={verifyOtp} disabled={isVerifying || otp.length < 6} style={{ background: "#228B22", color: "#fff", border: "none", borderRadius: 8, padding: "0 20px", cursor: "pointer", fontWeight: 700 }}>{isVerifying ? "..." : "Verify"}</button>
-                                        </div>
-                                        <button onClick={sendOtp} style={{ background: "transparent", border: "none", color: "#1E90FF", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Resend Code</button>
-                                    </>
-                                )}
-                                {error && <div style={{ marginTop: 12, color: "#c00", fontSize: 13, fontWeight: 600 }}>⚠ {error}</div>}
-                            </div>
-                        ) : (
-                            <>
-                                <div style={{ background: dark ? "rgba(34,139,34,.15)" : "#f0fff0", border: "1px solid #228B2266", borderRadius: 9, padding: "9px 12px", fontSize: 12, color: dark ? "#90EE90" : "#228B22", marginBottom: 16, textAlign: "center" }}>✅ Identity Verified Successfully!</div>
-                                <div style={{ marginBottom: 16 }}>
-                                    <label style={{ fontWeight: 700, color: dark ? "#ccc" : "#444", display: "block", marginBottom: 8, fontSize: 14 }}>⚽ Select Game</label>
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                        {(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f" ? sportGamesListWomens : sportGamesList).map(sg => <button key={sg} onClick={() => setGame(g => g === sg ? "" : sg)} style={{ padding: "8px 12px", borderRadius: 20, cursor: "pointer", fontSize: 13, fontWeight: 600, background: game === sg ? "#8B0000" : "transparent", color: game === sg ? "#fff" : dark ? "#ccc" : "#444", border: `2px solid ${game === sg ? "#8B0000" : dark ? "#444" : "#ddd"}` }}>{game === sg ? "✓ " : ""}{sg}</button>)}
-                                    </div>
-                                </div>
-                                <div style={{ marginBottom: 18 }}>
-                                    <label style={{ fontWeight: 700, color: dark ? "#ccc" : "#444", display: "block", marginBottom: 8, fontSize: 14 }}>🏃 Select Athletic Event</label>
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                        {(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f" ? athleticsListWomens : athleticsList).map(a => <button key={a} onClick={() => setAthletic(at => at === a ? "" : a)} style={{ padding: "8px 12px", borderRadius: 20, cursor: "pointer", fontSize: 13, fontWeight: 600, background: athletic === a ? "#4B0082" : "transparent", color: athletic === a ? "#fff" : dark ? "#ccc" : "#444", border: `2px solid ${athletic === a ? "#4B0082" : dark ? "#444" : "#ddd"}` }}>{athletic === a ? "✓ " : ""}{a}</button>)}
-                                    </div>
-                                </div>
-                                {error && <div style={{ marginBottom: 10, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
-                                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 10 }}>
-                                    <div style={{ fontSize: 12, color: dark ? "#888" : "#aaa" }}>{game && <span style={{ color: "#8B0000", fontWeight: 600 }}>⚽ {game}</span>}{game && athletic && " · "}{athletic && <span style={{ color: "#4B0082", fontWeight: 600 }}>🏃 {athletic}</span>}{!game && !athletic && "No events selected yet"}</div>
-                                    <button onClick={submit} disabled={!game && !athletic} style={{ background: (game || athletic) ? "linear-gradient(135deg,#8B0000,#C41E3A)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px 22px", cursor: (game || athletic) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 15, textAlign: "center" }}>Register & Lock 🔒</button>
-                                </div>
-                            </>
-                        )}
-                    </>
+                    <div style={{ display: "inline-block", background: dark ? "rgba(46,139,87,.15)" : "#f0fff0", border: "1px solid #2E8B5766", borderRadius: 50, padding: "6px 16px", color: "#2E8B57", fontSize: 13, fontWeight: 700 }}>
+                        🟢 REGISTRATION OPEN {registrationCloseTime && `• Closes at ${new Date(registrationCloseTime).toLocaleString()}`}
+                    </div>
                 )}
             </div>
+            <p style={{ color: dark ? "#aaa" : "#666", marginBottom: isMobile ? 14 : 24, fontSize: isMobile ? 13 : 15 }}>Enter your register number or email</p>
+            {isClosed && (
+                <div style={{ background: "#cc000015", border: "1px solid #cc000044", borderRadius: 14, padding: "20px", textAlign: "center", marginBottom: 20 }}>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>🔒</div>
+                    <h3 style={{ margin: "0 0 8px", color: dark ? "#ff6b6b" : "#c00" }}>Registrations Closed</h3>
+                    <p style={{ margin: 0, fontSize: 13, color: dark ? "#aaa" : "#555" }}>The official registration period has been closed by the Sports Administrator. Please contact them if you have any questions.</p>
+                </div>
+            )}
+            {!isClosed && (
+                <div style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 14, padding: isMobile ? 16 : 28, boxShadow: "0 4px 24px rgba(0,0,0,.08)" }}>
+                    {!student ? (
+                        <>
+                            <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Email or University Register Number</label>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                                <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder={isMobile ? "Email or Reg No" : "e.g. 23TD0578 or student@achariya.edu"} style={{ flex: 1, padding: "12px 14px", borderRadius: 8, fontSize: 16, border: `1px solid ${dark ? "#555" : "#ddd"}`, background: dark ? "#2a2a3e" : "#f8f8f8", color: dark ? "#fff" : "#333" }} />
+                                <button onClick={lookup} style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "12px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>Lookup</button>
+                            </div>
+                            {error && <div style={{ marginTop: 8, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
+                        </>
+                    ) : (
+                        <>
+                            <div style={{ background: dark ? tint(hObj?.color || "#888888") : `rgba(${parseInt((hObj?.color || "#888888").slice(1, 3), 16)},${parseInt((hObj?.color || "#888888").slice(3, 5), 16)},${parseInt((hObj?.color || "#888888").slice(5, 7), 16)},.08)`, border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+                                <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{hi(student.house)}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
+                                <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
+                            </div>
+
+                            {!isOtpVerified ? (
+                                <div style={{ textAlign: "center", padding: "10px 0" }}>
+                                    {!otpSent ? (
+                                        <>
+                                            <p style={{ color: dark ? "#ccc" : "#444", fontSize: 14, marginBottom: 16 }}>Privacy Check: Verify its you via Email OTP</p>
+                                            <button onClick={sendOtp} disabled={isVerifying} style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 50, padding: "12px 30px", cursor: "pointer", fontWeight: 700, transition: "transform .2s" }}>{isVerifying ? "Sending..." : "🔑 Send Verification Code"}</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p style={{ color: dark ? "#ccc" : "#444", fontSize: 14, marginBottom: 8 }}>Enter the 6-digit code sent to your email</p>
+                                            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12 }}>
+                                                <input value={otp} onChange={e => setOtp(e.target.value)} maxLength={6} placeholder="······" style={{ width: 140, textAlign: "center", letterSpacing: 4, padding: "12px", borderRadius: 8, fontSize: 20, fontWeight: 800, border: `2px solid ${dark ? "#555" : "#ddd"}`, background: dark ? "#2a2a3e" : "#fff", color: dark ? "#fff" : "#222" }} />
+                                                <button onClick={verifyOtp} disabled={isVerifying || otp.length < 6} style={{ background: "#228B22", color: "#fff", border: "none", borderRadius: 8, padding: "0 20px", cursor: "pointer", fontWeight: 700 }}>{isVerifying ? "..." : "Verify"}</button>
+                                            </div>
+                                            <button onClick={sendOtp} style={{ background: "transparent", border: "none", color: "#1E90FF", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Resend Code</button>
+                                        </>
+                                    )}
+                                    {error && <div style={{ marginTop: 12, color: "#c00", fontSize: 13, fontWeight: 600 }}>⚠ {error}</div>}
+                                </div>
+                            ) : (
+                                <>
+                                    <div style={{ background: dark ? "rgba(34,139,34,.15)" : "#f0fff0", border: "1px solid #228B2266", borderRadius: 9, padding: "9px 12px", fontSize: 12, color: dark ? "#90EE90" : "#228B22", marginBottom: 16, textAlign: "center" }}>✅ Identity Verified Successfully!</div>
+                                    <div style={{ marginBottom: 20 }}>
+                                        <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>{student.role === "Staff" ? "Staff Games" : "Team Games (Select One)"}</label>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                            {student.role === "Staff" ? (
+                                                (student.gender?.toLowerCase() === "female" ? staffGamesListWomens : staffGamesList).map(g => (
+                                                    <button key={g} onClick={() => setGame(game === g ? "" : g)} style={{ background: game === g ? "#8B0000" : "transparent", color: game === g ? "#fff" : dark ? "#aaa" : "#555", border: `1px solid ${game === g ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", fontSize: 13, transition: "all .2s" }}>{g}</button>
+                                                ))
+                                            ) : (
+                                                (student.gender?.toLowerCase() === "female" ? sportGamesListWomens : sportGamesList).map(g => (
+                                                    <button key={g} onClick={() => setGame(game === g ? "" : g)} style={{ background: game === g ? "#8B0000" : "transparent", color: game === g ? "#fff" : dark ? "#aaa" : "#555", border: `1px solid ${game === g ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", fontSize: 13, transition: "all .2s" }}>{g}</button>
+                                                ))
+                                            )}
+                                            {/* Fallback if no games defined */}
+                                            {student.role === "Staff" && (student.gender?.toLowerCase() === "female" ? staffGamesListWomens : staffGamesList).length === 0 && <span style={{ fontSize: 12, color: dark ? "#888" : "#999", fontStyle: "italic" }}>No staff games available</span>}
+                                            {student.role !== "Staff" && (student.gender?.toLowerCase() === "female" ? sportGamesListWomens : sportGamesList).length === 0 && <span style={{ fontSize: 12, color: dark ? "#888" : "#999", fontStyle: "italic" }}>No team games available</span>}
+                                        </div>
+                                    </div>
+                                    {student.role !== "Staff" && (
+                                        <div style={{ marginBottom: 24 }}>
+                                            <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Athletic Events (Select One)</label>
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                                {(student.gender?.toLowerCase() === "female" ? athleticsListWomens : athleticsList).map(a => (
+                                                    <button key={a} onClick={() => setAthletic(athletic === a ? "" : a)} style={{ background: athletic === a ? "#4B0082" : "transparent", color: athletic === a ? "#fff" : dark ? "#aaa" : "#555", border: `1px solid ${athletic === a ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", fontSize: 13, transition: "all .2s" }}>{a}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {error && <div style={{ marginBottom: 10, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
+                                    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 10 }}>
+                                        <div style={{ fontSize: 12, color: dark ? "#888" : "#aaa" }}>{game && <span style={{ color: "#8B0000", fontWeight: 600 }}>⚽ {game}</span>}{game && athletic && " · "}{athletic && <span style={{ color: "#4B0082", fontWeight: 600 }}>🏃 {athletic}</span>}{!game && !athletic && "No events selected yet"}</div>
+                                        <button onClick={submit} disabled={!game && !athletic} style={{ background: (game || athletic) ? "linear-gradient(135deg,#8B0000,#C41E3A)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px 22px", cursor: (game || athletic) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 15, textAlign: "center" }}>Register & Lock 🔒</button>
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
 
-export function ScoreboardPage({ dark, houses, pointLog }) {
+export function ScoreboardPage({ dark, houses, pointLog, registrationOpen = true, registrationCloseTime }) {
     const sh = [...houses].sort((a, b) => b.points - a.points);
     const isMobile = useIsMobile();
+    const isClosed = !registrationOpen || (registrationCloseTime && new Date() > new Date(registrationCloseTime));
+
     return (
         <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "16px 12px" : "40px 20px" }}>
             <div style={{ textAlign: "center", marginBottom: isMobile ? 20 : 40 }}>
                 <div style={{ fontSize: isMobile ? 36 : 48, marginBottom: 6 }}>🏆</div>
                 <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: 0, fontSize: isMobile ? 21 : 28 }}>Live Scoreboard</h1>
-                <p style={{ color: dark ? "#aaa" : "#666", fontSize: 12 }}>🟢 Live · {new Date().toLocaleTimeString()}</p>
+                <p style={{ color: dark ? "#aaa" : "#666", fontSize: 12, marginBottom: 16 }}>🟢 Live · {new Date().toLocaleTimeString()}</p>
             </div>
             {sh.map((h, i) => (
                 <div key={h.id} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `2px solid ${i === 0 ? h.color : dark ? "#333" : h.color + "44"}`, borderRadius: 14, padding: isMobile ? 12 : 24, marginBottom: isMobile ? 8 : 16, display: "flex", alignItems: "center", gap: isMobile ? 10 : 20, boxShadow: i === 0 ? `0 8px 40px ${h.color}44` : "0 2px 12px rgba(0,0,0,.06)", flexWrap: "wrap" }}>

@@ -30,10 +30,14 @@ export default function App() {
   const [nav, setNav] = useState([]);
   const [sportGamesList, setSportGamesList] = useState([]);
   const [sportGamesListWomens, setSportGamesListWomens] = useState([]);
+  const [staffGamesList, setStaffGamesList] = useState([]);
+  const [staffGamesListWomens, setStaffGamesListWomens] = useState([]);
   const [athleticsList, setAthleticsList] = useState([]);
   const [athleticsListWomens, setAthleticsListWomens] = useState([]);
   const [authorityRoles, setAuthorityRoles] = useState([]);
   const [managementRoles, setManagementRoles] = useState([]);
+  const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [registrationCloseTime, setRegistrationCloseTime] = useState("");
   const [eventDate, setEventDate] = useState({ date: "", time: "" });
   const [emptyGame, setEmptyGame] = useState({ name: "", type: "game", venue: "", official: "", status: "Upcoming", start: "", end: "", participants: "" });
 
@@ -58,10 +62,14 @@ export default function App() {
         if (data.nav) setNav(data.nav);
         if (data.sportGamesList) setSportGamesList(data.sportGamesList);
         if (data.sportGamesListWomens) setSportGamesListWomens(data.sportGamesListWomens);
+        if (data.staffGamesList) setStaffGamesList(data.staffGamesList);
+        if (data.staffGamesListWomens) setStaffGamesListWomens(data.staffGamesListWomens);
         if (data.athleticsList) setAthleticsList(data.athleticsList);
         if (data.athleticsListWomens) setAthleticsListWomens(data.athleticsListWomens);
         if (data.authorityRoles) setAuthorityRoles(data.authorityRoles);
         if (data.managementRoles) setManagementRoles(data.managementRoles);
+        if (typeof data.registrationOpen === 'boolean') setRegistrationOpen(data.registrationOpen);
+        if (data.registrationCloseTime) setRegistrationCloseTime(data.registrationCloseTime);
         if (data.eventDate) setEventDate(data.eventDate);
         if (data.emptyGame) setEmptyGame(data.emptyGame);
 
@@ -115,10 +123,14 @@ export default function App() {
   const setNavSync = wrap(setNav, "nav");
   const setSportGamesListSync = wrap(setSportGamesList, "sportGamesList");
   const setSportGamesListWomensSync = wrap(setSportGamesListWomens, "sportGamesListWomens");
+  const setStaffGamesListSync = wrap(setStaffGamesList, "staffGamesList");
+  const setStaffGamesListWomensSync = wrap(setStaffGamesListWomens, "staffGamesListWomens");
   const setAthleticsListSync = wrap(setAthleticsList, "athleticsList");
   const setAthleticsListWomensSync = wrap(setAthleticsListWomens, "athleticsListWomens");
   const setAuthorityRolesSync = wrap(setAuthorityRoles, "authorityRoles");
   const setManagementRolesSync = wrap(setManagementRoles, "managementRoles");
+  const setRegistrationOpenSync = wrap(setRegistrationOpen, "registrationOpen");
+  const setRegistrationCloseTimeSync = wrap(setRegistrationCloseTime, "registrationCloseTime");
   const setEventDateSync = wrap(setEventDate, "eventDate");
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f0f1a" : "#f4f4f8", color: dark ? "#fff" : "#8B0000", fontSize: 24, fontWeight: 800 }}>⚡ Loading Achariya Sports...</div>;
@@ -157,8 +169,8 @@ export default function App() {
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
         {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
-        {active === "Registration" && <RegistrationPage dark={dark} registrations={registrations} setRegistrations={setRegistrationsSync} studentsDB={studentsDB} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
-        {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} />}
+        {active === "Registration" && <RegistrationPage dark={dark} registrations={registrations} setRegistrations={setRegistrationsSync} studentsDB={studentsDB} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
+        {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
         {active === "Gallery" && <GalleryPage dark={dark} gallery={gallery} />}
         {active === "Admin" && <AdminPage
           dark={dark}
@@ -175,10 +187,14 @@ export default function App() {
           nav={nav} setNav={setNavSync}
           sportGamesList={sportGamesList} setSportGamesList={setSportGamesListSync}
           sportGamesListWomens={sportGamesListWomens} setSportGamesListWomens={setSportGamesListWomensSync}
+          staffGamesList={staffGamesList} setStaffGamesList={setStaffGamesListSync}
+          staffGamesListWomens={staffGamesListWomens} setStaffGamesListWomens={setStaffGamesListWomensSync}
           athleticsList={athleticsList} setAthleticsList={setAthleticsListSync}
           athleticsListWomens={athleticsListWomens} setAthleticsListWomens={setAthleticsListWomensSync}
           authorityRoles={authorityRoles} setAuthorityRoles={setAuthorityRolesSync}
           managementRoles={managementRoles} setManagementRoles={setManagementRolesSync}
+          registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpenSync}
+          registrationCloseTime={registrationCloseTime} setRegistrationCloseTime={setRegistrationCloseTimeSync}
           eventDate={eventDate} setEventDate={setEventDateSync}
           emptyGame={emptyGame}
         />}
