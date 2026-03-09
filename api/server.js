@@ -84,6 +84,13 @@ app.use("/api/", globalLimiter);
 const otpStore = {}; // DEPRECATED: Use Otp model
 
 // ─── Security: Block Non-Browser API Testing Tools ──────────────────────────
+const allowedHosts = [
+  "acet-sports-seven.vercel.app",
+  "acetsports.favoflex.com",
+  "localhost",
+  "127.0.0.1"
+];
+
 const requireValidOrigin = (req, res, next) => {
   if (req.path === "/api/health") return next();
 
@@ -94,11 +101,17 @@ const requireValidOrigin = (req, res, next) => {
     origin = origin.slice(0, -1);
   }
 
+  // Also check Host header as a fallback for same-origin requests
+  // (Browsers don't send Origin for same-origin GET requests)
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "";
+  const hostBase = host.split(":")[0]; // strip port if present
+  const isAllowedHost = allowedHosts.includes(hostBase) || /^acet-sports-[a-z0-9-]+\.vercel\.app$/.test(hostBase);
+
   // Only enforce strict origin checks in production (Vercel) to avoid breaking local Vite proxies
   const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
 
-  if (isProd && (!origin || !isAllowedOrigin(origin))) {
-    console.warn(`Blocked API request from unauthorized origin: ${origin || 'NO_ORIGIN'}`);
+  if (isProd && !isAllowedHost && (!origin || !isAllowedOrigin(origin))) {
+    console.warn(`Blocked API request. Host: ${host}, Origin: ${origin || 'NONE'}`);
     return res.status(403).json({ error: "Access Denied: strictly frontend access only." });
   }
 
