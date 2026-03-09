@@ -16,6 +16,7 @@ import { State, Otp } from "./models.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
 app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
 // Security Headers
 app.use(helmet({
