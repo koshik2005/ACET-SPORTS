@@ -5,7 +5,6 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import mongoSanitizePlugin from "express-mongo-sanitize";
 import mongoose from "mongoose";
 import compression from "compression";
 import path from "path";
@@ -15,62 +14,29 @@ import { State, Otp } from "./models.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
 app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
-// Security Headers
-app.use(helmet({
-  contentSecurityPolicy: false, // disable CSP so Cloudinary/ImgBB images load correctly on frontends
-  crossOriginEmbedderPolicy: false,
-}));
-const mongoSanitize = typeof mongoSanitizePlugin === "function" ? mongoSanitizePlugin : mongoSanitizePlugin.default;
-app.use(mongoSanitize()); // Prevent NoSQL injection attacks by stripping $, . etc.
-
+app.use(helmet({ contentSecurityPolicy: false })); // disable CSP so Cloudinary images load
 // Configure CORS for all routes (allows frontend to talk to backend from different subdomains)
-const allowedOrigins = [
-  "https://acet-sports-seven.vercel.app",
-  "https://acetsports.favoflex.com",
-  "http://localhost:5173", // Allow local development
-  "http://localhost:3001"
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.options(/(.*)/, cors()); // Handle preflight requests for all routes
 app.use(express.json({ limit: "20mb" })); // allow larger payloads for image base64
 
-// ─── Environment Validation ──────────────────────────────────────────────────
-if (!process.env.JWT_SECRET) {
-  console.warn("⚠️ WARNING: JWT_SECRET environment variable is not set. Using fallback secret. THIS IS INSECURE FOR PRODUCTION!");
-}
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-production";
-
-if (!process.env.MONGODB_URI) {
-  console.warn("⚠️ WARNING: MONGODB_URI is not set. Looking for local database.");
-}
 
 // Rate Limiters
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5000, // allow 5000 req per IP per 15 min — enough for 3000 active users (many may share school nat IP)
-  validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many requests from this IP, please try again after 15 minutes" }
 });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50, // Increased from 10 to 50 to support multi-user NAT and debugging
-  validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many login attempts, please try again later" }
 });
 
