@@ -25,12 +25,20 @@ const allowedOrigins = [
   "http://localhost:3001"
 ];
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return false;
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow Vercel preview deployments (e.g., https://acet-sports-r7cef9k0u-koshik2005s-projects.vercel.app)
+  if (/^https:\/\/acet-sports-[a-z0-9]+-[a-z0-9-]+\.vercel\.app$/.test(origin)) return true;
+  return false;
+};
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Browsers don't send Origin for same-origin GETs.
     // We allow !origin here, but requireValidOrigin middleware will later catch
     // malicious !origin requests that also lack Referer headers.
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -79,12 +87,17 @@ const otpStore = {}; // DEPRECATED: Use Otp model
 const requireValidOrigin = (req, res, next) => {
   if (req.path === "/api/health") return next();
 
-  const origin = req.headers.origin || req.headers.referer;
+  let origin = req.headers.origin || req.headers.referer;
+
+  // Clean up referer trailing slashes to match origin format if needed
+  if (origin && origin.endsWith('/')) {
+    origin = origin.slice(0, -1);
+  }
 
   // Only enforce strict origin checks in production (Vercel) to avoid breaking local Vite proxies
   const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
 
-  if (isProd && (!origin || !allowedOrigins.some(allowed => origin.startsWith(allowed)))) {
+  if (isProd && (!origin || !isAllowedOrigin(origin))) {
     console.warn(`Blocked API request from unauthorized origin: ${origin || 'NO_ORIGIN'}`);
     return res.status(403).json({ error: "Access Denied: strictly frontend access only." });
   }
