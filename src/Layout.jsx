@@ -90,8 +90,8 @@ export function Footer({ dark, nav = [], houses = [] }) {
                 </div>
                 <div>
                     <div style={{ fontWeight: 700, marginBottom: 7, opacity: .9, fontSize: 13 }}>Houses</div>
-                    {houses.map(h => (
-                        <div key={h.name} style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                    {houses.map((h, i) => (
+                        <div key={h.id || h.name || i} style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
                             <div style={{ width: 8, height: 8, borderRadius: "50%", background: h.color, flexShrink: 0 }} />
                             <span style={{ opacity: .8, fontSize: 12 }}>{h.name}</span>
                         </div>
