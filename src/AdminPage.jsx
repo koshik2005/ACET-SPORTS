@@ -33,7 +33,11 @@ export function AdminPage({
     registrationOpen, setRegistrationOpen,
     registrationCloseTime, setRegistrationCloseTime,
     eventDate, setEventDate,
-    emptyGame
+    starPlayers, setStarPlayers,
+    emptyGame,
+    closedEvents, setClosedEvents,
+    maxGames, setMaxGames,
+    maxAthletics, setMaxAthletics
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -89,7 +93,10 @@ export function AdminPage({
     const [wfEvent, setWfEvent] = useState("All");  // All | specific event name
     const [wfHouse, setWfHouse] = useState("All");  // All | house name
 
-    const TABS = ["Gallery", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config"];
+    const [starPlayerForm, setStarPlayerForm] = useState({ name: "", dept: "", year: "", game: "", house: "", img: null });
+    const [spUploading, setSpUploading] = useState(false);
+
+    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config"];
 
     const parseFile = (file, isStaffUpload = false) => {
         const reader = new FileReader();
@@ -781,6 +788,66 @@ export function AdminPage({
                             </div>
                         );
                     })}
+                </div>
+            )}
+            {tab === "Star Players" && (
+                <div>
+                    <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>🌟 Star Players Management</h3>
+                    <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginBottom: 14 }}>Highlight top performers on the homepage</div>
+
+                    <div style={{ ...cS, marginBottom: 18 }}>
+                        <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>Add New Star Player</h4>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                            <div><label style={lS}>Name</label><input value={starPlayerForm.name} onChange={e => setStarPlayerForm(f => ({ ...f, name: e.target.value }))} placeholder="Player Name" style={iS} /></div>
+                            <div>
+                                <label style={lS}>House</label>
+                                <select value={starPlayerForm.house} onChange={e => setStarPlayerForm(f => ({ ...f, house: e.target.value }))} style={iS}>
+                                    <option value="">Select House</option>
+                                    {houses.map(h => <option key={h.id} value={h.name}>{h.name}</option>)}
+                                </select>
+                            </div>
+                            <div><label style={lS}>Department</label><input value={starPlayerForm.dept} onChange={e => setStarPlayerForm(f => ({ ...f, dept: e.target.value }))} placeholder="e.g. CSE" style={iS} /></div>
+                            <div><label style={lS}>Year</label><input value={starPlayerForm.year} onChange={e => setStarPlayerForm(f => ({ ...f, year: e.target.value }))} placeholder="e.g. III" style={iS} /></div>
+                            <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}><label style={lS}>Game / Event (for which they are a star)</label><input value={starPlayerForm.game} onChange={e => setStarPlayerForm(f => ({ ...f, game: e.target.value }))} placeholder="e.g. Football / 100m Dash" style={iS} /></div>
+                        </div>
+
+                        <label style={lS}>Player Photo</label>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                            <ImgUploadBtn img={starPlayerForm.img} onUpload={d => setStarPlayerForm({ ...starPlayerForm, img: d })} dark={dark} />
+                            <div style={{ fontSize: 11, color: dark ? "#888" : "#999" }}>Square image recommended (1:1)</div>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                if (!starPlayerForm.name || !starPlayerForm.house || !starPlayerForm.img) return alert("Name, House, and Image are required!");
+                                setStarPlayers([...starPlayers, { ...starPlayerForm, id: Date.now() }]);
+                                setStarPlayerForm({ name: "", dept: "", year: "", game: "", house: "", img: null });
+                            }}
+                            style={{ background: "linear-gradient(135deg,#D4AF37,#B8860B)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 20px", cursor: "pointer", fontWeight: 700, fontSize: 14, width: "100%", marginTop: 10 }}
+                        >
+                            ⭐ Add Star Player
+                        </button>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+                        {starPlayers.map((p, idx) => (
+                            <div key={p.id || idx} style={{ ...cS, padding: 16 }}>
+                                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                                    {p.img ? <img src={p.img} alt={p.name} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: `2px solid #D4AF37` }} /> : <div style={{ width: 64, height: 64, borderRadius: "50%", background: dark ? "#333" : "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>👤</div>}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 10, fontWeight: 800, color: "#D4AF37", textTransform: "uppercase", marginBottom: 2 }}>{p.house}</div>
+                                        <div style={{ fontSize: 16, fontWeight: 800, color: dark ? "#fff" : "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                                        <div style={{ fontSize: 11, color: dark ? "#aaa" : "#666" }}>{p.dept} - {p.year}</div>
+                                        <div style={{ fontSize: 11, color: dark ? "#aaa" : "#666", marginTop: 2 }}>🏆 {p.game}</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: "flex", gap: 8, marginTop: 14, borderTop: `1px solid ${dark ? "#333" : "#f0f0f0"}`, paddingTop: 14 }}>
+                                    <button onClick={() => setConfirmDelete({ message: `Are you sure you want to remove ${p.name}?`, onConfirm: () => setStarPlayers(starPlayers.filter(x => x.id !== p.id)) })} style={{ flex: 1, background: "#cc000018", color: "#c00", border: "none", borderRadius: 6, padding: "8px 0", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>🗑 Remove</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {starPlayers.length === 0 && <div style={{ padding: 20, color: dark ? "#666" : "#aaa", textAlign: "center", background: dark ? "rgba(255,255,255,.02)" : "#f9f9f9", borderRadius: 12, border: `1px solid ${dark ? "#333" : "#eee"}`, fontSize: 13 }}>No Star Players added yet.</div>}
                 </div>
             )}
             {tab === "Houses" && (
@@ -1497,6 +1564,34 @@ export function AdminPage({
                                     )}
                                 </div>
                             </div>
+                            <div style={{ borderTop: `1px solid ${dark ? "#333" : "#ddd"}`, paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#444", marginBottom: 4 }}>Maximum Team Games</div>
+                                    <div style={{ fontSize: 11, color: dark ? "#aaa" : "#777" }}>Max number of team games a participant can register for.</div>
+                                </div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <input
+                                        type="number" min="1" max="10"
+                                        value={maxGames}
+                                        onChange={e => setMaxGames(parseInt(e.target.value) || 1)}
+                                        style={{ ...iS, marginBottom: 0, padding: "8px 12px", width: 70 }}
+                                    />
+                                </div>
+                            </div>
+                            <div style={{ borderTop: `1px solid ${dark ? "#333" : "#ddd"}`, paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#444", marginBottom: 4 }}>Maximum Athletic Events</div>
+                                    <div style={{ fontSize: 11, color: dark ? "#aaa" : "#777" }}>Max number of athletic events a participant can register for.</div>
+                                </div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <input
+                                        type="number" min="1" max="10"
+                                        value={maxAthletics}
+                                        onChange={e => setMaxAthletics(parseInt(e.target.value) || 1)}
+                                        style={{ ...iS, marginBottom: 0, padding: "8px 12px", width: 70 }}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         <div style={{ ...cS, marginBottom: 20 }}>
@@ -1746,13 +1841,13 @@ export function AdminPage({
                         </div>
 
                         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, alignItems: "start" }}>
-                            <ListManager dark={dark} title="🏆 Sport Games (Men)" list={sportGamesList} setList={setSportGamesList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Sport Games (Men)" list={sportGamesList} setList={setSportGamesList} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🧭 Navbar Visible Items" list={nav} setList={setNav} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="🏆 Sport Games (Women)" list={sportGamesListWomens} setList={setSportGamesListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="🏆 Staff Games (Men)" list={staffGamesList || []} setList={setStaffGamesList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="🏆 Staff Games (Women)" list={staffGamesListWomens || []} setList={setStaffGamesListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="🏃 Athletics (Men)" list={athleticsList} setList={setAthleticsList} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="🏃 Athletics (Women)" list={athleticsListWomens} setList={setAthleticsListWomens} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Sport Games (Women)" list={sportGamesListWomens} setList={setSportGamesListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Staff Games (Men)" list={staffGamesList || []} setList={setStaffGamesList} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏆 Staff Games (Women)" list={staffGamesListWomens || []} setList={setStaffGamesListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏃 Athletics (Men)" list={athleticsList} setList={setAthleticsList} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏃 Athletics (Women)" list={athleticsListWomens} setList={setAthleticsListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="👔 Sports Official Roles" list={authorityRoles} setList={setAuthorityRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏛️ Management Roles" list={managementRoles} setList={setManagementRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                         </div>
@@ -1888,8 +1983,18 @@ export function AdminPage({
     );
 }
 
-function ListManager({ title, list, setList, dark, isMobile, lS, iS, cS }) {
+function ListManager({ title, list, setList, closedEvents, setClosedEvents, dark, isMobile, lS, iS, cS }) {
     const [val, setVal] = useState("");
+
+    const toggleClosed = (event) => {
+        if (!closedEvents || !setClosedEvents) return;
+        if (closedEvents.includes(event)) {
+            setClosedEvents(closedEvents.filter(e => e !== event));
+        } else {
+            setClosedEvents([...closedEvents, event]);
+        }
+    };
+
     return (
         <div style={cS}>
             <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>{title}</h4>
@@ -1899,11 +2004,20 @@ function ListManager({ title, list, setList, dark, isMobile, lS, iS, cS }) {
             </div>
             {list.length === 0 ? <div style={{ fontSize: 12, color: dark ? "#666" : "#aaa" }}>List is empty</div> : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {list.map(obj => (
-                        <div key={obj} style={{ background: dark ? "rgba(255,255,255,.05)" : "#f0f0f0", padding: "6px 12px", borderRadius: 20, fontSize: 13, color: dark ? "#ccc" : "#333", display: "flex", alignItems: "center", gap: 8, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
-                            {obj} <button onClick={() => setList(list.filter(x => x !== obj))} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
-                        </div>
-                    ))}
+                    {list.map(obj => {
+                        const isClosed = closedEvents?.includes(obj);
+                        return (
+                            <div key={obj} style={{ background: dark ? "rgba(255,255,255,.05)" : "#f0f0f0", padding: "6px 12px", borderRadius: 20, fontSize: 13, color: dark ? "#ccc" : "#333", display: "flex", alignItems: "center", gap: 8, border: `1px solid ${isClosed ? "#c00" : (dark ? "#333" : "#e5e5e5")}` }}>
+                                {closedEvents && (
+                                    <button onClick={() => toggleClosed(obj)} title={isClosed ? "Click to Open" : "Click to Close"} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
+                                        {isClosed ? "🔴" : "🟢"}
+                                    </button>
+                                )}
+                                <span style={{ textDecoration: isClosed ? "line-through" : "none", opacity: isClosed ? 0.6 : 1 }}>{obj}</span>
+                                <button onClick={() => setList(list.filter(x => x !== obj))} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -3,7 +3,7 @@ import { useIsMobile } from "./utils.jsx";
 export function Header({ active, setActive, dark, setDark, nav = [], games = [] }) {
     const [menu, setMenu] = useState(false);
     const isMobile = useIsMobile();
-    const navIcons = { Home: "🏠", Events: "📅", Registration: "📝", Scoreboard: "🏆", Gallery: "🎨", Captain: "⚡", Admin: "⚙", Winners: "🥇" };
+    const navIcons = { Home: "🏠", Events: "📅", Registration: "📝", Scoreboard: "🏆", Gallery: "🎨", Captain: "⚡", Admin: "⚙", Winners: "🥇", "Star Players": "🌟" };
     const liveEvents = games.filter(g => g.status === "Live");
 
     return (

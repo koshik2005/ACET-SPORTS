@@ -18,7 +18,7 @@ app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
 app.use(helmet({ contentSecurityPolicy: false })); // disable CSP so Cloudinary images load
 // Configure CORS for all routes (allows frontend to talk to backend from different subdomains)
 app.use(cors({
-  origin: "*",
+  origin: "https://acet-sports-seven.vercel.app",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
@@ -98,7 +98,7 @@ const getInitialState = () => ({
   athleticsList: [],
   authorityRoles: [],
   managementRoles: [],
-  nav: ["Home", "Events", "Registration", "Scoreboard", "Gallery", "Captain", "Admin"],
+  nav: ["Home", "Events", "Registration", "Scoreboard", "Star Players", "Gallery", "Captain", "Admin"],
   eventDate: { date: "", time: "" },
   emptyGame: { name: "", venue: "", official: "", status: "Upcoming", start: "", end: "", participants: "" },
 });
@@ -208,6 +208,8 @@ app.get("/api/public-state", async (req, res) => {
     });
 
     const result = { ...state.toObject ? state.toObject() : state, houses: sanitizedHouses };
+    delete result.activeAdminToken; // <--- ADDED: Security fix, do not leak admin token to public state
+
     stateCache = { data: result, ts: Date.now() }; // update cache
     res.json(result);
   } catch (err) {

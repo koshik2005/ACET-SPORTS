@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useIsMobile, hi, tint, Count, Sheet } from "./utils.jsx";
 import { API_BASE } from "./api.js";
-export function RegistrationPage({ dark, registrations, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime }) {
+export function RegistrationPage({ dark, registrations, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime, closedEvents = [], maxGames = 1, maxAthletics = 1 }) {
     const [input, setInput] = useState("");
     const [student, setStudent] = useState(null);
-    const [game, setGame] = useState("");
-    const [athletic, setAthletic] = useState("");
+    const [gameSel, setGameSel] = useState([]);
+    const [athleticSel, setAthleticSel] = useState([]);
     const [otp, setOtp] = useState("");
     const [error, setError] = useState("");
     const [otpSent, setOtpSent] = useState(false);
@@ -19,7 +19,7 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
     const hObj = houses.find(h => h.name === student?.house);
 
     const lookup = async () => {
-        setError(""); setGame(""); setAthletic(""); setOtpSent(false); setIsOtpVerified(false); setOtp("");
+        setError(""); setGameSel([]); setAthleticSel([]); setOtpSent(false); setIsOtpVerified(false); setOtp("");
         const f = studentsDB.find(s => s.email === input.trim() || s.regNo === input.trim());
         if (!f) {
             setError("Student not found. Check your email or register number.");
@@ -70,9 +70,9 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
     };
 
     const submit = () => {
-        if (!game && !athletic) { setError("Please select at least one event."); return; }
-        setRegistrations(p => [...p.filter(r => r.email !== student.email), { ...student, game, athletic, registeredAt: new Date().toLocaleTimeString() }]);
-        setStudent(null); setInput(""); setGame(""); setAthletic(""); setError(""); setIsOtpVerified(false); setOtpSent(false);
+        if (gameSel.length === 0 && athleticSel.length === 0) { setError("Please select at least one event."); return; }
+        setRegistrations(p => [...p.filter(r => r.email !== student.email), { ...student, game: gameSel.join(", "), athletic: athleticSel.join(", "), registeredAt: new Date().toLocaleTimeString() }]);
+        setStudent(null); setInput(""); setGameSel([]); setAthleticSel([]); setError(""); setIsOtpVerified(false); setOtpSent(false);
     };
 
     if (student && existing) return (
@@ -156,16 +156,32 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                                 <>
                                     <div style={{ background: dark ? "rgba(34,139,34,.15)" : "#f0fff0", border: "1px solid #228B2266", borderRadius: 9, padding: "9px 12px", fontSize: 12, color: dark ? "#90EE90" : "#228B22", marginBottom: 16, textAlign: "center" }}>✅ Identity Verified Successfully!</div>
                                     <div style={{ marginBottom: 20 }}>
-                                        <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>{student.role === "Staff" ? "Staff Games" : "Team Games (Select One)"}</label>
+                                        <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>{student.role === "Staff" ? `Staff Games (Max ${maxGames})` : `Team Games (Max ${maxGames})`}</label>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                             {student.role === "Staff" ? (
-                                                (student.gender?.toLowerCase() === "female" ? staffGamesListWomens : staffGamesList).map(g => (
-                                                    <button key={g} onClick={() => setGame(game === g ? "" : g)} style={{ background: game === g ? "#8B0000" : "transparent", color: game === g ? "#fff" : dark ? "#aaa" : "#555", border: `1px solid ${game === g ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", fontSize: 13, transition: "all .2s" }}>{g}</button>
-                                                ))
+                                                (student.gender?.toLowerCase() === "female" ? staffGamesListWomens : staffGamesList).map(g => {
+                                                    const isClosed = closedEvents?.includes(g);
+                                                    const isSelected = gameSel.includes(g);
+                                                    return (
+                                                        <button key={g} disabled={isClosed} onClick={() => {
+                                                            if (isSelected) setGameSel(gameSel.filter(x => x !== g));
+                                                            else if (gameSel.length < maxGames) setGameSel([...gameSel, g]);
+                                                            else alert(`You can only select up to ${maxGames} team games.`);
+                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: isClosed ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"}</button>
+                                                    );
+                                                })
                                             ) : (
-                                                (student.gender?.toLowerCase() === "female" ? sportGamesListWomens : sportGamesList).map(g => (
-                                                    <button key={g} onClick={() => setGame(game === g ? "" : g)} style={{ background: game === g ? "#8B0000" : "transparent", color: game === g ? "#fff" : dark ? "#aaa" : "#555", border: `1px solid ${game === g ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", fontSize: 13, transition: "all .2s" }}>{g}</button>
-                                                ))
+                                                (student.gender?.toLowerCase() === "female" ? sportGamesListWomens : sportGamesList).map(g => {
+                                                    const isClosed = closedEvents?.includes(g);
+                                                    const isSelected = gameSel.includes(g);
+                                                    return (
+                                                        <button key={g} disabled={isClosed} onClick={() => {
+                                                            if (isSelected) setGameSel(gameSel.filter(x => x !== g));
+                                                            else if (gameSel.length < maxGames) setGameSel([...gameSel, g]);
+                                                            else alert(`You can only select up to ${maxGames} team games.`);
+                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: isClosed ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"}</button>
+                                                    );
+                                                })
                                             )}
                                             {/* Fallback if no games defined */}
                                             {student.role === "Staff" && (student.gender?.toLowerCase() === "female" ? staffGamesListWomens : staffGamesList).length === 0 && <span style={{ fontSize: 12, color: dark ? "#888" : "#999", fontStyle: "italic" }}>No staff games available</span>}
@@ -174,18 +190,26 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                                     </div>
                                     {student.role !== "Staff" && (
                                         <div style={{ marginBottom: 24 }}>
-                                            <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Athletic Events (Select One)</label>
+                                            <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Athletic Events (Max {maxAthletics})</label>
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                                {(student.gender?.toLowerCase() === "female" ? athleticsListWomens : athleticsList).map(a => (
-                                                    <button key={a} onClick={() => setAthletic(athletic === a ? "" : a)} style={{ background: athletic === a ? "#4B0082" : "transparent", color: athletic === a ? "#fff" : dark ? "#aaa" : "#555", border: `1px solid ${athletic === a ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: "pointer", fontSize: 13, transition: "all .2s" }}>{a}</button>
-                                                ))}
+                                                {(student.gender?.toLowerCase() === "female" ? athleticsListWomens : athleticsList).map(a => {
+                                                    const isClosed = closedEvents?.includes(a);
+                                                    const isSelected = athleticSel.includes(a);
+                                                    return (
+                                                        <button key={a} disabled={isClosed} onClick={() => {
+                                                            if (isSelected) setAthleticSel(athleticSel.filter(x => x !== a));
+                                                            else if (athleticSel.length < maxAthletics) setAthleticSel([...athleticSel, a]);
+                                                            else alert(`You can only select up to ${maxAthletics} athletic events.`);
+                                                        }} style={{ background: isSelected ? "#4B0082" : (isClosed ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: isClosed ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{a} {isClosed && "(Closed)"}</button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}
                                     {error && <div style={{ marginBottom: 10, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
                                     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 10 }}>
-                                        <div style={{ fontSize: 12, color: dark ? "#888" : "#aaa" }}>{game && <span style={{ color: "#8B0000", fontWeight: 600 }}>⚽ {game}</span>}{game && athletic && " · "}{athletic && <span style={{ color: "#4B0082", fontWeight: 600 }}>🏃 {athletic}</span>}{!game && !athletic && "No events selected yet"}</div>
-                                        <button onClick={submit} disabled={!game && !athletic} style={{ background: (game || athletic) ? "linear-gradient(135deg,#8B0000,#C41E3A)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px 22px", cursor: (game || athletic) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 15, textAlign: "center" }}>Register & Lock 🔒</button>
+                                        <div style={{ fontSize: 12, color: dark ? "#888" : "#aaa" }}>{gameSel.length > 0 && <span style={{ color: "#8B0000", fontWeight: 600 }}>⚽ {gameSel.join(", ")}</span>}{gameSel.length > 0 && athleticSel.length > 0 && " · "}{athleticSel.length > 0 && <span style={{ color: "#4B0082", fontWeight: 600 }}>🏃 {athleticSel.join(", ")}</span>}{gameSel.length === 0 && athleticSel.length === 0 && "No events selected yet"}</div>
+                                        <button onClick={submit} disabled={gameSel.length === 0 && athleticSel.length === 0} style={{ background: (gameSel.length > 0 || athleticSel.length > 0) ? "linear-gradient(135deg,#8B0000,#C41E3A)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "13px 22px", cursor: (gameSel.length > 0 || athleticSel.length > 0) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 15, textAlign: "center" }}>Register & Lock 🔒</button>
                                     </div>
                                 </>
                             )}
@@ -385,6 +409,108 @@ export function WinnersPage({ dark, results, houses, sportGamesList = [], sportG
                     <div style={{ fontSize: 64, marginBottom: 16 }}>🏁</div>
                     <div style={{ fontSize: 18, fontWeight: 700 }}>No results found</div>
                     <p style={{ fontSize: 14 }}>Try changing your filters or check back later.</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export function StarPlayersPage({ dark, starPlayers = [], houses = [] }) {
+    const isMobile = useIsMobile();
+    const [search, setSearch] = useState("");
+
+    const filtered = starPlayers.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.game.toLowerCase().includes(search.toLowerCase()) ||
+        p.house.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "16px 12px" : "40px 20px" }}>
+            <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 40 }}>
+                <div style={{ fontSize: isMobile ? 40 : 54, marginBottom: 8, filter: "drop-shadow(0 4px 12px rgba(255,215,0,.4))" }}>🌟</div>
+                <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: 0, fontSize: isMobile ? 24 : 36 }}>Star Players</h1>
+                <p style={{ color: dark ? "#aaa" : "#666", fontSize: 13, marginTop: 4 }}>Highlighting the most outstanding athletes of the year</p>
+            </div>
+
+            <div style={{ marginBottom: 30, display: "flex", justifyContent: "center" }}>
+                <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search by name, game, or house..."
+                    style={{
+                        width: "100%", maxWidth: 400, padding: "12px 20px", borderRadius: 50,
+                        border: `2px solid ${dark ? "#444" : "#ddd"}`,
+                        background: dark ? "rgba(255,255,255,.05)" : "#fff",
+                        color: dark ? "#fff" : "#222", fontSize: 15,
+                        boxShadow: "0 4px 12px rgba(0,0,0,.05)"
+                    }}
+                />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: 24 }}>
+                {filtered.map(p => {
+                    const hObj = houses.find(h => h.name === p.house);
+                    return (
+                        <div key={p.id} style={{
+                            background: dark ? "rgba(255,255,255,.04)" : "#fff",
+                            border: `1px solid ${dark ? "#333" : "#eee"}`,
+                            borderRadius: 16, overflow: "hidden",
+                            boxShadow: "0 8px 24px rgba(0,0,0,.06)",
+                            transition: "transform .2s",
+                            cursor: "default"
+                        }}
+                            onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"}
+                            onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+                        >
+                            <div style={{ height: 220, position: "relative", background: dark ? "#222" : "#f5f5f5" }}>
+                                <img src={p.img} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                <div style={{
+                                    position: "absolute", top: 12, right: 12,
+                                    background: hObj?.color || "#555", color: "#fff",
+                                    padding: "4px 12px", borderRadius: 50,
+                                    fontSize: 11, fontWeight: 800, textTransform: "uppercase",
+                                    boxShadow: "0 4px 12px rgba(0,0,0,.3)"
+                                }}>
+                                    {p.house}
+                                </div>
+                                <div style={{
+                                    position: "absolute", bottom: 0, left: 0, right: 0,
+                                    background: "linear-gradient(transparent, rgba(0,0,0,.8))",
+                                    padding: "30px 16px 12px",
+                                    display: "flex", alignItems: "flex-end"
+                                }}>
+                                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 18, textShadow: "0 2px 4px rgba(0,0,0,.5)" }}>
+                                        {p.name}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ padding: "16px 20px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                    <div style={{ fontSize: 13, color: dark ? "#aaa" : "#666", fontWeight: 600 }}>
+                                        {p.year} • {p.dept}
+                                    </div>
+                                </div>
+                                <div style={{
+                                    background: dark ? "rgba(255,215,0,.1)" : "#fffbea",
+                                    border: "1px solid rgba(255,215,0,.3)",
+                                    padding: "8px 12px", borderRadius: 8,
+                                    fontSize: 13, color: dark ? "#ffd700" : "#b8860b",
+                                    fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6
+                                }}>
+                                    🏆 {p.game}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {filtered.length === 0 && (
+                <div style={{ textAlign: "center", padding: 60, color: dark ? "#666" : "#aaa", background: dark ? "rgba(255,255,255,.02)" : "#fafafa", borderRadius: 16, border: `1px dashed ${dark ? "#444" : "#ccc"}` }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>✨</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>No Star Players found</div>
+                    <p style={{ fontSize: 14, marginTop: 4 }}>Check back later or adjust your search.</p>
                 </div>
             )}
         </div>

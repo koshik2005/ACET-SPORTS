@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import "./index.css";
 import { Header, Footer } from "./Layout.jsx";
 import { HomePage, EventsPage } from "./Pages1.jsx";
-import { RegistrationPage, ScoreboardPage, GalleryPage, WinnersPage } from "./Pages2.jsx";
+import { RegistrationPage, ScoreboardPage, GalleryPage, WinnersPage, StarPlayersPage } from "./Pages2.jsx";
 import { AdminPage } from "./AdminPage.jsx";
 import { CaptainPortal } from "./CaptainPortal.jsx";
 
@@ -24,6 +24,7 @@ export default function App() {
   const [pointLog, setPointLog] = useState([]);
   const [studentsDB, setStudentsDB] = useState([]);
   const [results, setResults] = useState([]);
+  const [starPlayers, setStarPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Configuration from API
@@ -40,6 +41,9 @@ export default function App() {
   const [registrationCloseTime, setRegistrationCloseTime] = useState("");
   const [eventDate, setEventDate] = useState({ date: "", time: "" });
   const [emptyGame, setEmptyGame] = useState({ name: "", type: "game", venue: "", official: "", status: "Upcoming", start: "", end: "", participants: "" });
+  const [closedEvents, setClosedEvents] = useState([]);
+  const [maxGames, setMaxGames] = useState(1);
+  const [maxAthletics, setMaxAthletics] = useState(1);
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -57,6 +61,7 @@ export default function App() {
         if (data.pointLog) setPointLog(data.pointLog);
         if (data.studentsDB) setStudentsDB(data.studentsDB);
         if (data.results) setResults(data.results);
+        if (data.starPlayers) setStarPlayers(data.starPlayers);
 
         // Set config
         if (data.nav) setNav(data.nav);
@@ -72,6 +77,9 @@ export default function App() {
         if (data.registrationCloseTime) setRegistrationCloseTime(data.registrationCloseTime);
         if (data.eventDate) setEventDate(data.eventDate);
         if (data.emptyGame) setEmptyGame(data.emptyGame);
+        if (data.closedEvents) setClosedEvents(data.closedEvents);
+        if (data.maxGames !== undefined) setMaxGames(data.maxGames);
+        if (data.maxAthletics !== undefined) setMaxAthletics(data.maxAthletics);
 
         setLoading(false);
       })
@@ -120,6 +128,7 @@ export default function App() {
   const setPointLogSync = wrap(setPointLog, "pointLog");
   const setStudentsDBSync = wrap(setStudentsDB, "studentsDB");
   const setResultsSync = wrap(setResults, "results");
+  const setStarPlayersSync = wrap(setStarPlayers, "starPlayers");
   const setNavSync = wrap(setNav, "nav");
   const setSportGamesListSync = wrap(setSportGamesList, "sportGamesList");
   const setSportGamesListWomensSync = wrap(setSportGamesListWomens, "sportGamesListWomens");
@@ -132,6 +141,9 @@ export default function App() {
   const setRegistrationOpenSync = wrap(setRegistrationOpen, "registrationOpen");
   const setRegistrationCloseTimeSync = wrap(setRegistrationCloseTime, "registrationCloseTime");
   const setEventDateSync = wrap(setEventDate, "eventDate");
+  const setClosedEventsSync = wrap(setClosedEvents, "closedEvents");
+  const setMaxGamesSync = wrap(setMaxGames, "maxGames");
+  const setMaxAthleticsSync = wrap(setMaxAthletics, "maxAthletics");
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f0f1a" : "#f4f4f8", color: dark ? "#fff" : "#8B0000", fontSize: 24, fontWeight: 800 }}>⚡ Loading Achariya Sports...</div>;
 
@@ -169,8 +181,9 @@ export default function App() {
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
         {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
-        {active === "Registration" && <RegistrationPage dark={dark} registrations={registrations} setRegistrations={setRegistrationsSync} studentsDB={studentsDB} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
+        {active === "Registration" && <RegistrationPage dark={dark} registrations={registrations} setRegistrations={setRegistrationsSync} studentsDB={studentsDB} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} closedEvents={closedEvents} maxGames={maxGames} maxAthletics={maxAthletics} />}
         {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
+        {active === "Star Players" && <StarPlayersPage dark={dark} starPlayers={starPlayers} houses={houses} />}
         {active === "Gallery" && <GalleryPage dark={dark} gallery={gallery} />}
         {active === "Admin" && <AdminPage
           dark={dark}
@@ -184,6 +197,7 @@ export default function App() {
           pointLog={pointLog} setPointLog={setPointLogSync}
           studentsDB={studentsDB} setStudentsDB={setStudentsDBSync}
           results={results} setResults={setResultsSync}
+          starPlayers={starPlayers} setStarPlayers={setStarPlayersSync}
           nav={nav} setNav={setNavSync}
           sportGamesList={sportGamesList} setSportGamesList={setSportGamesListSync}
           sportGamesListWomens={sportGamesListWomens} setSportGamesListWomens={setSportGamesListWomensSync}
@@ -197,6 +211,9 @@ export default function App() {
           registrationCloseTime={registrationCloseTime} setRegistrationCloseTime={setRegistrationCloseTimeSync}
           eventDate={eventDate} setEventDate={setEventDateSync}
           emptyGame={emptyGame}
+          closedEvents={closedEvents} setClosedEvents={setClosedEventsSync}
+          maxGames={maxGames} setMaxGames={setMaxGamesSync}
+          maxAthletics={maxAthletics} setMaxAthletics={setMaxAthleticsSync}
         />}
         {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} />}
       </main>
