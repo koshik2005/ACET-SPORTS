@@ -18,7 +18,13 @@ app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
 app.use(helmet({ contentSecurityPolicy: false })); // disable CSP so Cloudinary images load
 // Configure CORS for all routes (allows frontend to talk to backend from different subdomains)
 app.use(cors({
-  origin: "*",
+  origin: function (origin, callback) {
+    if (!origin || origin === "https://acetsports.favoflex.com") {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
