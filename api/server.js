@@ -25,8 +25,11 @@ const allowedOrigins = [
   "http://localhost:3001"
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
+    // Browsers don't send Origin for same-origin GETs.
+    // We allow !origin here, but requireValidOrigin middleware will later catch
+    // malicious !origin requests that also lack Referer headers.
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -36,7 +39,17 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
-}));
+};
+
+// Apply CORS but catch the specific Error to return a clean 403
+app.use((req, res, next) => {
+  cors(corsOptions)(req, res, (err) => {
+    if (err) {
+      return res.status(403).json({ error: "Access Denied: Origin not allowed or missing." });
+    }
+    next();
+  });
+});
 app.options(/(.*)/, cors()); // Handle preflight requests for all routes
 app.use(express.json({ limit: "20mb" })); // allow larger payloads for image base64
 
@@ -61,6 +74,25 @@ app.use("/api/", globalLimiter);
 
 
 const otpStore = {}; // DEPRECATED: Use Otp model
+
+// ─── Security: Block Non-Browser API Testing Tools ──────────────────────────
+const requireValidOrigin = (req, res, next) => {
+  if (req.path === "/api/health") return next();
+
+  const origin = req.headers.origin || req.headers.referer;
+
+  // Only enforce strict origin checks in production (Vercel) to avoid breaking local Vite proxies
+  const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
+
+  if (isProd && (!origin || !allowedOrigins.some(allowed => origin.startsWith(allowed)))) {
+    console.warn(`Blocked API request from unauthorized origin: ${origin || 'NO_ORIGIN'}`);
+    return res.status(403).json({ error: "Access Denied: strictly frontend access only." });
+  }
+
+  next();
+};
+
+app.use("/api/", requireValidOrigin);
 
 // ─── In-Memory State Cache ─────────────────────────────────────────────────────
 // Cache the public state for 30 seconds so 3000 simultaneous page loads
