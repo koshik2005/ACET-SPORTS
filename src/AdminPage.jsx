@@ -620,17 +620,15 @@ export function AdminPage({
 
         const doc = new Document({ sections: [{ properties: {}, children: docChildren }] });
 
-        import("docx").then(({ Packer }) => {
-            Packer.toBlob(doc).then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `Achariya_Sports_Final_Report_${new Date().getFullYear()}.docx`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            });
+        Packer.toBlob(doc).then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Achariya_Sports_Final_Report_${new Date().getFullYear()}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         });
     };
 
