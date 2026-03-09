@@ -14,19 +14,28 @@ import { State, Otp } from "./models.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
 app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
 app.use(helmet({ contentSecurityPolicy: false })); // disable CSP so Cloudinary images load
-// Configure CORS for all routes (allows frontend to talk to backend from different subdomains)
+// Configure CORS for all routes
+const allowedOrigins = [
+  "https://acet-sports-seven.vercel.app",
+  "https://acetsports.favoflex.com",
+  "http://localhost:5173",
+  "http://localhost:3001"
+];
+
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || origin === "https://acetsports.favoflex.com") {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
 app.options(/(.*)/, cors()); // Handle preflight requests for all routes
 app.use(express.json({ limit: "20mb" })); // allow larger payloads for image base64
@@ -36,13 +45,15 @@ const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-prod
 // Rate Limiters
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000, // allow 5000 req per IP per 15 min — enough for 3000 active users (many may share school nat IP)
+  max: 5000,
+  validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many requests from this IP, please try again after 15 minutes" }
 });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50, // Increased from 10 to 50 to support multi-user NAT and debugging
+  max: 50,
+  validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many login attempts, please try again later" }
 });
 
