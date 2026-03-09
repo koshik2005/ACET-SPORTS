@@ -120,7 +120,7 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                         <>
                             <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Email or University Register Number</label>
                             <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-                                <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder={isMobile ? "Email or Reg No" : "e.g. 23TD0578 or student@achariya.edu"} style={{ flex: 1, padding: "12px 14px", borderRadius: 8, fontSize: 16, border: `1px solid ${dark ? "#555" : "#ddd"}`, background: dark ? "#2a2a3e" : "#f8f8f8", color: dark ? "#fff" : "#333" }} />
+                                <input maxLength={100} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder={isMobile ? "Email or Reg No" : "e.g. 23TD0578 or student@achariya.edu"} style={{ flex: 1, padding: "12px 14px", borderRadius: 8, fontSize: 16, border: `1px solid ${dark ? "#555" : "#ddd"}`, background: dark ? "#2a2a3e" : "#f8f8f8", color: dark ? "#fff" : "#333" }} />
                                 <button onClick={lookup} style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "12px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>Lookup</button>
                             </div>
                             {error && <div style={{ marginTop: 8, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
