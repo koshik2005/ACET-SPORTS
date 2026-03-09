@@ -5,8 +5,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import mongoSanitize from "express-mongo-sanitize";
-import xss from "xss-clean";
+import mongoSanitizePlugin from "express-mongo-sanitize";
 import mongoose from "mongoose";
 import compression from "compression";
 import path from "path";
@@ -23,7 +22,7 @@ app.use(helmet({
   contentSecurityPolicy: false, // disable CSP so Cloudinary/ImgBB images load correctly on frontends
   crossOriginEmbedderPolicy: false,
 }));
-app.use(xss()); // sanitize request data against XSS
+const mongoSanitize = typeof mongoSanitizePlugin === "function" ? mongoSanitizePlugin : mongoSanitizePlugin.default;
 app.use(mongoSanitize()); // Prevent NoSQL injection attacks by stripping $, . etc.
 
 // Configure CORS for all routes (allows frontend to talk to backend from different subdomains)
@@ -64,12 +63,14 @@ if (!process.env.MONGODB_URI) {
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5000, // allow 5000 req per IP per 15 min — enough for 3000 active users (many may share school nat IP)
+  validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many requests from this IP, please try again after 15 minutes" }
 });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50, // Increased from 10 to 50 to support multi-user NAT and debugging
+  validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many login attempts, please try again later" }
 });
 
