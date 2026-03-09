@@ -60,7 +60,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                 <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>🏠 House Standings</h2>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit,minmax(220px,1fr))", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 28 : 48 }}>
                     {sortedH.map((h, i) => (
-                        <div key={h.id} style={{
+                        <div key={h.id || h.name || i} style={{
                             background: dark ? "rgba(255,255,255,.05)" : "#fff",
                             border: `2px solid ${i === 0 ? h.color : h.color + "44"}`,
                             borderRadius: 16,
@@ -93,7 +93,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                                     {sorted.map((a, i) => {
                                         const isLast = i === sorted.length - 1;
                                         return (
-                                            <div key={a.id} style={{
+                                            <div key={a.id || a.name || i} style={{
                                                 background: dark ? "rgba(255,255,255,.05)" : "#fff",
                                                 border: `1px solid ${i === 0 ? "#8B000055" : dark ? "#333" : "#eee"}`,
                                                 borderTop: `3px solid ${i === 0 ? "#8B0000" : "#ccc"}`,
@@ -133,7 +133,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                                         {sorted.map((a, i) => {
                                             const isLast = i === sorted.length - 1;
                                             return (
-                                                <div key={a.id} style={{
+                                                <div key={a.id || a.name || i} style={{
                                                     background: dark ? "rgba(255,255,255,.05)" : "#fff",
                                                     border: `1px solid ${i === 0 ? "#8B000055" : dark ? "#333" : "#eee"}`,
                                                     borderTop: `3px solid ${i === 0 ? "#8B0000" : "#ccc"}`,
@@ -173,7 +173,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                                         {sorted.map((a, i) => {
                                             const isLast = i === sorted.length - 1;
                                             return (
-                                                <div key={a.id} style={{
+                                                <div key={a.id || a.name || i} style={{
                                                     background: dark ? "rgba(255,255,255,.05)" : "#fff",
                                                     border: `1px solid ${i === 0 ? "#483D8B55" : dark ? "#333" : "#eee"}`,
                                                     borderTop: `3px solid ${i === 0 ? "#483D8B" : "#ccc"}`,
@@ -203,8 +203,8 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                 }
                 < h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>⚡ House Captains</h2>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: isMobile ? 10 : 20, marginBottom: isMobile ? 28 : 48 }}>
-                    {houses.map(h => (
-                        <div key={h.id} style={{ background: dark ? "rgba(255,255,255,.05)" : tint(h.color), border: `2px solid ${h.color}`, borderRadius: 16, padding: isMobile ? "14px 10px" : "24px 20px" }}>
+                    {houses.map((h, idx) => (
+                        <div key={h.id || h.name || idx} style={{ background: dark ? "rgba(255,255,255,.05)" : tint(h.color), border: `2px solid ${h.color}`, borderRadius: 16, padding: isMobile ? "14px 10px" : "24px 20px" }}>
                             {/* House header */}
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 12 : 18 }}>
                                 <div style={{ width: 30, height: 30, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 12, flexShrink: 0 }}>{hi(h.name)}</div>
