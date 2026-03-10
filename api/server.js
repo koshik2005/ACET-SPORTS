@@ -183,26 +183,12 @@ const loadDb = async () => {
   const state = await State.findOne();
   if (!state) {
     // SAFETY: Never silently create a blank document.
-    // If the collection is empty (e.g., first-time setup), an admin must
-    // explicitly seed the database via the /api/init route below.
-    throw new Error("CRITICAL: No state document found in database. Please initialize the database first.");
+    // If the collection is unexpectedly empty, surface the error clearly
+    // instead of overwriting data with a blank state.
+    throw new Error("No state document found in database. Contact admin.");
   }
   return state;
 };
-
-// ─── One-time DB Initialization (creates blank state if none exists) ──────────
-app.post("/api/init-db", authenticateAdmin, async (req, res) => {
-  try {
-    const existing = await State.findOne();
-    if (existing) {
-      return res.status(409).json({ error: "Database already initialized. Will not overwrite existing data." });
-    }
-    const state = await State.create(getInitialState());
-    res.json({ success: true, message: "Database initialized with empty state.", id: state._id });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to initialize database: " + err.message });
-  }
-});
 
 const saveDb = async (data) => {
   // Not used anymore as we use findOneAndUpdate for atomic updates, 
