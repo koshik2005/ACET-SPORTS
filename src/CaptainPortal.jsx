@@ -7,7 +7,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPwd, setShowPwd] = useState(false);
-    const [captain, setCaptain] = useState(null); // { name, role, house, houseColor }
+    const [captain, setCaptain] = useState(null); // { name, role, houseRole, house, houseColor }
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("Dashboard"); // Dashboard, Roster, Participation, T-Shirt Issue
     const [shirtIssueTab, setShirtIssueTab] = useState("Pending"); // Pending, Issued
@@ -42,6 +42,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                 setCaptain({
                     name: data.captainName,
                     role: ROLE_LABELS[data.houseRole],
+                    houseRole: data.houseRole,
                     house: data.houseName,
                     houseColor: data.houseColor
                 });
@@ -55,15 +56,30 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
         }
     };
 
+    // Determine captain's gender scope from their role
+    const captainIsMale = captain ? (
+        ["boysCaptain", "viceCaptainBoys", "staffCaptainMale"].includes(captain.houseRole)
+    ) : true;
+    const captainGender = captainIsMale ? "male" : "female";
+
     const houseRegs = captain
         ? registrations.filter(r => {
-            const isStaff = studentsDB.find(s => s.regNo === r.regNo)?.role === "Staff";
-            return !isStaff && (r.house || "").toLowerCase() === captain.house.toLowerCase();
+            const student = studentsDB.find(s => s.regNo === r.regNo);
+            if (!student || student.role === "Staff") return false;
+            if ((r.house || "").toLowerCase() !== captain.house.toLowerCase()) return false;
+            // gender filter
+            const g = (student.gender || "").toLowerCase();
+            return captainIsMale ? (g === "male" || g === "m") : (g === "female" || g === "f");
         })
         : [];
 
     const houseStudents = captain
-        ? studentsDB.filter(s => s.role !== "Staff" && (s.house || "").toLowerCase() === captain.house.toLowerCase())
+        ? studentsDB.filter(s => {
+            if (s.role === "Staff") return false;
+            if ((s.house || "").toLowerCase() !== captain.house.toLowerCase()) return false;
+            const g = (s.gender || "").toLowerCase();
+            return captainIsMale ? (g === "male" || g === "m") : (g === "female" || g === "f");
+        })
         : [];
 
     const staffRegs = registrations.filter(r => {
@@ -204,7 +220,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                 <div>
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: isMobile ? 10 : 20, marginBottom: 28 }}>
                         {[
-                            { label: "House Strength", value: houseStudents.length, emoji: "👥", color: captain.houseColor },
+                            { label: `${captainIsMale ? "♂ Men's" : "♀ Women's"} House Strength`, value: houseStudents.length, emoji: captainIsMale ? "👨" : "👩", color: captain.houseColor },
                             { label: "Total Registrations", value: houseRegs.length, emoji: "📋", color: "#8B0000" },
                             { label: "Participation Rate", value: houseStudents.length ? Math.round((houseRegs.length / houseStudents.length) * 100) + "%" : "0%", emoji: "📈", color: "#2E8B57" },
                         ].map(s => (
@@ -245,7 +261,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
 
             {activeTab === "Roster" && (
                 <div>
-                    <h3 style={{ color: dark ? "#fff" : "#222", marginBottom: 16, fontSize: 18, fontWeight: 800 }}>🏠 {captain.house} House Roster ({houseStudents.length})</h3>
+                    <h3 style={{ color: dark ? "#fff" : "#222", marginBottom: 16, fontSize: 18, fontWeight: 800 }}>🏠 {captain.house} House — {captainIsMale ? "♂ Men's" : "♀ Women's"} Roster ({houseStudents.length})</h3>
                     {houseStudents.length === 0 ? (
                         <div style={{ ...cS, textAlign: "center", padding: 60 }}>
                             <div style={{ fontSize: 60, marginBottom: 15 }}>📂</div>
@@ -285,7 +301,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
             {activeTab === "Participation" && (
                 <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 10, flexWrap: "wrap" }}>
-                        <h3 style={{ color: dark ? "#fff" : "#222", margin: 0, fontSize: 18, fontWeight: 800 }}>🏅 Event Participation ({filteredHouseRegs.length})</h3>
+                        <h3 style={{ color: dark ? "#fff" : "#222", margin: 0, fontSize: 18, fontWeight: 800 }}>🏅 {captainIsMale ? "♂ Men's" : "♀ Women's"} Participation ({filteredHouseRegs.length})</h3>
                         <div style={{ display: "flex", gap: 8 }}>
                             <select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterVal("All"); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
                                 <option value="All">All Types</option>
