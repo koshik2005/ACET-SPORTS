@@ -202,7 +202,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                     )
                 }
                 < h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>⚡ House Captains</h2>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: isMobile ? 10 : 20, marginBottom: isMobile ? 28 : 48 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: isMobile ? 14 : 20, marginBottom: isMobile ? 28 : 48 }}>
                     {houses.map((h, idx) => (
                         <div key={h.id || h.name || idx} style={{ background: dark ? "rgba(255,255,255,.05)" : tint(h.color), border: `2px solid ${h.color}`, borderRadius: 16, padding: isMobile ? "14px 10px" : "24px 20px" }}>
                             {/* House header */}
@@ -212,19 +212,19 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                             </div>
                             {/* Staff Captain info */}
                             {(h.staffCaptainMale?.name || h.staffCaptainFemale?.name) && (
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: isMobile ? 8 : 12, marginBottom: isMobile ? 10 : 14 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 12 : 14 }}>
                                     {[
                                         { l: "🎓 Staff Captain (M)", p: h.staffCaptainMale, emoji: "♂️" },
                                         { l: "🎓 Staff Captain (F)", p: h.staffCaptainFemale, emoji: "♀️" }
                                     ].map((c, i) => (
                                         c.p?.name ? (
-                                            <div key={i} style={{ background: dark ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.75)", borderRadius: 12, padding: isMobile ? "10px 6px" : "16px 10px", textAlign: "center" }}>
-                                                <div style={{ fontSize: isMobile ? 8 : 9, fontWeight: 700, color: h.color, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: isMobile ? 6 : 8 }}>{c.l}</div>
-                                                <div style={{ display: "flex", justifyContent: "center", marginBottom: isMobile ? 6 : 8 }}>
-                                                    <Avatar img={c.p?.img} name={c.p?.name} size={isMobile ? 52 : 72} color={h.color} />
+                                            <div key={i} style={{ background: dark ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.75)", borderRadius: 12, padding: isMobile ? "12px 10px" : "16px 10px", textAlign: "center" }}>
+                                                <div style={{ fontSize: isMobile ? 9 : 9, fontWeight: 700, color: h.color, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: isMobile ? 8 : 8 }}>{c.l}</div>
+                                                <div style={{ display: "flex", justifyContent: "center", marginBottom: isMobile ? 8 : 8 }}>
+                                                    <Avatar img={c.p?.img} name={c.p?.name} size={isMobile ? 64 : 72} color={h.color} />
                                                 </div>
-                                                <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{c.p.name}</div>
-                                                <div style={{ fontSize: isMobile ? 9 : 11, color: dark ? "#aaa" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.p.designation}</div>
+                                                <div style={{ fontSize: isMobile ? 12 : 13, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{c.p.name}</div>
+                                                <div style={{ fontSize: isMobile ? 10 : 11, color: dark ? "#aaa" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.p.designation}</div>
                                             </div>
                                         ) : <div key={i} />
                                     ))}
@@ -234,14 +234,14 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                             {/* 2x2 captain grid */}
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: isMobile ? 8 : 12 }}>
                                 {[{ l: "♂ Captain", p: h.boysCaptain }, { l: "♀ Captain", p: h.girlsCaptain }, { l: "♂ Vice Captain", p: h.viceCaptainBoys }, { l: "♀ Vice Captain", p: h.viceCaptainGirls }].map((c, i) => (
-                                    <div key={i} style={{ background: dark ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.75)", borderRadius: 12, padding: isMobile ? "10px 6px" : "16px 10px", textAlign: "center" }}>
-                                        <div style={{ fontSize: isMobile ? 9 : 10, fontWeight: 700, color: h.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: isMobile ? 6 : 8 }}>{c.l}</div>
-                                        <div style={{ display: "flex", justifyContent: "center", marginBottom: isMobile ? 6 : 8 }}>
-                                            <Avatar img={c.p?.img} name={c.p?.name || "?"} size={isMobile ? 52 : 72} color={h.color} />
+                                    <div key={i} style={{ background: dark ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.75)", borderRadius: 12, padding: isMobile ? "12px 10px" : "16px 10px", textAlign: "center" }}>
+                                        <div style={{ fontSize: isMobile ? 10 : 10, fontWeight: 700, color: h.color, letterSpacing: 1, textTransform: "uppercase", marginBottom: isMobile ? 8 : 8 }}>{c.l}</div>
+                                        <div style={{ display: "flex", justifyContent: "center", marginBottom: isMobile ? 8 : 8 }}>
+                                            <Avatar img={c.p?.img} name={c.p?.name || "?"} size={isMobile ? 64 : 72} color={h.color} />
                                         </div>
-                                        <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{c.p?.name || "—"}</div>
+                                        <div style={{ fontSize: isMobile ? 12 : 13, fontWeight: 700, color: dark ? "#fff" : "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{c.p?.name || "—"}</div>
                                         {c.p?.name && (c.p.year || c.p.dept) && (
-                                            <div style={{ fontSize: isMobile ? 9 : 11, color: dark ? "#aaa" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                            <div style={{ fontSize: isMobile ? 10 : 11, color: dark ? "#aaa" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                 {c.p.year} {c.p.dept ? `(${c.p.dept})` : ""}
                                             </div>
                                         )}
