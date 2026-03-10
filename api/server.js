@@ -428,6 +428,19 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
   }
 });
 
+// ─── Admin Password Verification (Step 2 of 3) ──────────────────────────────
+app.post("/api/admin-verify-password", loginLimiter, async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ success: false, error: "Email and password are required" });
+
+  const adminPassword = process.env.ADMIN_PASSWORD || "adminacet";
+  if (password !== adminPassword) {
+    return res.status(401).json({ success: false, error: "Incorrect admin password." });
+  }
+
+  res.json({ success: true });
+});
+
 app.post("/api/admin-login", loginLimiter, async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !email.trim() === "" || !otp) return res.status(400).json({ success: false, error: "Email and OTP are required" });

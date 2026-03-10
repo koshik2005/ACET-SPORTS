@@ -42,7 +42,8 @@ export function AdminPage({
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
     const [adminEmail, setAdminEmail] = useState("");
-    const [otpSent, setOtpSent] = useState(false);
+    const [adminPassword, setAdminPassword] = useState("");
+    const [loginStep, setLoginStep] = useState("email"); // "email" | "password" | "otp"
     const [otp, setOtp] = useState("");
     const [isVerifying, setIsVerifying] = useState(false);
     const [tab, setTab] = useState("Gallery");
@@ -131,26 +132,48 @@ export function AdminPage({
         reader.readAsBinaryString(file);
     };
 
-    const handleSendOtp = async () => {
+    const handleEmailNext = () => {
         if (!adminEmail || !adminEmail.includes("@")) {
             setLoginError("Please enter a valid Admin Email address");
             return;
         }
+        setLoginError("");
+        setAdminPassword("");
+        setLoginStep("password");
+    };
+
+    const handleVerifyPassword = async () => {
+        if (!adminPassword) {
+            setLoginError("Please enter the Admin Password");
+            return;
+        }
         setLoginError(""); setIsVerifying(true);
         try {
-            const res = await fetch(`${API_BASE}/api/admin-send-otp`, {
+            const res = await fetch(`${API_BASE}/api/admin-verify-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: adminEmail.trim() })
+                body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword })
             });
             const data = await res.json();
             if (data.success) {
-                setOtpSent(true);
+                // Password OK — now send OTP
+                const otpRes = await fetch(`${API_BASE}/api/admin-send-otp`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: adminEmail.trim() })
+                });
+                const otpData = await otpRes.json();
+                if (otpData.success) {
+                    setOtp("");
+                    setLoginStep("otp");
+                } else {
+                    setLoginError(otpData.error || "Failed to send OTP.");
+                }
             } else {
-                setLoginError(data.error || "Failed to send OTP.");
+                setLoginError(data.error || "Incorrect password.");
             }
         } catch (err) {
-            console.error("OTP REQUEST ERROR:", err);
+            console.error("PASSWORD VERIFY ERROR:", err);
             setLoginError(`Failed to reach server: ${err.message}`);
         }
         setIsVerifying(false);
@@ -661,28 +684,76 @@ export function AdminPage({
     const lS = { display: "block", fontWeight: 600, color: dark ? "#ccc" : "#555", marginBottom: 6, fontSize: 13 };
     const cS = { background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 14, padding: isMobile ? 14 : 24 };
 
-    if (!loggedIn) return (
-        <div style={{ maxWidth: 400, margin: isMobile ? "24px auto" : "80px auto", padding: isMobile ? "16px 14px" : "40px 20px" }}>
-            <div style={{ textAlign: "center", marginBottom: 20 }}><div style={{ fontSize: 48 }}>🔐</div><h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", fontSize: isMobile ? 20 : 24 }}>Admin Login</h2></div>
-            <div style={cS}>
-                {!otpSent ? (
-                    <>
-                        <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSendOtp()} placeholder="Enter Admin Email" style={{ ...iS, marginBottom: 12 }} />
-                        {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
-                        <button onClick={handleSendOtp} disabled={isVerifying} style={{ width: "100%", background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: isVerifying ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 16 }}>{isVerifying ? "Sending..." : "Send Verification Code"}</button>
-                    </>
-                ) : (
-                    <>
-                        <div style={{ fontSize: 13, color: dark ? "#aaa" : "#555", marginBottom: 12, textAlign: "center" }}>Enter the 6-digit code sent to {adminEmail}</div>
-                        <input type="text" value={otp} onChange={e => setOtp(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} maxLength={6} placeholder="······" style={{ ...iS, marginBottom: 8, textAlign: "center", letterSpacing: 6, fontSize: 24, fontWeight: 800 }} />
-                        {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
-                        <button onClick={handleLogin} disabled={isVerifying || otp.length < 6} style={{ width: "100%", background: "#2E8B57", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: (isVerifying || otp.length < 6) ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 16 }}>{isVerifying ? "Verifying..." : "Login"}</button>
-                        <button onClick={() => { setOtpSent(false); setOtp(""); setLoginError(""); }} style={{ width: "100%", background: "transparent", color: "#1E90FF", border: "none", marginTop: 12, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Back</button>
-                    </>
-                )}
+    if (!loggedIn) {
+        const stepLabels = ["Email", "Password", "OTP"];
+        const stepIdx = loginStep === "email" ? 0 : loginStep === "password" ? 1 : 2;
+        return (
+            <div style={{ maxWidth: 400, margin: isMobile ? "24px auto" : "80px auto", padding: isMobile ? "16px 14px" : "40px 20px" }}>
+                <div style={{ textAlign: "center", marginBottom: 20 }}>
+                    <div style={{ fontSize: 48 }}>🔐</div>
+                    <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", fontSize: isMobile ? 20 : 24 }}>Admin Login</h2>
+                    {/* Step indicators */}
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 10 }}>
+                        {stepLabels.map((label, i) => {
+                            const done = i < stepIdx;
+                            const active = i === stepIdx;
+                            return (
+                                <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: done ? "#2E8B57" : active ? "#8B0000" : dark ? "#444" : "#ddd", color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .3s" }}>
+                                        {done ? "✓" : i + 1}
+                                    </div>
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: active ? (dark ? "#fff" : "#8B0000") : done ? "#2E8B57" : dark ? "#666" : "#bbb" }}>{label}</span>
+                                    {i < 2 && <span style={{ color: dark ? "#555" : "#ccc", fontSize: 14 }}>›</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div style={cS}>
+                    {/* Step 1: Email */}
+                    {loginStep === "email" && (
+                        <>
+                            <label style={lS}>Admin Email</label>
+                            <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleEmailNext()}
+                                placeholder="Enter Admin Email" style={{ ...iS, marginBottom: 12 }} autoFocus />
+                            {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
+                            <button onClick={handleEmailNext} style={{ width: "100%", background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: "pointer", fontWeight: 700, fontSize: 16 }}>Next →</button>
+                        </>
+                    )}
+                    {/* Step 2: Password */}
+                    {loginStep === "password" && (
+                        <>
+                            <div style={{ fontSize: 13, color: dark ? "#aaa" : "#555", marginBottom: 12, textAlign: "center" }}>Enter admin password for <strong>{adminEmail}</strong></div>
+                            <label style={lS}>Admin Password</label>
+                            <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleVerifyPassword()}
+                                placeholder="Enter Admin Password" style={{ ...iS, marginBottom: 8 }} autoFocus />
+                            {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
+                            <button onClick={handleVerifyPassword} disabled={isVerifying} style={{ width: "100%", background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: isVerifying ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 16 }}>
+                                {isVerifying ? "Verifying..." : "Verify & Send OTP"}
+                            </button>
+                            <button onClick={() => { setLoginStep("email"); setAdminPassword(""); setLoginError(""); }} style={{ width: "100%", background: "transparent", color: "#1E90FF", border: "none", marginTop: 12, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Back</button>
+                        </>
+                    )}
+                    {/* Step 3: OTP */}
+                    {loginStep === "otp" && (
+                        <>
+                            <div style={{ fontSize: 13, color: dark ? "#aaa" : "#555", marginBottom: 12, textAlign: "center" }}>Enter the 6-digit code sent to <strong>{adminEmail}</strong></div>
+                            <input type="text" value={otp} onChange={e => setOtp(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                                maxLength={6} placeholder="······" style={{ ...iS, marginBottom: 8, textAlign: "center", letterSpacing: 6, fontSize: 24, fontWeight: 800 }} autoFocus />
+                            {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
+                            <button onClick={handleLogin} disabled={isVerifying || otp.length < 6} style={{ width: "100%", background: "#2E8B57", color: "#fff", border: "none", borderRadius: 8, padding: "14px 0", cursor: (isVerifying || otp.length < 6) ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 16 }}>
+                                {isVerifying ? "Verifying..." : "Login"}
+                            </button>
+                            <button onClick={() => { setLoginStep("password"); setOtp(""); setLoginError(""); }} style={{ width: "100%", background: "transparent", color: "#1E90FF", border: "none", marginTop: 12, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Back</button>
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
-    );
+        );
+    }
 
     return (
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "14px 12px" : "40px 20px" }}>
