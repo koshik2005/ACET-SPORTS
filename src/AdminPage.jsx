@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useIsMobile, hi, tint, Sheet } from "./utils.jsx";
 import { ImgUploadBtn } from "./ImgUploadBtn.jsx";
 import { ImageCropper } from "./ImageCropper.jsx";
@@ -1034,6 +1034,22 @@ export function AdminPage({
                                             </div>
                                         );
                                     })}
+                                </div>
+
+                                {/* WhatsApp Group Link */}
+                                <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? "#333" : "#f0f0f0"}`, paddingTop: 12 }}>
+                                    <label style={{ ...lS, marginBottom: 4 }}>📱 WhatsApp Group Link</label>
+                                    <input
+                                        value={h.whatsappLink || ""}
+                                        onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, whatsappLink: e.target.value } : x))}
+                                        placeholder="https://chat.whatsapp.com/..."
+                                        style={{ ...iS, marginBottom: 0 }}
+                                    />
+                                    {h.whatsappLink && (
+                                        <div style={{ fontSize: 11, color: "#25D366", marginTop: 4, fontWeight: 600 }}>
+                                            ✅ Link set — students will see a join button after registration
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
