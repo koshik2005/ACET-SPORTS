@@ -1036,20 +1036,31 @@ export function AdminPage({
                                     })}
                                 </div>
 
-                                {/* WhatsApp Group Link */}
+                                {/* WhatsApp Group Links */}
                                 <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? "#333" : "#f0f0f0"}`, paddingTop: 12 }}>
-                                    <label style={{ ...lS, marginBottom: 4 }}>📱 WhatsApp Group Link</label>
-                                    <input
-                                        value={h.whatsappLink || ""}
-                                        onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, whatsappLink: e.target.value } : x))}
-                                        placeholder="https://chat.whatsapp.com/..."
-                                        style={{ ...iS, marginBottom: 0 }}
-                                    />
-                                    {h.whatsappLink && (
-                                        <div style={{ fontSize: 11, color: "#25D366", marginTop: 4, fontWeight: 600 }}>
-                                            ✅ Link set — students will see a join button after registration
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: dark ? "#aaa" : "#666", marginBottom: 10 }}>📱 WhatsApp Group Links</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                        <div>
+                                            <label style={{ ...lS, marginBottom: 4, color: "#1E90FF" }}>♂ Men's Group</label>
+                                            <input
+                                                value={h.whatsappLinkMen || ""}
+                                                onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, whatsappLinkMen: e.target.value } : x))}
+                                                placeholder="https://chat.whatsapp.com/..."
+                                                style={{ ...iS, marginBottom: 0 }}
+                                            />
+                                            {h.whatsappLinkMen && <div style={{ fontSize: 10, color: "#25D366", marginTop: 3, fontWeight: 600 }}>✅ Men's link set</div>}
                                         </div>
-                                    )}
+                                        <div>
+                                            <label style={{ ...lS, marginBottom: 4, color: "#FF69B4" }}>♀ Women's Group</label>
+                                            <input
+                                                value={h.whatsappLinkWomen || ""}
+                                                onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, whatsappLinkWomen: e.target.value } : x))}
+                                                placeholder="https://chat.whatsapp.com/..."
+                                                style={{ ...iS, marginBottom: 0 }}
+                                            />
+                                            {h.whatsappLinkWomen && <div style={{ fontSize: 10, color: "#25D366", marginTop: 3, fontWeight: 600 }}>✅ Women's link set</div>}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
