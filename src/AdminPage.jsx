@@ -99,6 +99,22 @@ export function AdminPage({
 
     const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config"];
 
+    // Helper: parse a combined "year dept" value like "II AI&DS", "I(cse a)", "III MECH A"
+    const parseYearDept = (raw) => {
+        if (!raw) return { year: "", dept: "" };
+        const str = raw.trim();
+        // Match leading Roman numeral I–IV (4-year program), longest match first
+        const match = str.match(/^(IV|III|II|I)\s*[\s(/,-]?\s*(.*)$/i);
+        if (match) {
+            const year = match[1].toUpperCase();
+            // Clean up dept: remove surrounding parens, normalise spaces, uppercase
+            let dept = (match[2] || "").replace(/^\(|\)$/g, "").trim().toUpperCase();
+            return { year, dept };
+        }
+        // No leading Roman numeral — return raw as dept
+        return { year: "", dept: str.toUpperCase() };
+    };
+
     const parseFile = (file, isStaffUpload = false) => {
         const reader = new FileReader();
         reader.onload = (evt) => {
@@ -111,21 +127,43 @@ export function AdminPage({
                 const rows = raw.map(r => {
                     const n = {};
                     Object.entries(r).forEach(([k, v]) => { n[k.toLowerCase().trim()] = String(v).trim(); });
+
+                    // Detect combined year+dept column (e.g. "II AI&DS", "I(cse a)")
+                    // It may come under keys: "year", "class", "department", "dept", "year/dept", "class/dept"
+                    const combinedRaw = n["year/dept"] || n["class/dept"] || n["year dept"] || n["class dept"] || "";
+                    let rawYear = n.year || n.class || n.batch || n.y || "";
+                    let rawDept = n.dept || n.department || n.branch || n.course || "";
+
+                    // If combined column found, parse it
+                    if (combinedRaw) {
+                        const parsed = parseYearDept(combinedRaw);
+                        if (!rawYear) rawYear = parsed.year;
+                        if (!rawDept) rawDept = parsed.dept;
+                    } else if (rawYear && !rawDept) {
+                        // year column may actually hold combined value like "II AI&DS"
+                        const parsed = parseYearDept(rawYear);
+                        if (parsed.dept) { rawYear = parsed.year; rawDept = parsed.dept; }
+                    } else if (!rawYear && rawDept) {
+                        // dept column may hold combined value
+                        const parsed = parseYearDept(rawDept);
+                        if (parsed.year) { rawYear = parsed.year; rawDept = parsed.dept; }
+                    }
+
                     return {
                         sno: n["s.no"] || n.sno || n.sn || "",
                         name: n.name || n["student name"] || n["full name"] || "",
                         email: n.email || n["email id"] || n["mail"] || "",
                         regNo: n.regno || n["reg.no"] || n["register number"] || n["id"] || n.mobile || "",
                         house: n.house || n["house name"] || "",
-                        year: n.year || n.class || n.batch || n.y || "",
-                        dept: n.dept || n.department || n.branch || n.course || "",
+                        year: rawYear,
+                        dept: rawDept,
                         shirtSize: n["t-shirt size"] || n["tshirt size"] || n["tshirt"] || n.size || "",
                         gender: n.gender || n.sex || n.g || n.mf || n["m/f"] || "",
                         shirtIssued: false,
                         role: isStaffUpload ? "Staff" : (n.role || "Student")
                     };
                 }).filter(r => r.name || r.email || r.regNo);
-                if (rows.length === 0) { setXlError(`Could not find required columns. Ensure headers match: s.no, name, reg.no, email, ${isStaffUpload ? 'gender, department' : 'year, department, house, gender, t-shirt size'}.`); return; }
+                if (rows.length === 0) { setXlError(`Could not find required columns. Ensure headers match: s.no, name, reg.no, email, ${isStaffUpload ? 'gender, department' : 'year/department, house, gender, t-shirt size'}.`); return; }
                 setXlPreview(rows);
             } catch (e) { setXlError("Failed to read file: " + e.message); }
         };
