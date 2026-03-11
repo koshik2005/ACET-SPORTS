@@ -353,6 +353,16 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
   }
 });
 
+app.post("/api/clear-admin-logs", authenticateAdmin, async (req, res) => {
+  try {
+    await State.findOneAndUpdate({}, { $set: { adminLogs: [] } });
+    invalidateCache();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to clear admin logs" });
+  }
+});
+
 app.post("/api/send-otp", loginLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email is required" });

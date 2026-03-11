@@ -2104,34 +2104,57 @@ export function AdminPage({
                                     <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#333", marginBottom: 4 }}>Audit Logs</div>
                                     <div style={{ fontSize: 11, color: dark ? "#888" : "#777" }}>Download a CSV record of all Admin logins and data configuration changes.</div>
                                 </div>
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const token = localStorage.getItem("adminToken");
-                                            const res = await fetch(`${API_BASE}/api/download-admin-logs`, {
-                                                headers: { "Authorization": `Bearer ${token}` }
-                                            });
-                                            if (!res.ok) {
-                                                if (res.status === 401) return alert("Session expired. Please log in again.");
-                                                throw new Error("Failed to download logs");
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const token = localStorage.getItem("adminToken");
+                                                const res = await fetch(`${API_BASE}/api/download-admin-logs`, {
+                                                    headers: { "Authorization": `Bearer ${token}` }
+                                                });
+                                                if (!res.ok) {
+                                                    if (res.status === 401) return alert("Session expired. Please log in again.");
+                                                    throw new Error("Failed to download logs");
+                                                }
+                                                const blob = await res.blob();
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement("a");
+                                                a.href = url;
+                                                a.download = "admin-audit-logs.csv";
+                                                document.body.appendChild(a);
+                                                a.click();
+                                                a.remove();
+                                            } catch (e) {
+                                                alert("Download error: " + e.message);
                                             }
-                                            const blob = await res.blob();
-                                            const url = window.URL.createObjectURL(blob);
-                                            const a = document.createElement("a");
-                                            a.href = url;
-                                            a.download = "admin-audit-logs.csv";
-                                            document.body.appendChild(a);
-                                            a.click();
-                                            a.remove();
-                                        } catch (e) {
-                                            alert("Download error: " + e.message);
-                                        }
-                                    }}
-                                    style={{
-                                        background: "#4A90E2", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap"
-                                    }}>
-                                    📥 Download Audit Logs (CSV)
-                                </button>
+                                        }}
+                                        style={{
+                                            background: "#4A90E2", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap"
+                                        }}>
+                                        📥 Download Audit Logs (CSV)
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (window.confirm("Are you sure you want to clear ALL admin login and configuration change logs? This action cannot be undone.")) {
+                                                try {
+                                                    const token = localStorage.getItem("adminToken");
+                                                    const res = await fetch(`${API_BASE}/api/clear-admin-logs`, {
+                                                        method: "POST",
+                                                        headers: { "Authorization": `Bearer ${token}` }
+                                                    });
+                                                    if (!res.ok) throw new Error("Failed to clear logs");
+                                                    alert("✅ Admin logs cleared successfully!");
+                                                } catch (e) {
+                                                    alert("❌ Error: " + e.message);
+                                                }
+                                            }
+                                        }}
+                                        style={{
+                                            background: "transparent", color: "#c00", border: "1px solid #c00", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap"
+                                        }}>
+                                        🗑 Clear Login Logs
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
