@@ -1499,16 +1499,28 @@ export function AdminPage({
                                 </div>
                                 <div style={{ display: "flex", gap: 10 }}>
                                     <button onClick={() => {
-                                        // Always append every row as a new entry — admin handles any duplicates manually via inline Edit
-                                        let maxSno = studentsDB.reduce((max, s) => Math.max(max, parseInt(s.sno) || 0), 0);
-                                        const toAdd = xlPreview.map(nr => {
-                                            maxSno++;
-                                            return { ...nr, sno: maxSno, shirtIssued: false };
-                                        });
-                                        setStudentsDB([...studentsDB, ...toAdd]);
-                                        setXlPreview(null);
-                                        alert(`Successfully imported ${toAdd.length} students.`);
-                                    }} style={{ flex: 1, background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Confirm & Import Database</button>
+                                         // Skip EXACT duplicates (name + email + regNo all match), add all others as new entries
+                                         let maxSno = studentsDB.reduce((max, s) => Math.max(max, parseInt(s.sno) || 0), 0);
+                                         let addedCount = 0, skippedCount = 0;
+                                         const toAdd = [];
+                                         xlPreview.forEach(nr => {
+                                             const isExactDuplicate = studentsDB.some(s =>
+                                                 (s.name || "").trim().toLowerCase() === (nr.name || "").trim().toLowerCase() &&
+                                                 (s.email || "").trim().toLowerCase() === (nr.email || "").trim().toLowerCase() &&
+                                                 (s.regNo || "").trim().toLowerCase() === (nr.regNo || "").trim().toLowerCase()
+                                             );
+                                             if (isExactDuplicate) {
+                                                 skippedCount++;
+                                             } else {
+                                                 maxSno++;
+                                                 toAdd.push({ ...nr, sno: maxSno, shirtIssued: false });
+                                                 addedCount++;
+                                             }
+                                         });
+                                         setStudentsDB([...studentsDB, ...toAdd]);
+                                         setXlPreview(null);
+                                         alert(`Imported ${addedCount} student(s).${skippedCount > 0 ? ` Skipped ${skippedCount} exact duplicate(s).` : ""}`);
+                                     }} style={{ flex: 1, background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Confirm & Import Database</button>
                                     <button onClick={() => setXlPreview(null)} style={{ background: "transparent", color: dark ? "#ccc" : "#555", border: `1px solid ${dark ? "#444" : "#ccc"}`, borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Cancel</button>
                                 </div>
                             </div>
