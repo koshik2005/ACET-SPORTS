@@ -9,6 +9,8 @@ import mongoose from "mongoose";
 import compression from "compression";
 import path from "path";
 import { fileURLToPath } from "url";
+import mongoSanitize from "express-mongo-sanitize";
+import bcrypt from "bcryptjs";
 import { State, Otp } from "./models.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,7 +18,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
 app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
-app.use(helmet({ contentSecurityPolicy: false })); // disable CSP so Cloudinary images load
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.ibb.co", "https://*.vercel.app"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", "https://res.cloudinary.com", "https://*.vercel.app", "http://localhost:*", "http://127.0.0.1:*"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+}));
 // Configure CORS for all routes
 const allowedOrigins = [
   "https://acet-sports-seven.vercel.app",
@@ -352,6 +368,22 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
     }
 
     // Prepare update payload
+    // For Houses, hash unhashed passwords before saving
+    if (type === "houses" && Array.isArray(data)) {
+      const roles = ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"];
+      for (let hItem of data) {
+        for (let role of roles) {
+          if (hItem[role]?.password) {
+            const pw = String(hItem[role].password);
+            // Only hash if it's not already a bcrypt hash
+            if (!pw.startsWith("$2y$") && !pw.startsWith("$2b$") && !pw.startsWith("$2a$")) {
+              hItem[role].password = await bcrypt.hash(pw, 10);
+            }
+          }
+        }
+      }
+    }
+
     let updatePayload = { [type]: data };
 
     // Audit Log for Admin Changes
@@ -538,7 +570,9 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
     ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
       const captain = houseObj[role];
       if (captain && captain.email && captain.email.trim().toLowerCase() === em) {
-        if (captain.password === password) {
+        // Compare password using bcrypt
+        const isMatch = await bcrypt.compare(password, captain.password || "");
+        if (isMatch) {
           valid = true;
           loggedInRole = role;
           houseId = houseObj.id;

@@ -1,7 +1,6 @@
 # Environment variables (contains passwords & API keys — NEVER commit this!)
 .env
 .env.*
-!.env.production
 
 # Logs
 logs
