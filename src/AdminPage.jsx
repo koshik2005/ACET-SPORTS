@@ -1410,33 +1410,12 @@ export function AdminPage({
                         </div>
 
                         <div style={cS}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                <h4 style={{ color: dark ? "#ccc" : "#444", margin: 0, fontSize: 14 }}>Log</h4>
-                                {pointLog.length > 0 && (
-                                    <button
-                                        onClick={() => {
-                                            if (!window.confirm(`Clear the entire points log? A record of who cleared it will be saved.`)) return;
-                                            const now = new Date();
-                                            const clearEntry = {
-                                                type: "clear",
-                                                house: "SYSTEM",
-                                                reason: `🗑 Log cleared by Admin (${adminEmail})`,
-                                                pts: 0,
-                                                time: now.toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
-                                            };
-                                            setPointLog([clearEntry]);
-                                        }}
-                                        style={{ background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 6, padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700 }}
-                                    >
-                                        🗑 Clear Log
-                                    </button>
-                                )}
-                            </div>
+                            <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>Log</h4>
                             {pointLog.length === 0 ? <div style={{ fontSize: 12, color: dark ? "#666" : "#aaa" }}>No points awarded yet.</div> : (
                                 <div style={{ maxHeight: 300, overflowY: "auto", background: dark ? "rgba(255,255,255,.02)" : "#fafafa", borderRadius: 10, padding: 12, border: `1px solid ${dark ? "#333" : "#eee"}` }}>
                                     {pointLog.map((log, i) => (
-                                        <div key={i} style={{ fontSize: 13, color: dark ? "#ccc" : "#333", padding: "8px 0", borderBottom: `1px solid ${dark ? "#333" : "#eee"}`, display: "flex", gap: 10, background: log.type === "clear" ? (dark ? "rgba(200,0,0,.08)" : "#fff5f5") : "transparent", borderRadius: log.type === "clear" ? 6 : 0, paddingLeft: log.type === "clear" ? 8 : 0 }}>
-                                            <div style={{ fontWeight: 800, color: log.type === "clear" ? "#c00" : (typeof log === "string" ? "inherit" : (log.pts > 0 ? "#2E8B57" : "#c00")), minWidth: 40 }}>{log.type === "clear" ? "×" : (typeof log === "string" ? "" : log.pts > 0 ? `+${log.pts}` : log.pts)}</div>
+                                        <div key={i} style={{ fontSize: 13, color: dark ? "#ccc" : "#333", padding: "8px 0", borderBottom: `1px solid ${dark ? "#333" : "#eee"}`, display: "flex", gap: 10 }}>
+                                            <div style={{ fontWeight: 800, color: typeof log === "string" ? "inherit" : (log.pts > 0 ? "#2E8B57" : "#c00"), minWidth: 40 }}>{typeof log === "string" ? "" : log.pts > 0 ? `+${log.pts}` : log.pts}</div>
                                             <div style={{ flex: 1 }}>{typeof log === "string" ? log : `[${log.house}] ${log.reason}`}</div>
                                             <div style={{ fontSize: 11, color: "#888", alignSelf: "center" }}>{typeof log === "string" ? "" : log.time}</div>
                                         </div>
