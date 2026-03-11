@@ -1410,7 +1410,19 @@ export function AdminPage({
                         </div>
 
                         <div style={cS}>
-                            <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>Log</h4>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <h4 style={{ color: dark ? "#ccc" : "#444", margin: 0, fontSize: 14 }}>Log</h4>
+                                {pointLog.length > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm(`Clear all ${pointLog.length} log entries from the database? House point totals will NOT change. This only removes the history.`)) {
+                                                setPointLog([]);
+                                            }
+                                        }}
+                                        style={{ background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 6, padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700 }}
+                                    >🗑 Clear Log</button>
+                                )}
+                            </div>
                             {pointLog.length === 0 ? <div style={{ fontSize: 12, color: dark ? "#666" : "#aaa" }}>No points awarded yet.</div> : (
                                 <div style={{ maxHeight: 300, overflowY: "auto", background: dark ? "rgba(255,255,255,.02)" : "#fafafa", borderRadius: 10, padding: 12, border: `1px solid ${dark ? "#333" : "#eee"}` }}>
                                     {pointLog.map((log, i) => (
