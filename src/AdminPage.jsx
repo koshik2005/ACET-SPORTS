@@ -104,6 +104,8 @@ export function AdminPage({
     const [showAddStudent, setShowAddStudent] = useState(false);
     const [addStudentForm, setAddStudentForm] = useState({ name: "", regNo: "", email: "", gender: "Male", house: "", year: "", dept: "", shirtSize: "" });
     const [showBulkImport, setShowBulkImport] = useState(studentsDB.length === 0);
+    const [studentPage, setStudentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(50);
 
     // Helper: parse a combined "year dept" value like "II AI&DS", "I(cse a)", "III MECH A"
     const parseYearDept = (raw) => {
@@ -1526,7 +1528,7 @@ export function AdminPage({
                                     <div style={{ flex: 1, position: "relative" }}>
                                         <input
                                             value={studentSearch}
-                                            onChange={e => setStudentSearch(e.target.value)}
+                                            onChange={e => { setStudentSearch(e.target.value); setStudentPage(1); }}
                                             placeholder="🔍 Search by Name or Reg No..."
                                             style={{ ...iS, marginBottom: 0, paddingLeft: 40 }}
                                         />
@@ -1599,11 +1601,13 @@ export function AdminPage({
                                             {["S.No", "Name", "Reg No", "Email", "Gender", "House", "Year", "Dept", "Size", "Actions"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
-                                            {studentsDB
-                                                .filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()))
-                                                .slice(0, 100).map((s, idx) => (
+                                            {(() => {
+                                                const filtered = studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()));
+                                                const start = (studentPage - 1) * rowsPerPage;
+                                                const end = start + rowsPerPage;
+                                                return filtered.slice(start, end).map((s, idx) => (
                                                     <tr key={s.regNo} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
-                                                        <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || idx + 1}</td>
+                                                        <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || start + idx + 1}</td>
                                                         {editingRegNo === s.regNo ? (
                                                             <>
                                                                 <td style={{ padding: "4px 8px" }}><input value={editStudentForm.name} onChange={e => setEditStudentForm({ ...editStudentForm, name: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
@@ -1659,10 +1663,38 @@ export function AdminPage({
                                                             </>
                                                         )}
                                                     </tr>
-                                                ))}
+                                                ));
+                                            })()}
                                         </tbody>
                                     </table>
-                                    {studentsDB.length > 100 && <div style={{ textAlign: "center", padding: 12, color: "#888", fontSize: 12 }}>Showing first 100 results. {studentSearch ? "" : "Total: " + studentsDB.length}</div>}
+                                </div>
+
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 10 }}>
+                                    <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666" }}>
+                                        {(() => {
+                                            const filteredCount = studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length;
+                                            const totalPages = Math.ceil(filteredCount / rowsPerPage);
+                                            return `Page ${studentPage} of ${totalPages || 1} (${filteredCount} students total)`;
+                                        })()}
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                        <label style={{ fontSize: 11, color: dark ? "#888" : "#999" }}>Rows per page:</label>
+                                        <select value={rowsPerPage} onChange={e => { setRowsPerPage(Number(e.target.value)); setStudentPage(1); }} style={{ ...iS, width: "auto", padding: "4px 8px", fontSize: 11, margin: 0 }}>
+                                            {[20, 50, 100, 200, 500].map(v => <option key={v} value={v}>{v}</option>)}
+                                        </select>
+                                        <div style={{ display: "flex", gap: 4 }}>
+                                            <button 
+                                                disabled={studentPage === 1} 
+                                                onClick={() => setStudentPage(p => p - 1)}
+                                                style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#f5f5f5", color: dark ? (studentPage === 1 ? "#555" : "#ccc") : (studentPage === 1 ? "#ccc" : "#333"), cursor: studentPage === 1 ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
+                                            >Prev</button>
+                                            <button 
+                                                disabled={studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage)} 
+                                                onClick={() => setStudentPage(p => p + 1)}
+                                                style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#f5f5f5", color: dark ? (studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage) ? "#555" : "#ccc") : (studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage) ? "#ccc" : "#333"), cursor: studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage) ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
+                                            >Next</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
