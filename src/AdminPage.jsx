@@ -1509,7 +1509,7 @@ export function AdminPage({
                                             if (idx >= 0) { merged[idx] = { ...merged[idx], ...nr, sno: merged[idx].sno || nr.sno }; }
                                             else {
                                                 maxSno++;
-                                                merged.push({ ...nr, sno: nr.sno || maxSno, shirtIssued: false });
+                                                merged.push({ ...nr, sno: maxSno, shirtIssued: false });
                                                 addedCount++;
                                             }
                                         });
