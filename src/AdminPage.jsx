@@ -1499,23 +1499,15 @@ export function AdminPage({
                                 </div>
                                 <div style={{ display: "flex", gap: 10 }}>
                                     <button onClick={() => {
-                                        // Identify current highest S.No and map
+                                        // Always append every row as a new entry — admin handles any duplicates manually via inline Edit
                                         let maxSno = studentsDB.reduce((max, s) => Math.max(max, parseInt(s.sno) || 0), 0);
-                                        const merged = [...studentsDB];
-                                        let addedCount = 0;
-                                        xlPreview.forEach(nr => {
-                                            // Update existing or add new
-                                            const idx = merged.findIndex(sr => sr.regNo === nr.regNo && sr.regNo);
-                                            if (idx >= 0) { merged[idx] = { ...merged[idx], ...nr, sno: merged[idx].sno || nr.sno }; }
-                                            else {
-                                                maxSno++;
-                                                merged.push({ ...nr, sno: maxSno, shirtIssued: false });
-                                                addedCount++;
-                                            }
+                                        const toAdd = xlPreview.map(nr => {
+                                            maxSno++;
+                                            return { ...nr, sno: maxSno, shirtIssued: false };
                                         });
-                                        setStudentsDB(merged);
+                                        setStudentsDB([...studentsDB, ...toAdd]);
                                         setXlPreview(null);
-                                        alert(`Successfully added ${addedCount} and updated ${xlPreview.length - addedCount} students.`);
+                                        alert(`Successfully imported ${toAdd.length} students.`);
                                     }} style={{ flex: 1, background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Confirm & Import Database</button>
                                     <button onClick={() => setXlPreview(null)} style={{ background: "transparent", color: dark ? "#ccc" : "#555", border: `1px solid ${dark ? "#444" : "#ccc"}`, borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Cancel</button>
                                 </div>
