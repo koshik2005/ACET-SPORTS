@@ -22,12 +22,21 @@ const allowedOrigins = [
   "https://acet-sports-seven.vercel.app",
   "https://acetsports.favoflex.com",
   "http://localhost:5173",
-  "http://localhost:3001"
+  "http://127.0.0.1:5173",
+  "http://localhost:3001",
+  "http://127.0.0.1:3001"
 ];
 
 const isAllowedOrigin = (origin) => {
   if (!origin) return false;
   if (allowedOrigins.includes(origin)) return true;
+
+  // Allow all localhost/127.0.0.1 variations in local development
+  const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
+  if (!isProd && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) {
+    return true;
+  }
+
   // Allow Vercel preview deployments (e.g., https://acet-sports-r7cef9k0u-koshik2005s-projects.vercel.app)
   if (/^https:\/\/acet-sports-[a-z0-9]+-[a-z0-9-]+\.vercel\.app$/.test(origin)) return true;
   return false;
@@ -53,6 +62,7 @@ const corsOptions = {
 app.use((req, res, next) => {
   cors(corsOptions)(req, res, (err) => {
     if (err) {
+      console.warn(`🔒 CORS Bloced: Origin "${req.headers.origin}" not in whitelist.`);
       return res.status(403).json({ error: "Access Denied: Origin not allowed or missing." });
     }
     next();
