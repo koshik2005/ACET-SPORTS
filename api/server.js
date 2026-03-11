@@ -75,8 +75,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-prod
 
 // Rate Limiters
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000,
+  windowMs: 15 * 60 * 1000, 
+  max: 1000, // Reduced from 5000: still generous for normal users, but better against abuse
   validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many requests from this IP, please try again after 15 minutes" }
 });
@@ -296,7 +296,14 @@ app.get("/api/public-state", async (req, res) => {
     });
 
     const result = { ...state.toObject ? state.toObject() : state, houses: sanitizedHouses };
-    delete result.activeAdminToken; // <--- ADDED: Security fix, do not leak admin token to public state
+    
+    // SECURITY: Strip out sensitive database fields from public state.
+    // These should only be queried via /api/secure-state by authenticated admins.
+    delete result.activeAdminToken;
+    delete result.studentsDB;
+    delete result.registrations;
+    delete result.adminLogs;
+    delete result.pointLog;
 
     stateCache = { data: result, ts: Date.now() }; // update cache
     res.json(result);
@@ -323,6 +330,21 @@ app.get("/api/state", (req, res) => {
 app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
   try {
     const { type, data } = req.body;
+
+    // SECURITY: Whitelist of allowed state properties to update.
+    // Prevents arbitrary injection into the State document.
+    const allowedTypes = [
+      "houses", "authorities", "management", "studentCommittee", "games", "gallery", 
+      "registrations", "pointLog", "studentsDB", "results", "sportGamesList", 
+      "sportGamesListWomens", "staffGamesList", "staffGamesListWomens", "athleticsList", 
+      "athleticsListWomens", "authorityRoles", "managementRoles", "nav", 
+      "registrationOpen", "eventDate", "emptyGame", "starPlayers", "closedEvents",
+      "maxGames", "maxAthletics", "registrationCloseTime"
+    ];
+
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({ error: `Unauthorized update type: ${type}` });
+    }
 
     // Authorization Check: Captains can ONLY update studentsDB
     if (req.user.role === "captain" && type !== "studentsDB") {
@@ -453,7 +475,11 @@ app.post("/api/admin-verify-password", loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ success: false, error: "Email and password are required" });
 
-  const adminPassword = process.env.ADMIN_PASSWORD || "adminacet";
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    return res.status(500).json({ success: false, error: "Server Configuration Error: ADMIN_PASSWORD not set in environment." });
+  }
+
   if (password !== adminPassword) {
     return res.status(401).json({ success: false, error: "Incorrect admin password." });
   }
@@ -466,13 +492,10 @@ app.post("/api/admin-login", loginLimiter, async (req, res) => {
   if (!email || !email.trim() === "" || !otp) return res.status(400).json({ success: false, error: "Email and OTP are required" });
 
   const em = email.trim();
-  const isDefaultFallback = String(otp) === "159753";
   const stored = await Otp.findOne({ email: em, type: "admin" });
 
-  if (!isDefaultFallback) {
-    if (!stored) return res.status(400).json({ error: "OTP expired or not sent" });
-    if (String(stored.otp) !== String(otp)) return res.status(400).json({ error: "Invalid OTP" });
-  }
+  if (!stored) return res.status(400).json({ error: "OTP expired or not sent" });
+  if (String(stored.otp) !== String(otp)) return res.status(400).json({ error: "Invalid OTP" });
 
   if (stored) await Otp.deleteOne({ _id: stored._id });
 

@@ -48,9 +48,21 @@ export default function App() {
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/public-state`)
-      .then(res => res.json())
+    const adminToken = localStorage.getItem("adminToken");
+    const fetchPath = adminToken ? "/api/secure-state" : "/api/public-state";
+    const headers = adminToken ? { "Authorization": `Bearer ${adminToken}` } : {};
+
+    fetch(`${API_BASE}${fetchPath}`, { headers })
+      .then(res => {
+        if (!res.ok && adminToken) {
+          // If secure fetch fails (expired token), fallback to public
+          localStorage.removeItem("adminToken");
+          return fetch(`${API_BASE}/api/public-state`).then(r => r.json());
+        }
+        return res.json();
+      })
       .then(data => {
+        if (!data) return;
         if (data.houses) setHouses(data.houses);
         if (data.authorities) setAuthorities(data.authorities);
         if (data.management) setManagement(data.management);
@@ -60,6 +72,7 @@ export default function App() {
         if (data.registrations) setRegistrations(data.registrations);
         if (data.pointLog) setPointLog(data.pointLog);
         if (data.studentsDB) setStudentsDB(data.studentsDB);
+        if (data.adminLogs) setAdminLogs?.(data.adminLogs); // Only if setter exists
         if (data.results) setResults(data.results);
         if (data.starPlayers) setStarPlayers(data.starPlayers);
 

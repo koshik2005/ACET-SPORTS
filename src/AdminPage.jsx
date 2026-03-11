@@ -242,13 +242,23 @@ export function AdminPage({
             if (data.success) {
                 localStorage.setItem("adminToken", data.token);
 
-                // Fetch the secure state that includes passwords
+                // Fetch the secure state that includes everything
                 const secureRes = await fetch(`${API_BASE}/api/secure-state`, {
                     headers: { "Authorization": `Bearer ${data.token}` }
                 });
                 const secureData = await secureRes.json();
 
-                if (secureData.houses) setHouses(secureData.houses);
+                if (secureData.houses) props.setHouses(secureData.houses);
+                if (secureData.studentsDB) props.setStudentsDB(secureData.studentsDB);
+                if (secureData.pointLog) props.setPointLog(secureData.pointLog);
+                if (secureData.registrations) props.setRegistrations(secureData.registrations);
+                if (secureData.authorities) props.setAuthorities(secureData.authorities);
+                if (secureData.management) props.setManagement(secureData.management);
+                if (secureData.studentCommittee) props.setStudentCommittee(secureData.studentCommittee);
+                if (secureData.games) props.setGames(secureData.games);
+                if (secureData.gallery) props.setGallery(secureData.gallery);
+                if (secureData.results) props.setResults(secureData.results);
+                if (secureData.starPlayers) props.setStarPlayers(secureData.starPlayers);
 
                 setLoggedIn(true);
             } else {
