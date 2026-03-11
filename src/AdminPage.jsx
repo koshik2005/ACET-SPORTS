@@ -260,6 +260,7 @@ export function AdminPage({
                 if (secureData.gallery) setGallery(secureData.gallery);
                 if (secureData.results) setResults(secureData.results);
                 if (secureData.starPlayers) setStarPlayers(secureData.starPlayers);
+                if (secureData.adminLogs) setAdminLogs(secureData.adminLogs);
 
                 setLoggedIn(true);
             } else {
