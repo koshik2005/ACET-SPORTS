@@ -25,6 +25,7 @@ export default function App() {
   const [studentsDB, setStudentsDB] = useState([]);
   const [results, setResults] = useState([]);
   const [starPlayers, setStarPlayers] = useState([]);
+  const [adminLogs, setAdminLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Configuration from API
@@ -72,7 +73,7 @@ export default function App() {
         if (data.registrations) setRegistrations(data.registrations);
         if (data.pointLog) setPointLog(data.pointLog);
         if (data.studentsDB) setStudentsDB(data.studentsDB);
-        if (data.adminLogs) setAdminLogs?.(data.adminLogs); // Only if setter exists
+        if (data.adminLogs) setAdminLogs(data.adminLogs);
         if (data.results) setResults(data.results);
         if (data.starPlayers) setStarPlayers(data.starPlayers);
 
@@ -116,11 +117,14 @@ export default function App() {
       body: JSON.stringify({ type, data })
     }).then(res => {
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          console.error("Unauthorized state sync attempt.");
-        }
+        res.json().then(data => {
+          console.error(`Sync failed for ${type}: ${data.error || res.statusText}`);
+          if (res.status === 401 || res.status === 403) {
+            console.error("Authentication/Permission error during sync.");
+          }
+        }).catch(() => console.error(`Sync failed for ${type} with status ${res.status}`));
       }
-    }).catch(err => console.error(`Sync failed for ${type}:`, err));
+    }).catch(err => console.error(`Network error during Sync for ${type}:`, err));
   };
 
   const wrap = (setter, type) => (updater) => {
@@ -142,6 +146,7 @@ export default function App() {
   const setStudentsDBSync = wrap(setStudentsDB, "studentsDB");
   const setResultsSync = wrap(setResults, "results");
   const setStarPlayersSync = wrap(setStarPlayers, "starPlayers");
+  const setAdminLogsSync = wrap(setAdminLogs, "adminLogs");
   const setNavSync = wrap(setNav, "nav");
   const setSportGamesListSync = wrap(setSportGamesList, "sportGamesList");
   const setSportGamesListWomensSync = wrap(setSportGamesListWomens, "sportGamesListWomens");
@@ -211,6 +216,7 @@ export default function App() {
           studentsDB={studentsDB} setStudentsDB={setStudentsDBSync}
           results={results} setResults={setResultsSync}
           starPlayers={starPlayers} setStarPlayers={setStarPlayersSync}
+          adminLogs={adminLogs} setAdminLogs={setAdminLogsSync}
           nav={nav} setNav={setNavSync}
           sportGamesList={sportGamesList} setSportGamesList={setSportGamesListSync}
           sportGamesListWomens={sportGamesListWomens} setSportGamesListWomens={setSportGamesListWomensSync}

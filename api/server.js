@@ -1,5 +1,13 @@
-import "dotenv/config";
 import express from "express";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Explicitly load .env from the api directory
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 import nodemailer from "nodemailer";
 import cors from "cors";
 import jwt from "jsonwebtoken";
@@ -7,18 +15,13 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import compression from "compression";
-import path from "path";
-import { fileURLToPath } from "url";
-import mongoSanitize from "express-mongo-sanitize";
 import bcrypt from "bcryptjs";
 import { State, Otp } from "./models.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 const app = express();
 app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
+app.set("query parser", "simple"); // Use simple parser to avoid immutable getters in Express 5
 app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
-app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -282,6 +285,7 @@ app.get("/api/health", async (req, res) => {
     res.json({
       status: "OK",
       db: dbStatus,
+      uriHint: MONGODB_URI ? MONGODB_URI.substring(0, 20) + "..." : "NONE",
       env: {
         node: process.version,
         env: process.env.NODE_ENV,
@@ -304,7 +308,7 @@ app.get("/api/public-state", async (req, res) => {
     const state = await loadDb();
     // Strip passwords from houses before sending
     const sanitizedHouses = state.houses.map(h => {
-      const { ...hSafe } = h;
+      const hSafe = h.toObject ? h.toObject() : { ...h };
       ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
         if (hSafe[role]) delete hSafe[role].password;
       });
@@ -567,11 +571,19 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
 
   // Search all houses and all roles for this email
   for (const houseObj of state.houses) {
-    ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
+    const roles = ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"];
+    for (const role of roles) {
       const captain = houseObj[role];
       if (captain && captain.email && captain.email.trim().toLowerCase() === em) {
-        // Compare password using bcrypt
-        const isMatch = await bcrypt.compare(password, captain.password || "");
+        const storedPw = captain.password || "";
+        let isMatch = false;
+        // If it looks like a bcrypt hash, compare it; otherwise, do a plain text check
+        if (storedPw.startsWith("$2b$") || storedPw.startsWith("$2a$") || storedPw.startsWith("$2y$")) {
+          isMatch = await bcrypt.compare(password, storedPw);
+        } else {
+          isMatch = (password === storedPw);
+        }
+
         if (isMatch) {
           valid = true;
           loggedInRole = role;
@@ -580,7 +592,7 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
           console.log(`❌ Login failed for ${em}: Password mismatch.`);
         }
       }
-    });
+    }
     if (valid) break;
   }
 

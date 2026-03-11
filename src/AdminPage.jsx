@@ -37,7 +37,8 @@ export function AdminPage({
     emptyGame,
     closedEvents, setClosedEvents,
     maxGames, setMaxGames,
-    maxAthletics, setMaxAthletics
+    maxAthletics, setMaxAthletics,
+    adminLogs, setAdminLogs
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -248,17 +249,17 @@ export function AdminPage({
                 });
                 const secureData = await secureRes.json();
 
-                if (secureData.houses) props.setHouses(secureData.houses);
-                if (secureData.studentsDB) props.setStudentsDB(secureData.studentsDB);
-                if (secureData.pointLog) props.setPointLog(secureData.pointLog);
-                if (secureData.registrations) props.setRegistrations(secureData.registrations);
-                if (secureData.authorities) props.setAuthorities(secureData.authorities);
-                if (secureData.management) props.setManagement(secureData.management);
-                if (secureData.studentCommittee) props.setStudentCommittee(secureData.studentCommittee);
-                if (secureData.games) props.setGames(secureData.games);
-                if (secureData.gallery) props.setGallery(secureData.gallery);
-                if (secureData.results) props.setResults(secureData.results);
-                if (secureData.starPlayers) props.setStarPlayers(secureData.starPlayers);
+                if (secureData.houses) setHouses(secureData.houses);
+                if (secureData.studentsDB) setStudentsDB(secureData.studentsDB);
+                if (secureData.pointLog) setPointLog(secureData.pointLog);
+                if (secureData.registrations) setRegistrations(secureData.registrations);
+                if (secureData.authorities) setAuthorities(secureData.authorities);
+                if (secureData.management) setManagement(secureData.management);
+                if (secureData.studentCommittee) setStudentCommittee(secureData.studentCommittee);
+                if (secureData.games) setGames(secureData.games);
+                if (secureData.gallery) setGallery(secureData.gallery);
+                if (secureData.results) setResults(secureData.results);
+                if (secureData.starPlayers) setStarPlayers(secureData.starPlayers);
 
                 setLoggedIn(true);
             } else {
@@ -2153,6 +2154,7 @@ export function AdminPage({
                                                         headers: { "Authorization": `Bearer ${token}` }
                                                     });
                                                     if (!res.ok) throw new Error("Failed to clear logs");
+                                                    setAdminLogs([]);
                                                     alert("✅ Admin logs cleared successfully!");
                                                 } catch (e) {
                                                     alert("❌ Error: " + e.message);
@@ -2160,11 +2162,33 @@ export function AdminPage({
                                             }
                                         }}
                                         style={{
-                                            background: "transparent", color: "#c00", border: "1px solid #c00", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap"
+                                            background: "rgba(204,0,0,.08)", color: "#c00", border: "1px solid #c00", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap"
                                         }}>
                                         🗑 Clear Login Logs
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* Live Audit Log Viewer */}
+                            <div style={{ ...cS, marginTop: 20, maxHeight: 400, overflowY: "auto" }}>
+                                <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>Recent Activity (Last 50)</h4>
+                                {adminLogs?.length === 0 ? (
+                                    <div style={{ fontSize: 12, color: dark ? "#666" : "#aaa", padding: 20, textAlign: "center" }}>No logs found.</div>
+                                ) : (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                        {[...adminLogs].reverse().slice(0, 50).map((log, i) => (
+                                            <div key={i} style={{ borderBottom: `1px solid ${dark ? "#222" : "#eee"}`, paddingBottom: 8, fontSize: 11 }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span style={{ fontWeight: 800, color: log.type === "LOGIN" ? "#2E8B57" : "#1E3A8A" }}>{log.type}</span>
+                                                    <span style={{ opacity: 0.6 }}>{new Date(log.timestamp).toLocaleString()}</span>
+                                                </div>
+                                                <div style={{ marginTop: 2 }}>
+                                                    <span style={{ fontWeight: 600 }}>{log.email}:</span> {log.action}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
