@@ -98,6 +98,9 @@ export function AdminPage({
     const [spUploading, setSpUploading] = useState(false);
 
     const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config"];
+    const [studentSearch, setStudentSearch] = useState("");
+    const [editingRegNo, setEditingRegNo] = useState(null);
+    const [editStudentForm, setEditStudentForm] = useState({});
 
     // Helper: parse a combined "year dept" value like "II AI&DS", "I(cse a)", "III MECH A"
     const parseYearDept = (raw) => {
@@ -1515,41 +1518,89 @@ export function AdminPage({
                         )}
 
                         {studentsDB.length > 0 && (
-                            <div>
+                            <div style={{ marginBottom: 20 }}>
+                                <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                                    <div style={{ flex: 1, position: "relative" }}>
+                                        <input
+                                            value={studentSearch}
+                                            onChange={e => setStudentSearch(e.target.value)}
+                                            placeholder="🔍 Search by Name or Reg No..."
+                                            style={{ ...iS, marginBottom: 0, paddingLeft: 40 }}
+                                        />
+                                        <div style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>🔍</div>
+                                    </div>
+                                </div>
+
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                                         <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                            {["S.No", "Name", "Reg No", "Role", "House", "Year", "Dept", "Gender", "Size"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                            {["S.No", "Name", "Reg No", "Email", "Gender", "House", "Year", "Dept", "Size", "Actions"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
-                                            {studentsDB.slice(0, 100).map((s, idx) => (
-                                                <tr key={s.regNo} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || idx + 1}</td>
-                                                    <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555", fontWeight: 600 }}>{s.role || "Student"}</td>
-                                                    <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
-                                                    <td style={{ padding: "8px 12px" }}>
-                                                        <input
-                                                            value={s.year || ""}
-                                                            onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, year: e.target.value } : x))}
-                                                            style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: "8px 12px" }}>
-                                                        <input
-                                                            value={s.dept || ""}
-                                                            onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, dept: e.target.value } : x))}
-                                                            style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender}</td>
-                                                    <td style={{ padding: "8px 12px", fontWeight: 700, color: "#8B0000" }}>{s.shirtSize}</td>
-                                                </tr>
-                                            ))}
+                                            {studentsDB
+                                                .filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()))
+                                                .slice(0, 100).map((s, idx) => (
+                                                    <tr key={s.regNo} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
+                                                        <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || idx + 1}</td>
+                                                        {editingRegNo === s.regNo ? (
+                                                            <>
+                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.name} onChange={e => setEditStudentForm({ ...editStudentForm, name: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.regNo} onChange={e => setEditStudentForm({ ...editStudentForm, regNo: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.email} onChange={e => setEditStudentForm({ ...editStudentForm, email: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 8px" }}>
+                                                                    <select value={editStudentForm.gender} onChange={e => setEditStudentForm({ ...editStudentForm, gender: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }}>
+                                                                        <option value="Male">Male</option>
+                                                                        <option value="Female">Female</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td style={{ padding: "4px 8px" }}>
+                                                                    <select value={editStudentForm.house} onChange={e => setEditStudentForm({ ...editStudentForm, house: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }}>
+                                                                        {houses.map(h => <option key={h.name} value={h.name}>{h.name}</option>)}
+                                                                    </select>
+                                                                </td>
+                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.year} onChange={e => setEditStudentForm({ ...editStudentForm, year: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12, width: 60 }} /></td>
+                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.dept} onChange={e => setEditStudentForm({ ...editStudentForm, dept: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.shirtSize} onChange={e => setEditStudentForm({ ...editStudentForm, shirtSize: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12, width: 40 }} /></td>
+                                                                <td style={{ padding: "8px 12px" }}>
+                                                                    <div style={{ display: "flex", gap: 6 }}>
+                                                                        <button onClick={() => {
+                                                                            setStudentsDB(db => db.map(x => x.regNo === s.regNo ? editStudentForm : x));
+                                                                            setEditingRegNo(null);
+                                                                        }} style={{ background: "#2E8B57", color: "#fff", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>Save</button>
+                                                                        <button onClick={() => setEditingRegNo(null)} style={{ background: dark ? "#333" : "#ddd", color: dark ? "#ccc" : "#333", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>Cancel</button>
+                                                                    </div>
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
+                                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
+                                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.email}</td>
+                                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender}</td>
+                                                                <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
+                                                                <td style={{ padding: "8px 12px" }}>{s.year}</td>
+                                                                <td style={{ padding: "8px 12px" }}>{s.dept}</td>
+                                                                <td style={{ padding: "8px 12px", fontWeight: 700, color: "#8B0000" }}>{s.shirtSize}</td>
+                                                                <td style={{ padding: "8px 12px" }}>
+                                                                    <div style={{ display: "flex", gap: 6 }}>
+                                                                        <button onClick={() => {
+                                                                            setEditStudentForm(s);
+                                                                            setEditingRegNo(s.regNo);
+                                                                        }} style={{ background: dark ? "#333" : "#eee", color: dark ? "#ccc" : "#444", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>Edit</button>
+                                                                        <button onClick={() => {
+                                                                            if (window.confirm(`Delete ${s.name}?`)) {
+                                                                                setStudentsDB(db => db.filter(x => x.regNo !== s.regNo));
+                                                                            }
+                                                                        }} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 10 }}>🗑</button>
+                                                                    </div>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                    </tr>
+                                                ))}
                                         </tbody>
                                     </table>
-                                    {studentsDB.length > 100 && <div style={{ textAlign: "center", padding: 12, color: "#888", fontSize: 12 }}>Showing first 100 students. Export to Excel for full list.</div>}
+                                    {studentsDB.length > 100 && <div style={{ textAlign: "center", padding: 12, color: "#888", fontSize: 12 }}>Showing first 100 results. {studentSearch ? "" : "Total: " + studentsDB.length}</div>}
                                 </div>
                             </div>
                         )}
