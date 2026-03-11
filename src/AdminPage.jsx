@@ -103,6 +103,7 @@ export function AdminPage({
     const [editStudentForm, setEditStudentForm] = useState({});
     const [showAddStudent, setShowAddStudent] = useState(false);
     const [addStudentForm, setAddStudentForm] = useState({ name: "", regNo: "", email: "", gender: "Male", house: "", year: "", dept: "", shirtSize: "" });
+    const [showBulkImport, setShowBulkImport] = useState(studentsDB.length === 0);
 
     // Helper: parse a combined "year dept" value like "II AI&DS", "I(cse a)", "III MECH A"
     const parseYearDept = (raw) => {
@@ -1432,12 +1433,12 @@ export function AdminPage({
                                 <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>Central database for all students (Required for Registrations)</div>
                             </div>
                             <div style={{ display: "flex", gap: 10 }}>
-                                <button onClick={() => xlInputRef.current?.click()} style={{ background: "linear-gradient(135deg,#1E3A8A,#2563EB)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>+ Import Excel</button>
+                                <button onClick={() => setShowBulkImport(!showBulkImport)} style={{ background: showBulkImport ? (dark ? "#333" : "#eee") : "linear-gradient(135deg,#1E3A8A,#2563EB)", color: showBulkImport ? (dark ? "#fff" : "#222") : "#fff", border: "none", borderRadius: 8, padding: "10px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>{showBulkImport ? "✕ Hide Import" : "📥 Bulk Import"}</button>
                             </div>
                             <input type="file" accept=".xlsx,.xls,.csv" ref={xlInputRef} style={{ display: "none" }} onChange={e => { const file = e.target.files[0]; if (file) parseFile(file); e.target.value = ""; }} />
                         </div>
 
-                        {!xlPreview && studentsDB.length === 0 && (
+                        {!xlPreview && showBulkImport && (
                             <>
                                 <div
                                     onDragOver={e => { e.preventDefault(); setXlDrag(true); }}
