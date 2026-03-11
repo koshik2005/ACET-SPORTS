@@ -5,6 +5,7 @@ import { HomePage, EventsPage } from "./Pages1.jsx";
 import { RegistrationPage, ScoreboardPage, GalleryPage, WinnersPage, StarPlayersPage } from "./Pages2.jsx";
 import { AdminPage } from "./AdminPage.jsx";
 import { CaptainPortal } from "./CaptainPortal.jsx";
+import { LaunchScreen } from "./LaunchScreen.jsx";
 
 export default function App() {
   const [active, setActive] = useState(() => {
@@ -27,6 +28,10 @@ export default function App() {
   const [starPlayers, setStarPlayers] = useState([]);
   const [adminLogs, setAdminLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasLaunched, setHasLaunched] = useState(() => {
+    return sessionStorage.getItem("launched") === "true";
+  });
+  const [launchConfig, setLaunchConfig] = useState({ enabled: true, title: "Achariya Sports Day", year: "2026" });
 
   // Configuration from API
   const [nav, setNav] = useState([]);
@@ -94,6 +99,7 @@ export default function App() {
         if (data.closedEvents) setClosedEvents(data.closedEvents);
         if (data.maxGames !== undefined) setMaxGames(data.maxGames);
         if (data.maxAthletics !== undefined) setMaxAthletics(data.maxAthletics);
+        if (data.launchConfig) setLaunchConfig(data.launchConfig);
 
         setLoading(false);
       })
@@ -162,6 +168,7 @@ export default function App() {
   const setClosedEventsSync = wrap(setClosedEvents, "closedEvents");
   const setMaxGamesSync = wrap(setMaxGames, "maxGames");
   const setMaxAthleticsSync = wrap(setMaxAthletics, "maxAthletics");
+  const setLaunchConfigSync = wrap(setLaunchConfig, "launchConfig");
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f0f1a" : "#f4f4f8", color: dark ? "#fff" : "#8B0000", fontSize: 24, fontWeight: 800 }}>⚡ Loading Achariya Sports...</div>;
 
@@ -233,11 +240,19 @@ export default function App() {
           closedEvents={closedEvents} setClosedEvents={setClosedEventsSync}
           maxGames={maxGames} setMaxGames={setMaxGamesSync}
           maxAthletics={maxAthletics} setMaxAthletics={setMaxAthleticsSync}
+          launchConfig={launchConfig} setLaunchConfig={setLaunchConfigSync}
         />}
         {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} />}
       </main>
 
       <Footer dark={dark} nav={nav.filter(n => n !== "Admin" && n !== "Captain")} houses={houses} />
+      
+      {launchConfig?.enabled && !hasLaunched && (
+        <LaunchScreen config={launchConfig} onLaunch={() => {
+          setHasLaunched(true);
+          sessionStorage.setItem("launched", "true");
+        }} />
+      )}
     </div>
   );
 }

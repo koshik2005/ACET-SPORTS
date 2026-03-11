@@ -27,6 +27,8 @@ const stateSchema = new mongoose.Schema({
     closedEvents: { type: Array, default: [] },
     maxGames: { type: Number, default: 1 },
     maxAthletics: { type: Number, default: 1 },
+    adminLogs: { type: Array, default: [] },
+    launchConfig: { type: Object, default: { enabled: true, title: "Achariya Sports Day", year: "2026" } },
 }, {
     timestamps: true,
     // This ensures that Mongoose doesn't strip out fields not explicitly defined in the schema if we decide to add more later

@@ -38,7 +38,8 @@ export function AdminPage({
     closedEvents, setClosedEvents,
     maxGames, setMaxGames,
     maxAthletics, setMaxAthletics,
-    adminLogs, setAdminLogs
+    adminLogs, setAdminLogs,
+    launchConfig, setLaunchConfig
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -2049,6 +2050,40 @@ export function AdminPage({
                     <div style={{ maxWidth: 800 }}>
                         <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: 18 }}>🛠️ System Configuration</h3>
                         <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginBottom: 20 }}>Configure global sports app options.</div>
+
+                        <div style={{ ...cS, marginBottom: 20, borderTop: "4px solid #FFD700" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+                                <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0", fontSize: 15 }}>🎬 Launch Screen Settings</h4>
+                                <div style={{ fontSize: 12, color: dark ? "#888" : "#999" }}>Splash screen animation</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <div 
+                                    onClick={() => setLaunchConfig({ ...launchConfig, enabled: !(launchConfig?.enabled ?? true) })}
+                                    style={{
+                                        width: 44, height: 24, borderRadius: 12, cursor: "pointer", position: "relative",
+                                        background: (launchConfig?.enabled ?? true) ? "#2E8B57" : (dark ? "#444" : "#ccc"),
+                                        transition: "background 0.3s"
+                                    }}
+                                >
+                                    <div style={{
+                                        width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 2,
+                                        left: (launchConfig?.enabled ?? true) ? 22 : 2,
+                                        transition: "left 0.3s", boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
+                                    }} />
+                                </div>
+                                <label style={{ ...lS, marginBottom: 0, cursor: "pointer", color: dark ? "#fff" : "#222" }} onClick={() => setLaunchConfig({ ...launchConfig, enabled: !(launchConfig?.enabled ?? true) })}>Enable Launch Animation</label>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, opacity: launchConfig?.enabled ? 1 : 0.5, pointerEvents: launchConfig?.enabled ? "auto" : "none" }}>
+                                <div>
+                                    <label style={lS}>Main Title</label>
+                                    <input value={launchConfig?.title || ""} onChange={e => setLaunchConfig({ ...launchConfig, title: e.target.value })} placeholder="Achariya Sports Day" style={iS} />
+                                </div>
+                                <div>
+                                    <label style={lS}>Year / Subtitle (Gold Text)</label>
+                                    <input value={launchConfig?.year || ""} onChange={e => setLaunchConfig({ ...launchConfig, year: e.target.value })} placeholder="2026" style={iS} />
+                                </div>
+                            </div>
+                        </div>
 
                         <div style={{ ...cS, marginBottom: 20, borderTop: "4px solid #8B0000" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
