@@ -101,6 +101,8 @@ export function AdminPage({
     const [studentSearch, setStudentSearch] = useState("");
     const [editingRegNo, setEditingRegNo] = useState(null);
     const [editStudentForm, setEditStudentForm] = useState({});
+    const [showAddStudent, setShowAddStudent] = useState(false);
+    const [addStudentForm, setAddStudentForm] = useState({ name: "", regNo: "", email: "", gender: "Male", house: "", year: "", dept: "", shirtSize: "" });
 
     // Helper: parse a combined "year dept" value like "II AI&DS", "I(cse a)", "III MECH A"
     const parseYearDept = (raw) => {
@@ -1529,7 +1531,66 @@ export function AdminPage({
                                         />
                                         <div style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>🔍</div>
                                     </div>
+                                    <button
+                                        onClick={() => setShowAddStudent(!showAddStudent)}
+                                        style={{ background: showAddStudent ? (dark ? "#333" : "#eee") : "linear-gradient(135deg,#1E3A8A,#2563EB)", color: showAddStudent ? (dark ? "#fff" : "#222") : "#fff", border: "none", borderRadius: 8, padding: "0 20px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}
+                                    >
+                                        {showAddStudent ? "✕ Close Form" : "➕ Add Student"}
+                                    </button>
                                 </div>
+
+                                {showAddStudent && (
+                                    <div style={{ ...cS, marginBottom: 20, border: `2px solid ${dark ? "#1E3A8A" : "#2563EB"}` }}>
+                                        <h4 style={{ margin: "0 0 16px", color: dark ? "#fff" : "#1E3A8A", fontSize: 16 }}>➕ Add New Student</h4>
+                                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+                                            <div><label style={lS}>Full Name *</label><input value={addStudentForm.name} onChange={e => setAddStudentForm({ ...addStudentForm, name: e.target.value })} placeholder="Full Name" style={iS} /></div>
+                                            <div><label style={lS}>Reg No *</label><input value={addStudentForm.regNo} onChange={e => setAddStudentForm({ ...addStudentForm, regNo: e.target.value })} placeholder="Registration Number" style={iS} /></div>
+                                            <div><label style={lS}>Email</label><input value={addStudentForm.email} onChange={e => setAddStudentForm({ ...addStudentForm, email: e.target.value })} placeholder="Email Address" style={iS} /></div>
+                                            <div>
+                                                <label style={lS}>Gender</label>
+                                                <select value={addStudentForm.gender} onChange={e => setAddStudentForm({ ...addStudentForm, gender: e.target.value })} style={iS}>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label style={lS}>House</label>
+                                                <select value={addStudentForm.house} onChange={e => setAddStudentForm({ ...addStudentForm, house: e.target.value })} style={iS}>
+                                                    <option value="">Select House</option>
+                                                    {houses.map(h => <option key={h.id} value={h.name}>{h.name}</option>)}
+                                                </select>
+                                            </div>
+                                            <div><label style={lS}>Year</label><input value={addStudentForm.year} onChange={e => setAddStudentForm({ ...addStudentForm, year: e.target.value })} placeholder="e.g., III" style={iS} /></div>
+                                            <div><label style={lS}>Dept</label><input value={addStudentForm.dept} onChange={e => setAddStudentForm({ ...addStudentForm, dept: e.target.value })} placeholder="e.g., CSE" style={iS} /></div>
+                                            <div><label style={lS}>Shirt Size</label><input value={addStudentForm.shirtSize} onChange={e => setAddStudentForm({ ...addStudentForm, shirtSize: e.target.value })} placeholder="e.g., M, L, XL" style={iS} /></div>
+                                        </div>
+                                        <div style={{ display: "flex", gap: 10 }}>
+                                            <button
+                                                onClick={() => {
+                                                    if (!addStudentForm.name || !addStudentForm.regNo) return alert("Name and Reg No are required!");
+                                                    if (studentsDB.some(x => x.regNo === addStudentForm.regNo)) return alert("A student with this Reg No already exists!");
+
+                                                    let maxSno = studentsDB.reduce((max, s) => Math.max(max, parseInt(s.sno) || 0), 0);
+                                                    const newStudent = {
+                                                        ...addStudentForm,
+                                                        sno: maxSno + 1,
+                                                        shirtIssued: false,
+                                                        role: "Student"
+                                                    };
+
+                                                    setStudentsDB([newStudent, ...studentsDB]);
+                                                    setShowAddStudent(false);
+                                                    setAddStudentForm({ name: "", regNo: "", email: "", gender: "Male", house: "", year: "", dept: "", shirtSize: "" });
+                                                    alert("Student added successfully!");
+                                                }}
+                                                style={{ flex: 1, background: "linear-gradient(135deg,#1E3A8A,#2563EB)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", cursor: "pointer", fontWeight: 700, fontSize: 13 }}
+                                            >
+                                                💾 Save Student
+                                            </button>
+                                            <button onClick={() => setShowAddStudent(false)} style={{ background: "transparent", color: dark ? "#ccc" : "#555", border: `1px solid ${dark ? "#444" : "#ccc"}`, borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Cancel</button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
