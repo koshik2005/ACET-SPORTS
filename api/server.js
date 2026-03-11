@@ -7,8 +7,6 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import compression from "compression";
-import mongoSanitize from "express-mongo-sanitize";
-import bcrypt from "bcryptjs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { State, Otp } from "./models.js";
@@ -72,7 +70,6 @@ app.use((req, res, next) => {
 });
 app.options(/(.*)/, cors()); // Handle preflight requests for all routes
 app.use(express.json({ limit: "20mb" })); // allow larger payloads for image base64
-app.use(mongoSanitize()); // sanitize all inputs against NoSQL injection
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-production";
 
@@ -291,25 +288,15 @@ app.get("/api/public-state", async (req, res) => {
     const state = await loadDb();
     // Strip passwords from houses before sending
     const sanitizedHouses = state.houses.map(h => {
-      // Use toObject() if it exists (for Mongoose docs) or clone the object
-      const hObj = h.toObject ? h.toObject() : JSON.parse(JSON.stringify(h));
-      const { ...hSafe } = hObj;
+      const { ...hSafe } = h;
       ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
         if (hSafe[role]) delete hSafe[role].password;
       });
       return hSafe;
     });
 
-    // Ensure nav is never empty if it got wiped
-    const defaultNav = ["Home", "Events", "Registration", "Scoreboard", "Star Players", "Gallery", "Winners", "Captain", "Admin"];
-    const finalNav = (state.nav && state.nav.length > 0) ? state.nav : defaultNav;
-
-    const result = { 
-      ...(state.toObject ? state.toObject() : JSON.parse(JSON.stringify(state))), 
-      houses: sanitizedHouses,
-      nav: finalNav 
-    };
-    delete result.activeAdminToken; // <--- Security fix
+    const result = { ...state.toObject ? state.toObject() : state, houses: sanitizedHouses };
+    delete result.activeAdminToken; // <--- ADDED: Security fix, do not leak admin token to public state
 
     stateCache = { data: result, ts: Date.now() }; // update cache
     res.json(result);
@@ -342,26 +329,8 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
       return res.status(403).json({ error: "Captains can only update T-shirt issuance." });
     }
 
-    // Prepare update payload with atomic $set to prevent document replacement
-    let updatePayload = { $set: { [type]: data } };
-
-    // Automatically hash captain passwords if houses are being updated
-    if (type === "houses" && Array.isArray(data)) {
-      const roles = ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"];
-      const saltedHouses = await Promise.all(data.map(async h => {
-        const updatedH = { ...h };
-        for (const role of roles) {
-          if (updatedH[role] && updatedH[role].password) {
-            const isHashed = updatedH[role].password.startsWith("$2a$") || updatedH[role].password.startsWith("$2b$");
-            if (!isHashed && updatedH[role].password.trim() !== "") {
-              updatedH[role].password = await bcrypt.hash(updatedH[role].password, 10);
-            }
-          }
-        }
-        return updatedH;
-      }));
-      updatePayload.$set[type] = saltedHouses;
-    }
+    // Prepare update payload
+    let updatePayload = { [type]: data };
 
     // Audit Log for Admin Changes
     if (req.user.role === "admin" && (req.user.email || req.user.name)) {
@@ -485,18 +454,7 @@ app.post("/api/admin-verify-password", loginLimiter, async (req, res) => {
   if (!email || !password) return res.status(400).json({ success: false, error: "Email and password are required" });
 
   const adminPassword = process.env.ADMIN_PASSWORD || "adminacet";
-  
-  // Support both plain text and hashed admin password in .env
-  const isHashed = adminPassword.startsWith("$2a$") || adminPassword.startsWith("$2b$");
-  let match = false;
-  
-  if (isHashed) {
-    match = await bcrypt.compare(password, adminPassword);
-  } else {
-    match = (password === adminPassword);
-  }
-
-  if (!match) {
+  if (password !== adminPassword) {
     return res.status(401).json({ success: false, error: "Incorrect admin password." });
   }
 
@@ -547,57 +505,26 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
   let valid = false;
   let loggedInRole = "";
   let houseId = "";
-  let needsMigration = false;
 
   // Search all houses and all roles for this email
   for (const houseObj of state.houses) {
-    const roles = ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"];
-    for (const role of roles) {
+    ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
       const captain = houseObj[role];
       if (captain && captain.email && captain.email.trim().toLowerCase() === em) {
-        // Try hashed comparison first
-        const isHashed = captain.password && (captain.password.startsWith("$2a$") || captain.password.startsWith("$2b$"));
-        
-        if (isHashed) {
-          const match = await bcrypt.compare(password, captain.password);
-          if (match) {
-            valid = true;
-            loggedInRole = role;
-            houseId = houseObj.id;
-          }
-        } else if (captain.password === password) {
-          // Legacy plain-text match
+        if (captain.password === password) {
           valid = true;
           loggedInRole = role;
           houseId = houseObj.id;
-          needsMigration = true;
+        } else {
+          console.log(`❌ Login failed for ${em}: Password mismatch.`);
         }
-
-        if (valid) break;
       }
-    }
+    });
     if (valid) break;
   }
 
   if (valid) {
     console.log(`✅ Captain logged in: ${em} (${loggedInRole} in House ${houseId})`);
-    
-    // Lazy migration: if they logged in with plain text, hash it now
-    if (needsMigration) {
-      const hashed = await bcrypt.hash(password, 10);
-      const updatedHouses = state.houses.map(h => {
-        if (h.id === houseId) {
-          const updatedHouse = { ...h };
-          updatedHouse[loggedInRole] = { ...updatedHouse[loggedInRole], password: hashed };
-          return updatedHouse;
-        }
-        return h;
-      });
-      await State.findOneAndUpdate({}, { $set: { houses: updatedHouses } });
-      invalidateCache();
-      console.log(`🔐 Lazy migrated password for ${em}`);
-    }
-
     const token = jwt.sign({ role: "captain", house: houseId, houseRole: loggedInRole }, JWT_SECRET, { expiresIn: "12h" });
 
     // Find house details to return
@@ -612,7 +539,7 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
       captainName: houseObj?.[loggedInRole]?.name || "Captain"
     });
   } else {
-    console.log(`❌ Login failed for ${em}: Invalid credentials.`);
+    console.log(`❌ Login failed for ${em}: No matching email/password found in any house.`);
     res.status(401).json({ success: false, error: "Invalid email or password." });
   }
 });
