@@ -291,15 +291,25 @@ app.get("/api/public-state", async (req, res) => {
     const state = await loadDb();
     // Strip passwords from houses before sending
     const sanitizedHouses = state.houses.map(h => {
-      const { ...hSafe } = h;
+      // Use toObject() if it exists (for Mongoose docs) or clone the object
+      const hObj = h.toObject ? h.toObject() : JSON.parse(JSON.stringify(h));
+      const { ...hSafe } = hObj;
       ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
         if (hSafe[role]) delete hSafe[role].password;
       });
       return hSafe;
     });
 
-    const result = { ...state.toObject ? state.toObject() : state, houses: sanitizedHouses };
-    delete result.activeAdminToken; // <--- ADDED: Security fix, do not leak admin token to public state
+    // Ensure nav is never empty if it got wiped
+    const defaultNav = ["Home", "Events", "Registration", "Scoreboard", "Star Players", "Gallery", "Winners", "Captain", "Admin"];
+    const finalNav = (state.nav && state.nav.length > 0) ? state.nav : defaultNav;
+
+    const result = { 
+      ...(state.toObject ? state.toObject() : JSON.parse(JSON.stringify(state))), 
+      houses: sanitizedHouses,
+      nav: finalNav 
+    };
+    delete result.activeAdminToken; // <--- Security fix
 
     stateCache = { data: result, ts: Date.now() }; // update cache
     res.json(result);
@@ -332,8 +342,8 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
       return res.status(403).json({ error: "Captains can only update T-shirt issuance." });
     }
 
-    // Prepare update payload
-    let updatePayload = { [type]: data };
+    // Prepare update payload with atomic $set to prevent document replacement
+    let updatePayload = { $set: { [type]: data } };
 
     // Automatically hash captain passwords if houses are being updated
     if (type === "houses" && Array.isArray(data)) {
@@ -350,7 +360,7 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
         }
         return updatedH;
       }));
-      updatePayload[type] = saltedHouses;
+      updatePayload.$set[type] = saltedHouses;
     }
 
     // Audit Log for Admin Changes
