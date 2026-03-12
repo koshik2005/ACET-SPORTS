@@ -625,8 +625,6 @@ app.post("/api/verify-otp", async (req, res) => {
 
   if (!stored) return res.status(400).json({ success: false, error: "No OTP found for this email" });
   if (stored.otp !== otp) return res.status(400).json({ success: false, error: "Invalid OTP" });
-
-  await Otp.deleteOne({ _id: stored._id });
   res.json({ success: true });
 });
 
