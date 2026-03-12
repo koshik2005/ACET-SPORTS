@@ -246,6 +246,9 @@ function makeTransporter() {
   const user = process.env.SMTP_USER || process.env.EMAIL;
   const pass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
   return nodemailer.createTransport({
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
     secure: process.env.SMTP_SECURE === "true",
