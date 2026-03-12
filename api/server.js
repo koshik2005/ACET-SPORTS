@@ -436,11 +436,19 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
     }
 
     // Atomic update in MongoDB
-    await State.findOneAndUpdate({}, updatePayload, { upsert: true });
+    console.log(`[STATE_UPDATE] User:${req.user.email || req.user.name} Type:${type} DataSize:${JSON.stringify(data).length} chars`);
+    
+    const result = await State.findOneAndUpdate({}, updatePayload, { upsert: true, new: true, rawResult: true });
+    
+    if (result) {
+        console.log(`[STATE_UPDATE_SUCCESS] Updated Document ID: ${result.value?._id || result._id}`);
+    }
+
     invalidateCache(); // clear state cache so next fetch gets fresh data
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Failed to update state" });
+    console.error("[STATE_UPDATE_ERROR]", err);
+    res.status(500).json({ error: "Failed to update state: " + err.message });
   }
 });
 

@@ -298,6 +298,21 @@ export function AdminPage({
                 if (secureData.results) setResults(secureData.results);
                 if (secureData.starPlayers) setStarPlayers(secureData.starPlayers);
                 if (secureData.adminLogs) setAdminLogs(secureData.adminLogs);
+                if (secureData.launchConfig) setLaunchConfig(secureData.launchConfig);
+                if (secureData.inaugurationDetails) setInaugurationDetails(secureData.inaugurationDetails);
+                if (secureData.eventDate) setEventDate(secureData.eventDate);
+                if (typeof secureData.registrationOpen === 'boolean') setRegistrationOpen(secureData.registrationOpen);
+                if (secureData.registrationCloseTime) setRegistrationCloseTime(secureData.registrationCloseTime);
+                if (secureData.closedEvents) setClosedEvents(secureData.closedEvents);
+                if (secureData.maxGames !== undefined) setMaxGames(secureData.maxGames);
+                if (secureData.maxAthletics !== undefined) setMaxAthletics(secureData.maxAthletics);
+                if (secureData.nav) setNav(secureData.nav);
+                if (secureData.sportGamesList) setSportGamesList(secureData.sportGamesList);
+                if (secureData.sportGamesListWomens) setSportGamesListWomens(secureData.sportGamesListWomens);
+                if (secureData.athleticsList) setAthleticsList(secureData.athleticsList);
+                if (secureData.athleticsListWomens) setAthleticsListWomens(secureData.athleticsListWomens);
+                if (secureData.authorityRoles) setAuthorityRoles(secureData.authorityRoles);
+                if (secureData.managementRoles) setManagementRoles(secureData.managementRoles);
 
                 setLoggedIn(true);
                 fetchQueries();
@@ -2263,7 +2278,10 @@ export function AdminPage({
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                                 <div 
-                                    onClick={() => setLaunchConfig({ ...launchConfig, enabled: !(launchConfig?.enabled ?? true) })}
+                                    onClick={() => {
+                                        const newValue = !(launchConfig?.enabled ?? true);
+                                        setLaunchConfig(prev => ({ ...prev, enabled: newValue }));
+                                    }}
                                     style={{
                                         width: 44, height: 24, borderRadius: 12, cursor: "pointer", position: "relative",
                                         background: (launchConfig?.enabled ?? true) ? "#2E8B57" : (dark ? "#444" : "#ccc"),
@@ -2276,7 +2294,7 @@ export function AdminPage({
                                         transition: "left 0.3s", boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
                                     }} />
                                 </div>
-                                <label style={{ ...lS, marginBottom: 0, cursor: "pointer", color: dark ? "#fff" : "#222" }} onClick={() => setLaunchConfig({ ...launchConfig, enabled: !(launchConfig?.enabled ?? true) })}>Enable Launch Animation</label>
+                                <label style={{ ...lS, marginBottom: 0, cursor: "pointer", color: dark ? "#fff" : "#222" }} onClick={() => setLaunchConfig(prev => ({ ...prev, enabled: !(prev?.enabled ?? true) }))}>Enable Launch Animation</label>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, opacity: launchConfig?.enabled ? 1 : 0.5, pointerEvents: launchConfig?.enabled ? "auto" : "none" }}>
                                 <div>
