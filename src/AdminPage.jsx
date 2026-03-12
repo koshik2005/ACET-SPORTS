@@ -310,11 +310,20 @@ export function AdminPage({
         }
     };
 
-    const sendAnnouncementEmail = async (inviteType = "event") => {
+    const sendAnnouncementEmail = async (inviteType = "event", targetGroup = "all") => {
         const isInauguration = inviteType === "inauguration";
-        const confirmMsg = isInauguration 
-            ? "Are you sure you want to send the Sports Day INAUGURATION Invitation to everyone?" 
-            : "Are you sure you want to email EVERY registered student and authority about the Sports Day schedule?";
+        const isTargeted = targetGroup === "staff_hod";
+        
+        let confirmMsg = "";
+        if (isInauguration) {
+            confirmMsg = isTargeted 
+                ? "Are you sure you want to send the Inauguration Invitation to Staff & HODs ONLY?"
+                : "Are you sure you want to send the Sports Day INAUGURATION Invitation to everyone?";
+        } else {
+            confirmMsg = isTargeted
+                ? "Are you sure you want to broadcast the Official Schedule to Staff & HODs ONLY?"
+                : "Are you sure you want to email EVERY registered student and authority about the Sports Day schedule?";
+        }
         
         if (!window.confirm(confirmMsg)) return;
 
@@ -329,11 +338,21 @@ export function AdminPage({
 
         const msg = isInauguration ? "Sending Inauguration Invitations..." : "Broadcasting Official Schedule...";
 
-        const allUsers = [
+        let allUsers = [
             ...authorities.map(a => ({ ...a, roleType: "authority" })),
             ...management.map(m => ({ ...m, roleType: "management" })),
             ...studentsDB.map(s => ({ ...s, roleType: s.role === "Staff" ? "staff" : "student" }))
         ].filter(u => u.email && u.email.includes("@"));
+
+        if (isTargeted) {
+            allUsers = allUsers.filter(u => 
+                u.roleType === "authority" || 
+                u.roleType === "management" || 
+                u.roleType === "staff" ||
+                (u.role || "").toLowerCase().includes("hod") ||
+                (u.role || "").toLowerCase().includes("head")
+            );
+        }
 
         if (allUsers.length === 0) {
             alert("No valid recipients with emails found.");
@@ -2324,24 +2343,47 @@ export function AdminPage({
                                         <div style={{ fontSize: 11, color: dark ? "#888" : "#777", marginBottom: 10 }}>Broadcasts schedule and invitations to all registered participants.</div>
                                     </div>
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                                        <button
-                                            onClick={() => sendAnnouncementEmail("inauguration")}
-                                            disabled={announcementStatus === "sending"}
-                                            style={{
-                                                background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#c00" : "#1E3A8A",
-                                                color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", alignSelf: "center"
-                                            }}>
-                                            {announcementStatus === "sending" ? "⏳ Sending..." : "🎊 Invitation for Inauguration"}
-                                        </button>
-                                        <button
-                                            onClick={() => sendAnnouncementEmail("event")}
-                                            disabled={announcementStatus === "sending"}
-                                            style={{
-                                                background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#c00" : "#8B0000",
-                                                color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", alignSelf: "center"
-                                            }}>
-                                            {announcementStatus === "sending" ? "⏳ Sending..." : "📢 Broadcast Main Event"}
-                                        </button>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                            <button
+                                                onClick={() => sendAnnouncementEmail("inauguration", "all")}
+                                                disabled={announcementStatus === "sending"}
+                                                style={{
+                                                    background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#c00" : "#1E3A8A",
+                                                    color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", alignSelf: "center", width: "100%"
+                                                }}>
+                                                {announcementStatus === "sending" ? "⏳ Sending..." : "🎊 Invitation for Inauguration (All)"}
+                                            </button>
+                                            <button
+                                                onClick={() => sendAnnouncementEmail("inauguration", "staff_hod")}
+                                                disabled={announcementStatus === "sending"}
+                                                style={{
+                                                    background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#cc8400" : "#cc8400",
+                                                    color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", alignSelf: "center", width: "100%"
+                                                }}>
+                                                {announcementStatus === "sending" ? "⏳ Sending..." : "👨‍💼 Staff/HODs Only"}
+                                            </button>
+                                        </div>
+                                        
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                            <button
+                                                onClick={() => sendAnnouncementEmail("event", "all")}
+                                                disabled={announcementStatus === "sending"}
+                                                style={{
+                                                    background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#c00" : "#8B0000",
+                                                    color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", alignSelf: "center", width: "100%"
+                                                }}>
+                                                {announcementStatus === "sending" ? "⏳ Sending..." : "📢 Broadcast Main Event (All)"}
+                                            </button>
+                                            <button
+                                                onClick={() => sendAnnouncementEmail("event", "staff_hod")}
+                                                disabled={announcementStatus === "sending"}
+                                                style={{
+                                                    background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#cc8400" : "#cc8400",
+                                                    color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", alignSelf: "center", width: "100%"
+                                                }}>
+                                                {announcementStatus === "sending" ? "⏳ Sending..." : "👤 Staff/HODs Only"}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 {announcementStatus.startsWith("error:") && <div style={{ fontSize: 11, color: "#ff4444", marginTop: 4, textAlign: "right" }}>{announcementStatus.replace("error:", "")}</div>}
