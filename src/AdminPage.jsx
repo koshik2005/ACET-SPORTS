@@ -911,26 +911,47 @@ export function AdminPage({
                             const files = Array.from(e.target.files);
                             if (files.length === 0) return;
                             
-                            files.forEach(file => {
+                            if (files.length === 1) {
+                                // Single file: show cropper
+                                const file = files[0];
                                 const reader = new FileReader();
                                 reader.onload = ev => {
-                                    setGalFiles(prev => [...prev, { src: ev.target.result, name: file.name, id: Math.random().toString(36).substr(2, 9) }]);
+                                    setGalFiles([{ src: ev.target.result, name: file.name, id: "temp-crop", isCropping: true }]);
                                 };
                                 reader.readAsDataURL(file);
-                            });
+                            } else {
+                                // Multiple files: bulk queue
+                                files.forEach(file => {
+                                    const reader = new FileReader();
+                                    reader.onload = ev => {
+                                        setGalFiles(prev => [...prev, { src: ev.target.result, name: file.name, id: Math.random().toString(36).substr(2, 9), isCropping: false }]);
+                                    };
+                                    reader.readAsDataURL(file);
+                                });
+                            }
                             e.target.value = "";
                         }} />
+
+                        {galFiles.length === 1 && galFiles[0].isCropping && (
+                            <ImageCropper
+                                image={galFiles[0].src}
+                                onCancel={() => setGalFiles([])}
+                                onCropComplete={(croppedData) => setGalFiles([{ ...galFiles[0], src: croppedData, isCropping: false, id: Date.now().toString() }])}
+                                dark={dark}
+                            />
+                        )}
+
                         {galFiles.length > 0 ? (
                             <div style={{ marginBottom: 15 }}>
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 8, marginBottom: 10, maxHeight: 200, overflowY: "auto", padding: 5 }}>
                                     {galFiles.map((file, idx) => (
                                         <div key={file.id} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#eee"}` }}>
                                             <img src={file.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            <button onClick={() => setGalFiles(prev => prev.filter(f => f.id !== file.id))} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                                            {!galUploading && <button onClick={() => setGalFiles(prev => prev.filter(f => f.id !== file.id))} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
                                         </div>
                                     ))}
                                 </div>
-                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 10 }}>{galFiles.length} images selected. They will be uploaded sequentially.</div>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 10 }}>{galFiles.length} images selected. {galFiles.length > 1 ? "They will be uploaded sequentially." : "Ready to upload."}</div>
                             </div>
                         ) : (
                             <div onClick={() => galleryInputRef.current?.click()} style={{ border: `2px dashed ${dark ? "#444" : "#ccc"}`, borderRadius: 10, padding: isMobile ? 18 : 28, textAlign: "center", cursor: "pointer", marginBottom: 10, background: dark ? "rgba(255,255,255,.02)" : "#fafafa" }}>
@@ -1008,10 +1029,23 @@ export function AdminPage({
                                 {imgs.length === 0
                                     ? <div style={{ padding: 16, color: dark ? "#666" : "#aaa", fontSize: 13, background: dark ? "rgba(255,255,255,.03)" : "#f9f9f9", borderRadius: 10, textAlign: "center" }}>No {cat} year images</div>
                                     : (
-                                        <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill,minmax(${isMobile ? 110 : 160}px,1fr))`, gap: isMobile ? 7 : 12 }}>
+                                        <div style={{ 
+                                            columnCount: isMobile ? 3 : 5, 
+                                            columnGap: isMobile ? 7 : 12,
+                                            width: "100%"
+                                        }}>
                                             {imgs.map(img => (
-                                                <div key={img.id} style={{ borderRadius: 10, overflow: "hidden", position: "relative", background: dark ? "#222" : "#f0f0f0" }}>
-                                                    <img src={img.src} alt={img.label} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
+                                                <div key={img.id} style={{ 
+                                                    marginBottom: isMobile ? 7 : 12, 
+                                                    borderRadius: 10, 
+                                                    overflow: "hidden", 
+                                                    position: "relative", 
+                                                    background: dark ? "#222" : "#f0f0f0",
+                                                    breakInside: "avoid",
+                                                    display: "inline-block",
+                                                    width: "100%"
+                                                }}>
+                                                    <img src={img.src} alt={img.label} style={{ width: "100%", height: "auto", display: "block" }} />
                                                     <div style={{ padding: "5px 8px", background: dark ? "rgba(0,0,0,.75)" : "rgba(255,255,255,.92)" }}><div style={{ fontSize: 10, fontWeight: 600, color: dark ? "#fff" : "#333", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{img.label}</div></div>
                                                     <button onClick={() => setGallery(g => g.filter(i => i.id !== img.id))} style={{ position: "absolute", top: 4, right: 4, background: "rgba(200,0,0,.88)", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", color: "#fff", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>✕</button>
                                                 </div>

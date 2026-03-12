@@ -4,6 +4,7 @@ import Cropper from 'react-easy-crop';
 export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
+    const [aspect, setAspect] = useState(1); // Default 1:1
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
     const onCropChange = (crop) => setCrop(crop);
@@ -23,6 +24,13 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
         }
     };
 
+    const RATIOS = [
+        { label: "1:1", val: 1 },
+        { label: "4:3", val: 4 / 3 },
+        { label: "16:9", val: 16 / 9 },
+        { label: "3:4", val: 3 / 4 }
+    ];
+
     return (
         <div style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
@@ -37,7 +45,7 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
                     image={image}
                     crop={crop}
                     zoom={zoom}
-                    aspect={1}
+                    aspect={aspect}
                     onCropChange={onCropChange}
                     onCropComplete={onCropCompleteInternal}
                     onZoomChange={onZoomChange}
@@ -49,6 +57,24 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
                 padding: 20, borderRadius: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
                 <div style={{ marginBottom: 15 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: dark ? '#aaa' : '#666', marginBottom: 8 }}>ASPECT RATIO</label>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 15 }}>
+                        {RATIOS.map(r => (
+                            <button
+                                key={r.label}
+                                onClick={() => setAspect(r.val)}
+                                style={{
+                                    flex: 1, padding: '8px', borderRadius: 8, border: `2px solid ${aspect === r.val ? '#8B0000' : (dark ? '#333' : '#eee')}`,
+                                    background: aspect === r.val ? 'rgba(139,0,0,0.1)' : 'transparent',
+                                    color: aspect === r.val ? (dark ? '#fff' : '#8B0000') : (dark ? '#aaa' : '#666'),
+                                    fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                {r.label}
+                            </button>
+                        ))}
+                    </div>
+
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: dark ? '#aaa' : '#666', marginBottom: 8 }}>ZOOM</label>
                     <input
                         type="range"

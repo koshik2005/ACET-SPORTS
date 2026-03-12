@@ -355,12 +355,26 @@ export function GalleryPage({ dark, gallery }) {
     const cur = gallery.filter(g => g.category === "current");
     const prev = gallery.filter(g => g.category === "previous");
     const Grid = ({ imgs }) => (
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill,minmax(${isMobile ? 110 : 160}px,1fr))`, gap: isMobile ? 7 : 12 }}>
+        <div style={{ 
+            columnCount: isMobile ? 2 : 4, 
+            columnGap: isMobile ? 7 : 12,
+            width: "100%"
+        }}>
             {imgs.map((img, i) => (
-                <div key={i} onClick={() => setSel(img)} style={{ borderRadius: 10, overflow: "hidden", aspectRatio: "1", cursor: "pointer", background: dark ? "#222" : "#f0f0f0", position: "relative" }}
+                <div key={i} onClick={() => setSel(img)} style={{ 
+                    marginBottom: isMobile ? 7 : 12, 
+                    borderRadius: 10, 
+                    overflow: "hidden", 
+                    cursor: "pointer", 
+                    background: dark ? "#222" : "#f0f0f0", 
+                    position: "relative",
+                    breakInside: "avoid",
+                    display: "inline-block",
+                    width: "100%"
+                }}
                     onMouseEnter={e => e.currentTarget.querySelector(".ov2").style.opacity = "1"}
                     onMouseLeave={e => e.currentTarget.querySelector(".ov2").style.opacity = "0"}>
-                    <img src={img.src} alt={img.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={img.src} alt={img.label} style={{ width: "100%", height: "auto", display: "block" }} />
                     <div className="ov2" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "flex-end", padding: 6, opacity: 0, transition: "opacity .2s" }}>
                         <span style={{ color: "#fff", fontSize: 11, fontWeight: 600 }}>{img.label}</span>
                     </div>
