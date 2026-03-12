@@ -243,14 +243,13 @@ const saveDb = async (data) => {
 
 // ─── Transporter ───────────────────────────────────────────────────────────
 function makeTransporter() {
+  const user = process.env.SMTP_USER || process.env.EMAIL;
+  const pass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
     secure: process.env.SMTP_SECURE === "true",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    auth: { user, pass },
   });
 }
 
@@ -312,7 +311,7 @@ app.get("/api/health", async (req, res) => {
         node: process.version,
         env: process.env.NODE_ENV,
         hasMongo: !!process.env.MONGODB_URI,
-        hasSmtp: !!(process.env.SMTP_USER && process.env.SMTP_PASS)
+        hasSmtp: !!((process.env.SMTP_USER || process.env.EMAIL) && (process.env.SMTP_PASS || process.env.APP_PASSWORD))
       }
     });
   } catch (err) {
@@ -453,7 +452,7 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
   try {
     const transporter = makeTransporter();
     await transporter.sendMail({
-      from: `"Sports Day ERP" <${process.env.SMTP_USER}>`,
+      from: `"Sports Day ERP" <${process.env.SMTP_USER || process.env.EMAIL}>`,
       to: email,
       subject: `🗝️ Your Registration OTP — Achariya Sports`,
       html: `
@@ -539,7 +538,7 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
   try {
     const transporter = makeTransporter();
     await transporter.sendMail({
-      from: `"Sports Day Admin" <${process.env.SMTP_USER}>`,
+      from: `"Sports Day Admin" <${process.env.SMTP_USER || process.env.EMAIL}>`,
       to: email,
       subject: `🗝️ Admin Login OTP — Achariya Sports`,
       html: `
@@ -678,8 +677,8 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
 
 app.get("/api/email-config", (req, res) => {
   res.json({
-    configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
-    user: process.env.SMTP_USER || "",
+    configured: !!((process.env.SMTP_USER || process.env.EMAIL) && (process.env.SMTP_PASS || process.env.APP_PASSWORD)),
+    user: process.env.SMTP_USER || process.env.EMAIL || "",
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: process.env.SMTP_PORT || "587",
   });
@@ -702,8 +701,10 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
   if (!captainEmail || !password || !captainName) {
     return res.status(400).json({ error: "Missing required fields: captainName, captainEmail, password" });
   }
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    return res.status(500).json({ error: "SMTP not configured. Set SMTP_USER and SMTP_PASS in .env" });
+  const smtpUser = process.env.SMTP_USER || process.env.EMAIL;
+  const smtpPass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
+  if (!smtpUser || !smtpPass) {
+    return res.status(400).json({ error: "SMTP not configured. Set SMTP_USER and SMTP_PASS (or EMAIL and APP_PASSWORD) in .env" });
   }
 
   const loginUrl = portalUrl || process.env.PORTAL_URL || "http://localhost:5173/captain";
@@ -773,7 +774,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
   try {
     // Send to Captain
     await transporter.sendMail({
-      from: `"Sports Day ERP" <${process.env.SMTP_USER}>`,
+      from: `"Sports Day ERP" <${process.env.SMTP_USER || process.env.EMAIL}>`,
       to: captainEmail,
       subject: `🎉 Congratulations ${captainName}! You are the ${house} House ${role}`,
       html: captainHtml,
@@ -800,7 +801,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
       for (const auth of authorities) {
         if (auth.email && auth.email.includes("@")) {
           await transporter.sendMail({
-            from: `"Sports ERP System" <${process.env.SMTP_USER}>`,
+            from: `"Sports ERP System" <${process.env.SMTP_USER || process.env.EMAIL}>`,
             to: auth.email,
             subject: authSubject,
             html: authHtml,
@@ -921,7 +922,7 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
 
     try {
       const mailOptions = {
-        from: `"Sports Day ACET" <${process.env.SMTP_USER}>`,
+        from: `"Sports Day ACET" <${process.env.SMTP_USER || process.env.EMAIL}>`,
         to: user.email,
         subject: subject,
         html: html,
