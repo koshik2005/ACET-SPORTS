@@ -82,46 +82,6 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         </div>
                     ))}
                 </div>
-                {
-                    authorities.length > 0 && (
-                        <>
-                            <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>🎖️ Sports Authority</h2>
-                            {(() => {
-                                const sorted = [...authorities].sort((a, b) => a.priority - b.priority);
-                                const isOdd = sorted.length % 2 !== 0;
-                                return (
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: isMobile ? 12 : 20, marginBottom: isMobile ? 28 : 48 }}>
-                                        {sorted.map((a, i) => {
-                                            const isLast = i === sorted.length - 1;
-                                            return (
-                                                <div key={a.id || a.name || i} style={{
-                                                    background: dark ? "rgba(255,255,255,.05)" : "#fff",
-                                                    border: `1px solid ${i === 0 ? "#8B000055" : dark ? "#333" : "#eee"}`,
-                                                    borderTop: `3px solid ${i === 0 ? "#8B0000" : "#ccc"}`,
-                                                    borderRadius: 16,
-                                                    padding: isMobile ? "18px 12px" : "28px 20px",
-                                                    textAlign: "center",
-                                                    boxShadow: i === 0 ? "0 8px 32px rgba(139,0,0,.15)" : "0 2px 12px rgba(0,0,0,.06)",
-                                                    gridColumn: isOdd && isLast ? "1 / -1" : undefined,
-                                                    maxWidth: isOdd && isLast ? (isMobile ? "60%" : "45%") : undefined,
-                                                    margin: isOdd && isLast ? "0 auto" : undefined,
-                                                    width: isOdd && isLast ? "100%" : undefined,
-                                                }}>
-                                                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-                                                        <Avatar img={a.img} name={a.name} size={isMobile ? 72 : 96} color={i === 0 ? "#8B0000" : "#555"} />
-                                                    </div>
-                                                    <div style={{ fontSize: isMobile ? 15 : 19, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", marginBottom: 4 }}>{a.name}</div>
-                                                    <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: 1.3, color: "#8B0000", textTransform: "uppercase", marginBottom: 3 }}>{a.role}</div>
-                                                    <div style={{ fontSize: isMobile ? 11 : 12, color: dark ? "#aaa" : "#777" }}>{a.designation}</div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })()}
-                        </>
-                    )
-                }
                 {management.length > 0 && (
                     <>
                         <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>🏛️ Management Authority</h2>
@@ -159,8 +119,45 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                             );
                         })()}
                     </>
-                )
-                }
+                )}
+                {authorities.length > 0 && (
+                    <>
+                        <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>🎖️ Sports Authority</h2>
+                        {(() => {
+                            const sorted = [...authorities].sort((a, b) => a.priority - b.priority);
+                            const isOdd = sorted.length % 2 !== 0;
+                            return (
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: isMobile ? 12 : 20, marginBottom: isMobile ? 28 : 48 }}>
+                                    {sorted.map((a, i) => {
+                                        const isLast = i === sorted.length - 1;
+                                        return (
+                                            <div key={a.id || a.name || i} style={{
+                                                background: dark ? "rgba(255,255,255,.05)" : "#fff",
+                                                border: `1px solid ${i === 0 ? "#8B000055" : dark ? "#333" : "#eee"}`,
+                                                borderTop: `3px solid ${i === 0 ? "#8B0000" : "#ccc"}`,
+                                                borderRadius: 16,
+                                                padding: isMobile ? "18px 12px" : "28px 20px",
+                                                textAlign: "center",
+                                                boxShadow: i === 0 ? "0 8px 32px rgba(139,0,0,.15)" : "0 2px 12px rgba(0,0,0,.06)",
+                                                gridColumn: isOdd && isLast ? "1 / -1" : undefined,
+                                                maxWidth: isOdd && isLast ? (isMobile ? "60%" : "45%") : undefined,
+                                                margin: isOdd && isLast ? "0 auto" : undefined,
+                                                width: isOdd && isLast ? "100%" : undefined,
+                                            }}>
+                                                <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+                                                    <Avatar img={a.img} name={a.name} size={isMobile ? 72 : 96} color={i === 0 ? "#8B0000" : "#555"} />
+                                                </div>
+                                                <div style={{ fontSize: isMobile ? 15 : 19, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", marginBottom: 4 }}>{a.name}</div>
+                                                <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: 1.3, color: "#8B0000", textTransform: "uppercase", marginBottom: 3 }}>{a.role}</div>
+                                                <div style={{ fontSize: isMobile ? 11 : 12, color: dark ? "#aaa" : "#777" }}>{a.designation}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
+                    </>
+                )}
                 {
                     studentCommittee.length > 0 && (
                         <>
@@ -201,7 +198,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         </>
                     )
                 }
-                < h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>⚡ House Captains</h2>
+                <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>⚡ House Captains</h2>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: isMobile ? 14 : 20, marginBottom: isMobile ? 28 : 48 }}>
                     {houses.map((h, idx) => (
                         <div key={h.id || h.name || idx} style={{ background: dark ? "rgba(255,255,255,.05)" : tint(h.color), border: `2px solid ${h.color}`, borderRadius: 16, padding: isMobile ? "14px 10px" : "24px 20px" }}>
