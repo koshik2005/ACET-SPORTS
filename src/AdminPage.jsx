@@ -67,7 +67,7 @@ export function AdminPage({
     const [editRegForm, setEditRegForm] = useState({ game: "", athletic: "" });
     const galleryInputRef = useRef();
     const [galForm, setGalForm] = useState({ category: "current", label: "" });
-    const [galFile, setGalFile] = useState(null);
+    const [galFiles, setGalFiles] = useState([]); // Array of { src, name, id }
     const [galUploading, setGalUploading] = useState(false);
     const [authModal, setAuthModal] = useState(null);
     const [authForm, setAuthForm] = useState(EMPTY_AUTH);
@@ -907,59 +907,97 @@ export function AdminPage({
                             <div><label style={lS}>Caption</label>
                                 <input value={galForm.label} onChange={e => setGalForm(f => ({ ...f, label: e.target.value }))} placeholder="e.g. Football Final 2025" style={iS} /></div>
                         </div>
-                        <input type="file" accept="image/*" ref={galleryInputRef} style={{ display: "none" }} onChange={e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => setGalFile({ src: ev.target.result, name: file.name }); reader.readAsDataURL(file); e.target.value = ""; }} />
-                        {galFile && !galFile.cropped && (
-                            <ImageCropper
-                                image={galFile.src}
-                                onCancel={() => setGalFile(null)}
-                                onCropComplete={(croppedData) => setGalFile({ ...galFile, src: croppedData, cropped: true })}
-                                dark={dark}
-                            />
-                        )}
-                        {galFile && galFile.cropped ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                                <img src={galFile.src} alt="" style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", border: `2px solid ${dark ? "#444" : "#ddd"}`, flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, color: dark ? "#ccc" : "#333", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{galFile.name}</div><div style={{ fontSize: 12, color: dark ? "#888" : "#aaa" }}>Ready to upload</div></div>
-                                <button onClick={() => setGalFile(null)} style={{ background: "transparent", border: "none", color: dark ? "#aaa" : "#999", cursor: "pointer", fontSize: 20, flexShrink: 0 }}>✕</button>
+                        <input type="file" multiple accept="image/*" ref={galleryInputRef} style={{ display: "none" }} onChange={e => {
+                            const files = Array.from(e.target.files);
+                            if (files.length === 0) return;
+                            
+                            files.forEach(file => {
+                                const reader = new FileReader();
+                                reader.onload = ev => {
+                                    setGalFiles(prev => [...prev, { src: ev.target.result, name: file.name, id: Math.random().toString(36).substr(2, 9) }]);
+                                };
+                                reader.readAsDataURL(file);
+                            });
+                            e.target.value = "";
+                        }} />
+                        {galFiles.length > 0 ? (
+                            <div style={{ marginBottom: 15 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 8, marginBottom: 10, maxHeight: 200, overflowY: "auto", padding: 5 }}>
+                                    {galFiles.map((file, idx) => (
+                                        <div key={file.id} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#eee"}` }}>
+                                            <img src={file.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            <button onClick={() => setGalFiles(prev => prev.filter(f => f.id !== file.id))} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 10 }}>{galFiles.length} images selected. They will be uploaded sequentially.</div>
                             </div>
                         ) : (
                             <div onClick={() => galleryInputRef.current?.click()} style={{ border: `2px dashed ${dark ? "#444" : "#ccc"}`, borderRadius: 10, padding: isMobile ? 18 : 28, textAlign: "center", cursor: "pointer", marginBottom: 10, background: dark ? "rgba(255,255,255,.02)" : "#fafafa" }}>
                                 <div style={{ fontSize: 28, marginBottom: 5 }}>📁</div>
-                                <div style={{ color: dark ? "#888" : "#aaa", fontSize: 14 }}>Tap to choose an image</div>
+                                <div style={{ color: dark ? "#888" : "#aaa", fontSize: 14 }}>Tap to choose images (Upload Many)</div>
                                 <div style={{ color: dark ? "#666" : "#bbb", fontSize: 11, marginTop: 2 }}>JPG, PNG, GIF, WEBP</div>
                             </div>
                         )}
                         <button
                             onClick={async () => {
-                                if (!galFile || galUploading) return;
+                                if (galFiles.length === 0 || galUploading) return;
                                 setGalUploading(true);
+                                let successCount = 0;
+                                let failCount = 0;
+
                                 try {
                                     const token = localStorage.getItem("adminToken");
-                                    const res = await fetch(`${API_BASE}/api/upload-image`, {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                                        body: JSON.stringify({ data: galFile.src, folder: "acet-sports/gallery" }),
-                                    });
-                                    const result = await res.json();
-                                    if (!res.ok) throw new Error(result.error || "Upload failed");
-                                    // Store Cloudinary URL (not base64) — works on any device!
-                                    setGallery(imgs => [...imgs, { ...galForm, src: result.url, id: Date.now(), label: galForm.label || galFile.name }]);
-                                    setGalFile(null);
+                                    const category = galForm.category;
+                                    const captionBase = galForm.label;
+
+                                    for (let i = 0; i < galFiles.length; i++) {
+                                        const file = galFiles[i];
+                                        // Update status message or similar if needed
+                                        console.log(`Uploading ${i + 1}/${galFiles.length}...`);
+                                        
+                                        try {
+                                            const res = await fetch(`${API_BASE}/api/upload-image`, {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                                                body: JSON.stringify({ data: file.src, folder: "acet-sports/gallery" }),
+                                            });
+                                            const result = await res.json();
+                                            if (!res.ok) throw new Error(result.error || "Upload failed");
+                                            
+                                            const newImage = { 
+                                                category, 
+                                                src: result.url, 
+                                                id: Date.now() + i, // Ensure unique ID even in fast loop 
+                                                label: captionBase || file.name 
+                                            };
+                                            
+                                            setGallery(imgs => [...imgs, newImage]);
+                                            successCount++;
+                                        } catch (err) {
+                                            console.error(`Failed to upload ${file.name}:`, err);
+                                            // Fallback for local storage if one fails? Or just skip? 
+                                            // As per original logic, let's just count it as failed for sequential loop
+                                            failCount++;
+                                        }
+                                    }
+
+                                    if (failCount > 0) {
+                                        alert(`Upload complete with issues.\nSuccess: ${successCount}\nFailed: ${failCount}`);
+                                    }
+                                    
+                                    setGalFiles([]);
                                     setGalForm({ category: "current", label: "" });
                                 } catch (e) {
-                                    alert("❌ Upload failed: " + e.message + "\n\nFallback: storing image locally (will only show on this device).");
-                                    // Fallback: store base64 if Cloudinary not configured
-                                    setGallery(imgs => [...imgs, { ...galForm, src: galFile.src, id: Date.now(), label: galForm.label || galFile.name }]);
-                                    setGalFile(null);
-                                    setGalForm({ category: "current", label: "" });
+                                    alert("❌ Bulk upload failed: " + e.message);
                                 } finally {
                                     setGalUploading(false);
                                 }
                             }}
-                            disabled={!galFile || galUploading}
-                            style={{ background: (galFile && !galUploading) ? "linear-gradient(135deg,#8B0000,#C41E3A)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "11px 24px", cursor: (galFile && !galUploading) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 14 }}
+                            disabled={galFiles.length === 0 || galUploading}
+                            style={{ background: (galFiles.length > 0 && !galUploading) ? "linear-gradient(135deg,#8B0000,#C41E3A)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "11px 24px", cursor: (galFiles.length > 0 && !galUploading) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 14 }}
                         >
-                            {galUploading ? "⏳ Uploading to Cloud..." : "➕ Add to Gallery"}
+                            {galUploading ? `⏳ Uploading (${galFiles.length})...` : `➕ Add ${galFiles.length > 0 ? galFiles.length : ""} to Gallery`}
                         </button>
                     </div>
                     {["current", "previous"].map(cat => {
