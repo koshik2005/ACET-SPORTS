@@ -479,7 +479,11 @@ export function AdminPage({
     const exportFilteredTShirts = () => {
         const list = studentsDB.filter(s => {
             if (tsHouse !== "All" && s.house !== tsHouse) return false;
-            if (tsGender !== "All" && (s.gender || "").toLowerCase() !== tsGender.toLowerCase()) return false;
+            if (tsGender !== "All") {
+                const g = (s.gender || "").trim().toLowerCase();
+                if (tsGender === "Male" && g !== "male" && g !== "m") return false;
+                if (tsGender === "Female" && g !== "female" && g !== "f") return false;
+            }
             if (tsStatus === "Issued" && !s.shirtIssued) return false;
             if (tsStatus === "Pending" && s.shirtIssued) return false;
             return true;
@@ -527,8 +531,8 @@ export function AdminPage({
 
     const exportFinalReport = async () => {
         // Build participants list by gender
-        const menStudents = studentsDB.filter(s => s.gender && (s.gender.toLowerCase() === "male" || s.gender.toLowerCase() === "m"));
-        const womenStudents = studentsDB.filter(s => s.gender && (s.gender.toLowerCase() === "female" || s.gender.toLowerCase() === "f"));
+        const menStudents = studentsDB.filter(s => s.gender && ["male", "m"].includes(s.gender.toLowerCase()));
+        const womenStudents = studentsDB.filter(s => s.gender && ["female", "f"].includes(s.gender.toLowerCase()));
 
         // Helper to get image run or placeholder text
         const createProfileImage = async (url, fallbackText) => {
@@ -656,7 +660,10 @@ export function AdminPage({
             docChildren.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { before: 400, after: 200 } }));
             const rRows = registrations.filter(r => {
                 const s = studentsDB.find(st => st.regNo === r.regNo);
-                return s && (s.gender?.toLowerCase().startsWith(genderName.toLowerCase()[0]));
+                const g = (s.gender || "").trim().toLowerCase();
+                const isMen = genderName === "Men" && (g === "male" || g === "m");
+                const isWomen = genderName === "Women" && (g === "female" || g === "f");
+                return s && (isMen || isWomen);
             }).map((r, i) => new TableRow({
                 children: [
                     new TableCell({ children: [new Paragraph(String(i + 1))] }),
@@ -1917,8 +1924,8 @@ export function AdminPage({
                             {[
                                 { label: "Total Students", value: studentsDB.length, color: "#8B0000" },
                                 { label: "Total Issued", value: studentsDB.filter(s => s.shirtIssued).length, color: "#2E8B57" },
-                                { label: "Pending Men", value: studentsDB.filter(s => !s.shirtIssued && (s.gender || "").toLowerCase() === "male").length, color: "#1E3A8A" },
-                                { label: "Pending Women", value: studentsDB.filter(s => !s.shirtIssued && (s.gender || "").toLowerCase() === "female").length, color: "#4B0082" }
+                                { label: "Pending Men", value: studentsDB.filter(s => !s.shirtIssued && ["male", "m"].includes((s.gender || "").trim().toLowerCase())).length, color: "#1E3A8A" },
+                                { label: "Pending Women", value: studentsDB.filter(s => !s.shirtIssued && ["female", "f"].includes((s.gender || "").trim().toLowerCase())).length, color: "#4B0082" }
                             ].map(st => (
                                 <div key={st.label} style={{ background: dark ? "rgba(255,255,255,.03)" : "#f9f9f9", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 12, padding: 14, textAlign: "center" }}>
                                     <div style={{ fontSize: 24, fontWeight: 900, color: st.color }}>{st.value}</div>
@@ -1935,7 +1942,11 @@ export function AdminPage({
                                 <tbody>
                                     {studentsDB.filter(s => {
                                         if (tsHouse !== "All" && s.house !== tsHouse) return false;
-                                        if (tsGender !== "All" && (s.gender || "").toLowerCase() !== tsGender.toLowerCase()) return false;
+                                        if (tsGender !== "All") {
+                                            const g = (s.gender || "").trim().toLowerCase();
+                                            if (tsGender === "Male" && g !== "male" && g !== "m") return false;
+                                            if (tsGender === "Female" && g !== "female" && g !== "f") return false;
+                                        }
                                         if (tsStatus === "Issued" && !s.shirtIssued) return false;
                                         if (tsStatus === "Pending" && s.shirtIssued) return false;
                                         return true;

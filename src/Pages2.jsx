@@ -230,7 +230,7 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                                         <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>{student.role === "Staff" ? `Staff Games (Max ${maxGames})` : `Team Games (Max ${maxGames})`}</label>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                             {student.role === "Staff" ? (
-                                                (student.gender?.toLowerCase() === "female" ? staffGamesListWomens : staffGamesList).map(g => {
+                                                ((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? staffGamesListWomens : staffGamesList).map(g => {
                                                     const isClosed = closedEvents?.includes(g);
                                                     const isSelected = gameSel.includes(g);
                                                     return (
@@ -242,7 +242,7 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                                                     );
                                                 })
                                             ) : (
-                                                (student.gender?.toLowerCase() === "female" ? sportGamesListWomens : sportGamesList).map(g => {
+                                                ((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? sportGamesListWomens : sportGamesList).map(g => {
                                                     const isClosed = closedEvents?.includes(g);
                                                     const isSelected = gameSel.includes(g);
                                                     return (
@@ -263,7 +263,7 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
                                         <div style={{ marginBottom: 24 }}>
                                             <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Athletic Events (Max {maxAthletics})</label>
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                                {(student.gender?.toLowerCase() === "female" ? athleticsListWomens : athleticsList).map(a => {
+                                                {((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? athleticsListWomens : athleticsList).map(a => {
                                                     const isClosed = closedEvents?.includes(a);
                                                     const isSelected = athleticSel.includes(a);
                                                     return (
