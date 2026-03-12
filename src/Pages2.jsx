@@ -21,12 +21,21 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
 
     const lookup = async () => {
         setError(""); setGameSel([]); setAthleticSel([]); setOtpSent(false); setIsOtpVerified(false); setOtp("");
-        const f = studentsDB.find(s => s.email === input.trim() || s.regNo === input.trim());
-        if (!f) {
-            setError("Student not found. Check your email or register number.");
-            return;
+        if (!input.trim()) return;
+
+        setIsVerifying(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/lookup-student?query=${encodeURIComponent(input.trim())}`);
+            const data = await res.json();
+            if (data.success) {
+                setStudent(data.student);
+            } else {
+                setError(data.error || "Student not found. Check your email or register number.");
+            }
+        } catch (err) {
+            setError("Server unreachable.");
         }
-        setStudent(f);
+        setIsVerifying(false);
     };
 
     const sendOtp = async () => {

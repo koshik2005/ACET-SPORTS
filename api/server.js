@@ -208,6 +208,22 @@ const getInitialState = () => ({
 });
 
 
+app.get("/api/public-state", async (req, res) => {
+  const state = await State.findOne();
+  if (!state) return res.json({});
+  
+  // SANITIZATION: Strip emails from authorities and management for public view
+  const sanitizeList = (list) => (list || []).map(({ email, ...rest }) => rest);
+
+  res.json({
+    ...state._doc,
+    authorities: sanitizeList(state.authorities),
+    management: sanitizeList(state.management),
+    studentsDB: [], // Ensure studentsDB is NEVER sent to public
+    adminToken: undefined,
+    adminLogs: undefined
+  });
+});
 const loadDb = async () => {
   const state = await State.findOne();
   if (!state) {
@@ -279,6 +295,12 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
 };
 
 // ─── Health / config check ─────────────────────────────────────────────────
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString()
+  });
+});
 app.get("/api/health", async (req, res) => {
   try {
     const dbStatus = mongoose.connection.readyState === 1 ? "Connected" : "Disconnected";
@@ -454,6 +476,43 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
     console.error("OTP Error:", err);
     res.status(500).json({ error: "Failed to send OTP. Check SMTP settings." });
   }
+});
+
+// ── Secure Student Lookup (For Registration) ──────────────────────────
+const lookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // limit each IP to 50 lookups per window
+  message: { error: "Too many lookup attempts. Please try again later." }
+});
+
+app.get("/api/lookup-student", lookupLimiter, async (req, res) => {
+  const { query } = req.query;
+  if (!query) return res.status(400).json({ error: "Search query required" });
+
+  const state = await State.findOne();
+  if (!state || !state.studentsDB) return res.status(500).json({ error: "Database error" });
+
+  const student = state.studentsDB.find(s => 
+    s.email?.toLowerCase() === query.trim().toLowerCase() || 
+    s.regNo?.toLowerCase() === query.trim().toLowerCase()
+  );
+
+  if (!student) return res.status(404).json({ error: "Student not found" });
+
+  // Return ONLY necessary non-sensitive info
+  res.json({
+    success: true,
+    student: {
+      name: student.name,
+      email: student.email,
+      regNo: student.regNo,
+      house: student.house,
+      year: student.year,
+      dept: student.dept,
+      gender: student.gender,
+      role: student.role
+    }
+  });
 });
 
 app.post("/api/verify-otp", async (req, res) => {
