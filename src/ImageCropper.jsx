@@ -25,6 +25,7 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
     };
 
     const RATIOS = [
+        { label: "Free", val: null },
         { label: "1:1", val: 1 },
         { label: "4:3", val: 4 / 3 },
         { label: "16:9", val: 16 / 9 },
