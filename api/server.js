@@ -208,22 +208,8 @@ const getInitialState = () => ({
 });
 
 
-app.get("/api/public-state", async (req, res) => {
-  const state = await State.findOne();
-  if (!state) return res.json({});
-  
-  // SANITIZATION: Strip emails from authorities and management for public view
-  const sanitizeList = (list) => (list || []).map(({ email, ...rest }) => rest);
+// Redundant public-state handler removed. Unified below at line 325.
 
-  res.json({
-    ...state._doc,
-    authorities: sanitizeList(state.authorities),
-    management: sanitizeList(state.management),
-    studentsDB: [], // Ensure studentsDB is NEVER sent to public
-    adminToken: undefined,
-    adminLogs: undefined
-  });
-});
 const loadDb = async () => {
   const state = await State.findOne();
   if (!state) {
@@ -357,14 +343,37 @@ app.get("/api/public-state", async (req, res) => {
   }
 });
 
-app.get("/api/secure-state", authenticateAdmin, async (req, res) => {
+app.get("/api/secure-state", authenticateCaptainOrAdmin, async (req, res) => {
   try {
     const state = await loadDb();
-    res.json(state);
+    const isAdmin = !!req.headers.authorization?.startsWith("Bearer admin-"); // Simplified check: in our system, admin tokens are prefixed or we check role
+    
+    // Better check: use the token to determine if it's admin or captain
+    const token = req.headers.authorization?.split(" ")[1];
+    let user;
+    try { user = jwt.verify(token, JWT_SECRET); } catch(e) { return res.status(401).json({ error: "Invalid token" }); }
+
+    if (user.role === "admin") {
+      return res.json(state);
+    } else if (user.role === "captain") {
+      // Sanitize state for captain: only show their house's registrations
+      const result = { ...state.toObject ? state.toObject() : state };
+      result.studentsDB = (result.studentsDB || []).filter(s => s.house === user.house);
+      result.registrations = (result.registrations || []).filter(r => r.house === user.house);
+      
+      // Still hide sensitive admin-only stuff
+      delete result.activeAdminToken;
+      delete result.adminLogs;
+      
+      return res.json(result);
+    }
+
+    res.status(403).json({ error: "Unauthorized" });
   } catch (err) {
     res.status(500).json({ error: "Failed to load state" });
   }
 });
+
 
 app.get("/api/state", (req, res) => {
   // Redirect old /api/state to public-state for backwards compatibility momentarily
@@ -501,7 +510,13 @@ app.get("/api/lookup-student", lookupLimiter, async (req, res) => {
 
   if (!student) return res.status(404).json({ error: "Student not found" });
 
-  // Return ONLY necessary non-sensitive info
+  // Check if student is already registered
+  const registration = (state.registrations || []).find(r => 
+    r.email?.toLowerCase() === student.email?.toLowerCase() || 
+    r.regNo?.toLowerCase() === student.regNo?.toLowerCase()
+  );
+
+  // Return ONLY necessary non-sensitive info + registration status
   res.json({
     success: true,
     student: {
@@ -512,9 +527,59 @@ app.get("/api/lookup-student", lookupLimiter, async (req, res) => {
       year: student.year,
       dept: student.dept,
       gender: student.gender,
-      role: student.role
+      role: student.role,
+      alreadyRegistered: !!registration,
+      existingRegistration: registration || null
     }
   });
+});
+
+app.post("/api/register-event", async (req, res) => {
+  const { email, otp, game, athletic } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+
+  try {
+    // 1. Verify OTP first
+    const stored = await Otp.findOne({ email, type: "student" });
+    if (!stored || stored.otp !== otp) {
+      return res.status(400).json({ error: "Invalid or expired OTP" });
+    }
+
+    // 2. Get student details from DB
+    const state = await State.findOne();
+    const student = state.studentsDB.find(s => s.email?.toLowerCase() === email.toLowerCase());
+    if (!student) return res.status(404).json({ error: "Student profile not found" });
+
+    // 3. Create registration object
+    const newReg = {
+      name: student.name,
+      email: student.email,
+      regNo: student.regNo,
+      house: student.house,
+      game: game || "",
+      athletic: athletic || "",
+      registeredAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+    };
+
+    // 4. Atomic update: Add to registrations, ensuring no duplicates for this person
+    // We $pull first to ensure we don't have multiple entries for the same student, then $push
+    await State.findOneAndUpdate({}, {
+      $pull: { registrations: { email: student.email } }
+    });
+    
+    await State.findOneAndUpdate({}, {
+      $push: { registrations: newReg }
+    });
+
+    // 5. Cleanup OTP
+    await Otp.deleteOne({ _id: stored._id });
+    invalidateCache();
+
+    res.json({ success: true, registration: newReg });
+  } catch (err) {
+    console.error("REGISTRATION ERROR:", err);
+    res.status(500).json({ error: "Failed to register: " + err.message });
+  }
 });
 
 app.post("/api/verify-otp", async (req, res) => {

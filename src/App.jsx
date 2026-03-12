@@ -56,14 +56,17 @@ export default function App() {
 
   useEffect(() => {
     const adminToken = localStorage.getItem("adminToken");
-    const fetchPath = adminToken ? "/api/secure-state" : "/api/public-state";
-    const headers = adminToken ? { "Authorization": `Bearer ${adminToken}` } : {};
+    const captainToken = localStorage.getItem("captainToken");
+    const token = adminToken || captainToken;
+    const fetchPath = token ? "/api/secure-state" : "/api/public-state";
+    const headers = token ? { "Authorization": `Bearer ${token}` } : {};
 
     fetch(`${API_BASE}${fetchPath}`, { headers })
       .then(res => {
-        if (!res.ok && adminToken) {
+        if (!res.ok && token) {
           // If secure fetch fails (expired token), fallback to public
           localStorage.removeItem("adminToken");
+          localStorage.removeItem("captainToken");
           return fetch(`${API_BASE}/api/public-state`).then(r => r.json());
         }
         return res.json();
@@ -209,7 +212,7 @@ export default function App() {
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
         {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
-        {active === "Registration" && <RegistrationPage dark={dark} registrations={registrations} setRegistrations={setRegistrationsSync} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} closedEvents={closedEvents} maxGames={maxGames} maxAthletics={maxAthletics} />}
+        {active === "Registration" && <RegistrationPage dark={dark} setRegistrations={setRegistrationsSync} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} closedEvents={closedEvents} maxGames={maxGames} maxAthletics={maxAthletics} />}
         {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
         {active === "Star Players" && <StarPlayersPage dark={dark} starPlayers={starPlayers} houses={houses} />}
         {active === "Gallery" && <GalleryPage dark={dark} gallery={gallery} />}

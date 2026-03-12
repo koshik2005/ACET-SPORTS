@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIsMobile, hi, tint, Count, Sheet } from "./utils.jsx";
 import { API_BASE } from "./api.js";
-export function RegistrationPage({ dark, registrations, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime, closedEvents = [], maxGames = 1, maxAthletics = 1 }) {
+export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime, closedEvents = [], maxGames = 1, maxAthletics = 1 }) {
     const [input, setInput] = useState("");
     const [student, setStudent] = useState(null);
     const [gameSel, setGameSel] = useState([]);
@@ -12,15 +12,15 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
     const [isOtpVerified, setIsOtpVerified] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [registered, setRegistered] = useState(null); // holds { student, hObj } after successful registration
+    const [existingRegistration, setExistingRegistration] = useState(null);
     const isMobile = useIsMobile();
 
     const isClosed = !registrationOpen || (registrationCloseTime && new Date() > new Date(registrationCloseTime));
 
-    const existing = student ? registrations.find(r => r.email === student.email) : null;
     const hObj = houses.find(h => h.name === student?.house);
 
     const lookup = async () => {
-        setError(""); setGameSel([]); setAthleticSel([]); setOtpSent(false); setIsOtpVerified(false); setOtp("");
+        setError(""); setGameSel([]); setAthleticSel([]); setOtpSent(false); setIsOtpVerified(false); setOtp(""); setExistingRegistration(null);
         if (!input.trim()) return;
 
         setIsVerifying(true);
@@ -29,6 +29,9 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
             const data = await res.json();
             if (data.success) {
                 setStudent(data.student);
+                if (data.student.alreadyRegistered) {
+                    setExistingRegistration(data.student.existingRegistration);
+                }
             } else {
                 setError(data.error || "Student not found. Check your email or register number.");
             }
@@ -79,12 +82,36 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
         setIsVerifying(false);
     };
 
-    const submit = () => {
+    const submit = async () => {
         if (gameSel.length === 0 && athleticSel.length === 0) { setError("Please select at least one event."); return; }
-        setRegistrations(p => [...p.filter(r => r.email !== student.email), { ...student, game: gameSel.join(", "), athletic: athleticSel.join(", "), registeredAt: new Date().toLocaleTimeString() }]);
-        // Show WhatsApp join screen instead of immediately resetting
-        setRegistered({ student, hObj });
-        setStudent(null); setInput(""); setGameSel([]); setAthleticSel([]); setError(""); setIsOtpVerified(false); setOtpSent(false);
+        
+        setIsVerifying(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/register-event`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: student.email,
+                    otp, // Pass OTP for server-side verification during final registration
+                    game: gameSel.join(", "),
+                    athletic: athleticSel.join(", ")
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Locally update registrations if possible (for admin if they happen to be viewing)
+                if (typeof setRegistrations === 'function') {
+                    setRegistrations(p => [...p.filter(r => r.email !== student.email), data.registration]);
+                }
+                setRegistered({ student, hObj });
+                setStudent(null); setInput(""); setGameSel([]); setAthleticSel([]); setError(""); setIsOtpVerified(false); setOtpSent(false); setExistingRegistration(null);
+            } else {
+                setError(data.error || "Registration failed.");
+            }
+        } catch (err) {
+            setError("Server error during registration.");
+        }
+        setIsVerifying(false);
     };
 
     // ── Post-registration WhatsApp prompt ──────────────────────────────────
@@ -146,20 +173,20 @@ export function RegistrationPage({ dark, registrations, setRegistrations, studen
     }
 
 
-    if (student && existing) return (
+    if (student && existingRegistration) return (
         <div style={{ maxWidth: 600, margin: isMobile ? "16px auto" : "60px auto", padding: isMobile ? "16px 12px" : "40px 20px", textAlign: "center" }}>
             <div style={{ fontSize: 52 }}>🔒</div>
             <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: "10px 0 8px", fontSize: isMobile ? 19 : 24 }}>Already Registered</h2>
             <p style={{ color: dark ? "#aaa" : "#666", marginBottom: 16, fontSize: 13 }}>Your registration is locked. Only an admin can make changes.</p>
             <div style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 14, padding: isMobile ? 14 : 28, textAlign: "left" }}>
-                <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 18, color: hObj?.color, marginBottom: 10 }}>{existing.name} — {existing.house} House</div>
+                <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 18, color: hObj?.color, marginBottom: 10 }}>{existingRegistration.name} — {existingRegistration.house} House</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div style={{ background: dark ? "rgba(139,0,0,.15)" : "#fff5f5", border: "1px solid #8B000033", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#8B0000", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>⚽ Game</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existing.game || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
-                    <div style={{ background: dark ? "rgba(75,0,130,.2)" : "#f5f0ff", border: "1px solid #4B008233", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#4B0082", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>🏃 Athletic</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existing.athletic || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
+                    <div style={{ background: dark ? "rgba(139,0,0,.15)" : "#fff5f5", border: "1px solid #8B000033", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#8B0000", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>⚽ Game</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existingRegistration.game || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
+                    <div style={{ background: dark ? "rgba(75,0,130,.2)" : "#f5f0ff", border: "1px solid #4B008233", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#4B0082", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>🏃 Athletic</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existingRegistration.athletic || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
                 </div>
                 <div style={{ marginTop: 12, padding: "9px 12px", background: dark ? "rgba(255,200,0,.1)" : "#fffbea", border: "1px solid #FFD70066", borderRadius: 8, fontSize: 12, color: dark ? "#ffd700" : "#856404" }}>⚠️ To change, contact your Sports Admin.</div>
             </div>
-            <button onClick={() => { setStudent(null); setInput(""); setOtpSent(false); setIsOtpVerified(false); }} style={{ marginTop: 14, background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 50, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>← Back</button>
+            <button onClick={() => { setStudent(null); setInput(""); setOtpSent(false); setIsOtpVerified(false); setExistingRegistration(null); }} style={{ marginTop: 14, background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 50, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>← Back</button>
         </div>
     );
 
