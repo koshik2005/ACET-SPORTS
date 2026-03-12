@@ -47,5 +47,16 @@ const otpSchema = new mongoose.Schema({
 
 const Otp = mongoose.model("Otp", otpSchema);
 
-export { State, Otp };
+const querySchema = new mongoose.Schema({
+    regNo: { type: String, required: true },
+    studentName: { type: String, required: true },
+    issueType: { type: String, required: true }, // e.g., "Name Spelling", "Email Change"
+    details: { type: String, required: true },
+    status: { type: String, default: "Pending" }, // Pending, Resolved
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Query = mongoose.model("Query", querySchema);
+
+export { State, Otp, Query };
 export default State;

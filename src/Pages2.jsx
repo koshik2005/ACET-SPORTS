@@ -13,6 +13,9 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
     const [isVerifying, setIsVerifying] = useState(false);
     const [registered, setRegistered] = useState(null); // holds { student, hObj } after successful registration
     const [existingRegistration, setExistingRegistration] = useState(null);
+    const [isPartial, setIsPartial] = useState(false);
+    const [showQuery, setShowQuery] = useState(false);
+    const [queryData, setQueryData] = useState({ issueType: "Name Spelling", details: "" });
     const isMobile = useIsMobile();
 
     const isClosed = !registrationOpen || (registrationCloseTime && new Date() > new Date(registrationCloseTime));
@@ -29,8 +32,12 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
             const data = await res.json();
             if (data.success) {
                 setStudent(data.student);
+                setIsPartial(data.student.isPartial);
                 if (data.student.alreadyRegistered) {
                     setExistingRegistration(data.student.existingRegistration);
+                    // Pre-fill existing selections
+                    if (data.student.existingRegistration.game) setGameSel(data.student.existingRegistration.game.split(", "));
+                    if (data.student.existingRegistration.athletic) setAthleticSel(data.student.existingRegistration.athletic.split(", "));
                 }
             } else {
                 setError(data.error || "Student not found. Check your email or register number.");
@@ -92,24 +99,51 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     email: student.email,
-                    otp, // Pass OTP for server-side verification during final registration
+                    otp,
                     game: gameSel.join(", "),
                     athletic: athleticSel.join(", ")
                 })
             });
             const data = await res.json();
             if (data.success) {
-                // Locally update registrations if possible (for admin if they happen to be viewing)
                 if (typeof setRegistrations === 'function') {
                     setRegistrations(p => [...p.filter(r => r.email !== student.email), data.registration]);
                 }
                 setRegistered({ student, hObj });
-                setStudent(null); setInput(""); setGameSel([]); setAthleticSel([]); setError(""); setIsOtpVerified(false); setOtpSent(false); setExistingRegistration(null);
+                setStudent(null); setInput(""); setGameSel([]); setAthleticSel([]); setError(""); setIsOtpVerified(false); setOtpSent(false); setExistingRegistration(null); setIsPartial(false);
             } else {
                 setError(data.error || "Registration failed.");
             }
         } catch (err) {
             setError("Server error during registration.");
+        }
+        setIsVerifying(false);
+    };
+
+    const submitQuery = async () => {
+        if (!queryData.details.trim()) { setError("Please provide details."); return; }
+        setIsVerifying(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/submit-query`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    regNo: student.regNo,
+                    studentName: student.name,
+                    issueType: queryData.issueType,
+                    details: queryData.details
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert("Query submitted successfully!");
+                setShowQuery(false);
+                setQueryData({ issueType: "Name Spelling", details: "" });
+            } else {
+                setError(data.error || "Failed to submit query.");
+            }
+        } catch (err) {
+            setError("Request failed.");
         }
         setIsVerifying(false);
     };
@@ -173,7 +207,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
     }
 
 
-    if (student && existingRegistration) return (
+    if (student && existingRegistration && !isPartial) return (
         <div style={{ maxWidth: 600, margin: isMobile ? "16px auto" : "60px auto", padding: isMobile ? "16px 12px" : "40px 20px", textAlign: "center" }}>
             <div style={{ fontSize: 52 }}>🔒</div>
             <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: "10px 0 8px", fontSize: isMobile ? 19 : 24 }}>Already Registered</h2>
@@ -186,7 +220,30 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                 </div>
                 <div style={{ marginTop: 12, padding: "9px 12px", background: dark ? "rgba(255,200,0,.1)" : "#fffbea", border: "1px solid #FFD70066", borderRadius: 8, fontSize: 12, color: dark ? "#ffd700" : "#856404" }}>⚠️ To change, contact your Sports Admin.</div>
             </div>
-            <button onClick={() => { setStudent(null); setInput(""); setOtpSent(false); setIsOtpVerified(false); setExistingRegistration(null); }} style={{ marginTop: 14, background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 50, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>← Back</button>
+            <button onClick={() => { setStudent(null); setInput(""); setOtpSent(false); setIsOtpVerified(false); setExistingRegistration(null); setIsPartial(false); }} style={{ marginTop: 14, background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 50, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>← Back</button>
+        </div>
+    );
+
+    if (showQuery && student) return (
+        <div style={{ maxWidth: 500, margin: "60px auto", padding: 20 }}>
+            <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", fontSize: 24, marginBottom: 16 }}>Report Data Error</h2>
+            <div style={{ background: dark ? "#1a1a2e" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 14, padding: 24 }}>
+                <p style={{ fontSize: 13, color: dark ? "#aaa" : "#666", marginBottom: 20 }}>Found a spelling mistake in your name or email? Report it here and the Admin will fix it for you.</p>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>Issue Type</label>
+                <select value={queryData.issueType} onChange={e => setQueryData({...queryData, issueType: e.target.value})} style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #ddd", marginBottom: 16 }}>
+                    <option>Name Spelling</option>
+                    <option>Email Change</option>
+                    <option>Department/Year Error</option>
+                    <option>Other</option>
+                </select>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>Details</label>
+                <textarea value={queryData.details} onChange={e => setQueryData({...queryData, details: e.target.value})} placeholder="e.g. My name is spelled 'Abishek' not 'Abhishek'" style={{ width: "100%", height: 100, padding: 12, borderRadius: 8, border: "1px solid #ddd", marginBottom: 16, fontFamily: "inherit" }} />
+                {error && <div style={{ color: "#c00", fontSize: 12, marginBottom: 10 }}>{error}</div>}
+                <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={submitQuery} disabled={isVerifying} style={{ flex: 1, background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: 14, fontWeight: 700 }}>{isVerifying ? "Submitting..." : "Submit Report"}</button>
+                    <button onClick={() => setShowQuery(false)} style={{ flex: 1, background: "transparent", border: "1px solid #ddd", borderRadius: 8, padding: 14, color: dark ? "#fff" : "#222" }}>Cancel</button>
+                </div>
+            </div>
         </div>
     );
 
@@ -252,7 +309,26 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                 </div>
                             ) : (
                                 <>
-                                    <div style={{ background: dark ? "rgba(34,139,34,.15)" : "#f0fff0", border: "1px solid #228B2266", borderRadius: 9, padding: "9px 12px", fontSize: 12, color: dark ? "#90EE90" : "#228B22", marginBottom: 16, textAlign: "center" }}>✅ Identity Verified Successfully!</div>
+                                    <div style={{ background: dark ? "rgba(34,139,34,.15)" : "#f0fff0", border: "1px solid #228B2266", borderRadius: 9, padding: "16px", marginBottom: 16, textAlign: "center" }}>
+                                        <div style={{ fontSize: 12, color: dark ? "#90EE90" : "#228B22", fontWeight: 700, marginBottom: 12 }}>✅ Verified As: {student.name}</div>
+                                        
+                                        {/* Identity Check & Query Link */}
+                                        <div style={{ padding: 12, background: dark ? "rgba(0,0,0,.2)" : "rgba(0,0,0,.03)", borderRadius: 10, textAlign: "left" }}>
+                                            <div style={{ fontSize: 11, color: dark ? "#aaa" : "#888", marginBottom: 4 }}>House Group Join Link:</div>
+                                            <a href={(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? hObj?.whatsappLinkWomen : hObj?.whatsappLinkMen} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#25D366", fontWeight: 800, textDecoration: "none", display: "block", marginBottom: 8 }}>💬 Join {student.house} WhatsApp Group →</a>
+                                            
+                                            <div style={{ borderTop: `1px solid ${dark ? "#444" : "#ddd"}`, paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <span style={{ fontSize: 11, color: dark ? "#888" : "#999" }}>Spelling mistake?</span>
+                                                <button onClick={() => setShowQuery(true)} style={{ background: "transparent", border: "none", color: "#8B0000", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: 0 }}>Report to Admin</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {existingRegistration && isPartial && (
+                                        <div style={{ padding: "8px 12px", background: "#FFD70022", border: "1px solid #FFD70055", borderRadius: 8, fontSize: 11, color: dark ? "#ffd700" : "#856404", marginBottom: 16, textAlign: "center", fontWeight: 700 }}>
+                                            ⚠️ You have already registered for {existingRegistration.game ? "a Game" : "an Athletic Event"}. You can now add your missing selection.
+                                        </div>
+                                    )}
                                     <div style={{ marginBottom: 20 }}>
                                         <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>{student.role === "Staff" ? `Staff Games (Max ${maxGames})` : `Team Games (Max ${maxGames})`}</label>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

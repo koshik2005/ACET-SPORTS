@@ -98,10 +98,13 @@ export function AdminPage({
     const [wfEvent, setWfEvent] = useState("All");  // All | specific event name
     const [wfHouse, setWfHouse] = useState("All");  // All | house name
 
+    const [queries, setQueries] = useState([]);
+    const [queriesLoading, setQueriesLoading] = useState(false);
+
     const [starPlayerForm, setStarPlayerForm] = useState({ name: "", dept: "", year: "", game: "", house: "", img: null });
     const [spUploading, setSpUploading] = useState(false);
 
-    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config"];
+    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config", "Resolver"];
     const [studentSearch, setStudentSearch] = useState("");
     const [editingRegNo, setEditingRegNo] = useState(null);
     const [editStudentForm, setEditStudentForm] = useState({});
@@ -229,6 +232,37 @@ export function AdminPage({
         setIsVerifying(false);
     };
 
+    const fetchQueries = async () => {
+        setQueriesLoading(true);
+        try {
+            const adminToken = localStorage.getItem("adminToken");
+            const res = await fetch(`${API_BASE}/api/admin-queries`, {
+                headers: { "Authorization": `Bearer ${adminToken}` }
+            });
+            const data = await res.json();
+            if (Array.isArray(data)) setQueries(data);
+        } catch (err) { console.error("Failed to fetch queries"); }
+        setQueriesLoading(false);
+    };
+
+    const resolveQuery = async (id, status = "Resolved") => {
+        try {
+            const adminToken = localStorage.getItem("adminToken");
+            const res = await fetch(`${API_BASE}/api/admin-resolve-query`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${adminToken}`
+                },
+                body: JSON.stringify({ id, status })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setQueries(qs => qs.map(q => q._id === id ? { ...q, status } : q));
+            }
+        } catch (err) { console.error("Failed to resolve query"); }
+    };
+
     const handleLogin = async () => {
         setLoginError(""); setIsVerifying(true);
         if (!adminEmail.trim()) {
@@ -266,6 +300,7 @@ export function AdminPage({
                 if (secureData.adminLogs) setAdminLogs(secureData.adminLogs);
 
                 setLoggedIn(true);
+                fetchQueries();
             } else {
                 setLoginError(data.error || "Incorrect OTP");
             }
@@ -2482,6 +2517,55 @@ export function AdminPage({
                             <ListManager dark={dark} title="👔 Sports Official Roles" list={authorityRoles} setList={setAuthorityRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏛️ Management Roles" list={managementRoles} setList={setManagementRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                         </div>
+                    </div>
+                )
+            }
+
+            {
+                tab === "Resolver" && (
+                    <div style={{ maxWidth: 1000 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                            <div>
+                                <h3 style={{ color: dark ? "#fff" : "#222", margin: 0, fontSize: isMobile ? 15 : 18 }}>🛠️ Student Queries (Resolver)</h3>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginTop: 2 }}>Resolve student reports about data errors (spelling mistakes, etc.)</div>
+                            </div>
+                            <button onClick={fetchQueries} disabled={queriesLoading} style={{ background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13 }}>{queriesLoading ? "..." : "🔄 Refresh"}</button>
+                        </div>
+
+                        {queries.length === 0 ? (
+                            <div style={{ padding: 60, textAlign: "center", background: dark ? "rgba(255,255,255,.02)" : "#f9f9f9", borderRadius: 16, border: `1px solid ${dark ? "#222" : "#eee"}` }}>
+                                <div style={{ fontSize: 48, marginBottom: 12 }}>📬</div>
+                                <div style={{ fontWeight: 700, color: dark ? "#888" : "#aaa" }}>No queries found.</div>
+                            </div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                {queries.map(q => (
+                                    <div key={q._id} style={{ 
+                                        background: dark ? "rgba(255,255,255,.03)" : "#fff", 
+                                        border: `1px solid ${q.status === "Pending" ? (dark ? "#4a2a2a" : "#ffebeb") : (dark ? "#222" : "#eee")}`,
+                                        borderLeft: `5px solid ${q.status === "Pending" ? "#8B0000" : "#2E8B57"}`,
+                                        borderRadius: 12, padding: 16, display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", opacity: q.status === "Resolved" ? 0.7 : 1
+                                    }}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                                <span style={{ fontWeight: 800, fontSize: 14, color: dark ? "#fff" : "#333" }}>{q.studentName}</span>
+                                                <span style={{ fontSize: 11, background: dark ? "#222" : "#f0f0f0", padding: "2px 8px", borderRadius: 4, color: dark ? "#aaa" : "#666" }}>{q.regNo}</span>
+                                                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: q.status === "Pending" ? "#8B0000" : "#2E8B57", color: "#fff" }}>{q.status}</span>
+                                            </div>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: "#8B0000", marginBottom: 4 }}>Issue: {q.issueType}</div>
+                                            <div style={{ fontSize: 13, color: dark ? "#ccc" : "#555", fontStyle: "italic", background: dark ? "rgba(0,0,0,.2)" : "#f9f9f9", padding: 10, borderRadius: 8 }}>"{q.details}"</div>
+                                            <div style={{ fontSize: 10, color: dark ? "#666" : "#aaa", marginTop: 8 }}>Submitted on: {new Date(q.createdAt).toLocaleString()}</div>
+                                        </div>
+                                        {q.status === "Pending" && (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                <button onClick={() => resolveQuery(q._id, "Resolved")} style={{ background: "#2E8B57", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Resolve ✅</button>
+                                                <button onClick={() => resolveQuery(q._id, "Ignored")} style={{ background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#aaa" : "#888", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: 12 }}>Ignore</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )
             }
