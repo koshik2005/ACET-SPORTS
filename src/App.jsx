@@ -46,6 +46,7 @@ export default function App() {
   const [registrationOpen, setRegistrationOpen] = useState(true);
   const [registrationCloseTime, setRegistrationCloseTime] = useState("");
   const [eventDate, setEventDate] = useState({ date: "", time: "" });
+  const [inaugurationDetails, setInaugurationDetails] = useState({ date: "", time: "", venue: "" });
   const [emptyGame, setEmptyGame] = useState({ name: "", type: "game", venue: "", official: "", status: "Upcoming", start: "", end: "", participants: "" });
   const [closedEvents, setClosedEvents] = useState([]);
   const [maxGames, setMaxGames] = useState(1);
@@ -100,6 +101,7 @@ export default function App() {
         if (data.maxGames !== undefined) setMaxGames(data.maxGames);
         if (data.maxAthletics !== undefined) setMaxAthletics(data.maxAthletics);
         if (data.launchConfig) setLaunchConfig(data.launchConfig);
+        if (data.inaugurationDetails) setInaugurationDetails(data.inaugurationDetails);
 
         setLoading(false);
       })
@@ -169,6 +171,7 @@ export default function App() {
   const setMaxGamesSync = wrap(setMaxGames, "maxGames");
   const setMaxAthleticsSync = wrap(setMaxAthletics, "maxAthletics");
   const setLaunchConfigSync = wrap(setLaunchConfig, "launchConfig");
+  const setInaugurationDetailsSync = wrap(setInaugurationDetails, "inaugurationDetails");
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f0f1a" : "#f4f4f8", color: dark ? "#fff" : "#8B0000", fontSize: 24, fontWeight: 800 }}>⚡ Loading Achariya Sports...</div>;
 
@@ -241,6 +244,7 @@ export default function App() {
           maxGames={maxGames} setMaxGames={setMaxGamesSync}
           maxAthletics={maxAthletics} setMaxAthletics={setMaxAthleticsSync}
           launchConfig={launchConfig} setLaunchConfig={setLaunchConfigSync}
+          inaugurationDetails={inaugurationDetails} setInaugurationDetails={setInaugurationDetailsSync}
         />}
         {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} />}
       </main>

@@ -760,43 +760,72 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
 });
 
 app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => {
-  const { date, time, portalUrl, authorities = [], studentsDB = [], invitationFile, invitationFileName, regardsNames } = req.body;
+  const { type, date, time, venue, portalUrl, authorities = [], management = [], studentsDB = [], recipients = [], invitationFile, invitationFileName, regardsNames } = req.body;
 
-  if (!date) {
-    return res.status(400).json({ error: "Date is required." });
-  }
-
-  // Gather recipients
-  const recipients = [];
-
-  // Authorities & Management
-  authorities.forEach(a => {
-    if (a.email && a.email.includes("@")) recipients.push(a.email);
-  });
-
-  // Students
-  studentsDB.forEach(s => {
-    if (s.email && s.email.includes("@")) recipients.push(s.email);
-  });
-
-  // Deduplicate
-  const uniqueEmails = [...new Set(recipients)];
-
-  if (uniqueEmails.length === 0) {
-    return res.status(400).json({ error: "No valid email addresses found across users." });
-  }
-
+  const isInauguration = type === "inauguration";
   const transporter = makeTransporter();
-
   const displayDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const displayTime = time ? `<div style="font-size:20px; color:#fff; margin-top:10px; font-weight:600;">⏰ ${time}</div>` : "";
+  
+  // Use provided recipients chunk if available, otherwise fallback to all
+  const allUsers = recipients.length > 0 ? recipients : [
+    ...authorities.map(a => ({ ...a, roleType: "authority" })),
+    ...management.map(m => ({ ...m, roleType: "management" })),
+    ...studentsDB.map(s => ({ ...s, roleType: s.role === "Staff" ? "staff" : "student" }))
+  ];
 
-  const htmlTemplate = `
+  const results = { success: 0, failed: 0 };
+
+  for (const user of allUsers) {
+    if (!user.email || !user.email.includes("@")) continue;
+
+    let subject, html;
+
+    if (isInauguration) {
+      subject = "Invitation for Sports Day Inauguration";
+      const roleLower = (user.role || "").toLowerCase();
+      const name = user.name || "Guest";
+      const dept = user.dept || "Department";
+      const isHigherOfficial = roleLower.includes("principal") || roleLower.includes("managing director") || roleLower.includes("md") || roleLower.includes("hod") || roleLower.includes("head");
+
+      if (isHigherOfficial) {
+        html = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif; padding:40px; color:#222; max-width:600px; margin:auto; border:1px solid #eee; line-height:1.6;">
+          <p>Respected ${name},<br/>
+          Head of the Department, ${dept}</p>
+          <p>Greetings from Achariya College of Engineering Technology.</p>
+          <p>On behalf of the Department of Physical Education, I am pleased to invite you to grace the Sports Day Inauguration Ceremony of our institution. Your esteemed presence will be a great honor and will serve as an inspiration to our students participating in the sports events.</p>
+          <div style="background:#f9f9f9; padding:20px; border-left:4px solid #8B0000; margin:20px 0;">
+            <strong>📍 Venue:</strong> ${venue || "Auditorium"}<br/>
+            <strong>🕒 Date:</strong> ${displayDate}<br/>
+            <strong>🕒 Time:</strong> ${time || "3:00 PM – 4:00 PM"}
+          </div>
+          <p>We sincerely hope you will kindly accept our invitation and grace the occasion with your presence.</p>
+          <p>Thank you.</p>
+          <p>Warm regards,<br/><strong>Physical Education Director</strong><br/>Achariya College of Engineering Technology</p>
+        </div>`;
+      } else {
+        html = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif; padding:40px; color:#222; max-width:600px; margin:auto; border:1px solid #eee; line-height:1.6;">
+          <p>Dear ${name},</p>
+          <p>Greetings!</p>
+          <p>You are cordially invited to attend the Sports Day Inauguration Ceremony of Achariya College of Engineering Technology.</p>
+          <div style="background:#f9f9f9; padding:20px; border-left:4px solid #8B0000; margin:20px 0;">
+            <strong>📍 Venue:</strong> ${venue || "Auditorium"}<br/>
+            <strong>🕒 Date:</strong> ${displayDate}<br/>
+            <strong>🕒 Time:</strong> ${time || "3:00 PM – 4:00 PM"}
+          </div>
+          <p>The ceremony will mark the official beginning of the college sports events and will include various programs and announcements. Your presence would be greatly appreciated and will encourage all the participants.</p>
+          <p>We look forward to your presence at the event.</p>
+          <p>Warm regards,<br/><strong>Achariya College of Engineering Technology</strong></p>
+        </div>`;
+      }
+    } else {
+      subject = "🏆 Sports Day Official Announcement - ACET";
+      const displayTimeHtml = time ? `<div style="font-size:20px; color:#fff; margin-top:10px; font-weight:600;">⏰ ${time}</div>` : "";
+      html = `
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-</head>
+<head><meta charset="utf-8"></head>
 <body style="margin:0;padding:24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#fff1ee;color:#222;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff1ee;padding:32px 0;">
     <tr><td align="center">
@@ -806,79 +835,61 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
           <h1 style="color:#fff;margin:0 0 10px;font-size:28px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.2);">Official Announcement</h1>
           <p style="color:rgba(255,255,255,.9);margin:0;font-size:15px;letter-spacing:.5px;">Achariya College of Engineering Technology</p>
         </td></tr>
-        
         <tr><td style="padding:40px 36px;">
           <h2 style="font-size:22px;color:#8B0000;margin:0 0 16px;text-align:center;">The Date is Set! 📅</h2>
-          <p style="font-size:16px;color:#444;margin:0 0 30px;line-height:1.6;text-align:center;">
-            Get ready to showcase your talent, spirit, and sportsmanship. We are excited to announce the official schedule for ACET Sports Day 2025.
-          </p>
-          
+          <p style="font-size:16px;color:#444;margin:0 0 30px;line-height:1.6;text-align:center;">Get ready to showcase your talent and spirit. We are excited to announce the official schedule for Sports Day.</p>
           <div style="background:#0f0f1a;border-radius:14px;padding:30px 24px;text-align:center;box-shadow:inset 0 4px 12px rgba(0,0,0,.3);border:2px solid #FFD700;">
-            <div style="font-size:12px;font-weight:800;letter-spacing:2px;color:#FFD700;text-transform:uppercase;margin-bottom:12px;">Official Date & Time</div>
-            <div style="font-size:24px;color:#fff;font-weight:800;text-shadow:0 2px 8px rgba(255,215,0,.4);">
-              ${displayDate}
-            </div>
-            ${displayTime}
+            <div style="font-size:12px;font-weight:800;letter-spacing:2px;color:#FFD700;text-transform:uppercase;margin-bottom:12px;">Official Date</div>
+            <div style="font-size:24px;color:#fff;font-weight:800;">${displayDate}</div>
+            ${displayTimeHtml}
           </div>
-          
-          <p style="font-size:15px;color:#555;margin:30px 0 30px;line-height:1.6;text-align:center;">
-            Don't forget to register for your events and track your house's progress on the official Sports Day portal.
-          </p>
-          
-          <div style="text-align:center; padding-bottom: 24px; border-bottom: 1px solid #eee;">
-            <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;text-decoration:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:800;letter-spacing:1px;box-shadow:0 8px 24px rgba(255,215,0,.4);">
-              Go to Sports Portal 🏃‍♂️
-            </a>
+          <div style="text-align:center; margin-top:30px;">
+            <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;text-decoration:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:800;box-shadow:0 8px 24px rgba(255,215,0,.4);">Go to Sports Portal 🏃‍♂️</a>
           </div>
-
-          <div style="margin-top: 24px; text-align: left;">
-            <p style="font-size:16px; color:#222; font-weight:600; margin-bottom:12px;">
-              Invited by the Department of Physical Education and Training.
-            </p>
-            <p style="font-size:15px; color:#444; margin-top:0;">
-              With regards,<br/><br/>
-              <strong>${regardsNames}</strong>
-            </p>
+          <div style="margin-top:24px;text-align:left;border-top:1px solid #eee;padding-top:24px;">
+            <p style="font-size:15px;color:#444;">With regards,<br/><br/><strong>${regardsNames}</strong></p>
           </div>
         </td></tr>
-        
         <tr><td style="background:#f9f9f9;border-top:1px solid #eee;padding:20px 36px;text-align:center;">
-          <p style="font-size:12px;color:#888;margin:0 0 8px;">You are receiving this because you are registered in the ACET Sports Database.</p>
-          <p style="font-size:11px;color:#aaa;margin:0;">© 2025 Achariya College of Engineering Technology · Sports Day ERP</p>
+          <p style="font-size:11px;color:#aaa;margin:0;">© 2026 Achariya College of Engineering Technology · Sports Day ERP</p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body>
 </html>`;
-
-  try {
-    // Configure attachments if an invitation file is provided
-    const mailOptions = {
-      from: `"ACET Sports Authority" <${process.env.SMTP_USER}>`,
-      to: process.env.SMTP_USER, // Send to self
-      bcc: uniqueEmails.join(","),
-      subject: `🏆 Official Sports Day Schedule Announced!`,
-      html: htmlTemplate,
-    };
-
-    if (invitationFile && invitationFileName) {
-      mailOptions.attachments = [
-        {
-          filename: invitationFileName,
-          path: invitationFile // Nodemailer accepts Data URIs (Base64) directly in the path
-        }
-      ];
     }
 
-    await transporter.sendMail(mailOptions);
+    try {
+      const mailOptions = {
+        from: `"Sports Day ACET" <${process.env.SMTP_USER}>`,
+        to: user.email,
+        subject: subject,
+        html: html,
+      };
 
-    console.log(`✅ Global announcement sent to ${uniqueEmails.length} users.`);
-    res.json({ success: true, message: `Announcement sent to ${uniqueEmails.length} users.` });
-  } catch (err) {
-    console.error("❌ Announcement error:", err.message);
-    res.status(500).json({ error: err.message });
+      if (invitationFile && invitationFileName) {
+        mailOptions.attachments = [{
+          filename: invitationFileName,
+          content: invitationFile.split("base64,")[1],
+          encoding: 'base64'
+        }];
+      }
+
+      await transporter.sendMail(mailOptions);
+      results.success++;
+    } catch (err) {
+      console.error(`❌ Email failed for ${user.email}:`, err.message);
+      results.failed++;
+    }
   }
+
+  res.json({ 
+    success: true, 
+    message: `Broadcast complete. Success: ${results.success}, Failed: ${results.failed}`,
+    successCount: results.success,
+    failedCount: results.failed
+  });
 });
 
 // ─── ImgBB Image Upload ──────────────────────────────────────────────────

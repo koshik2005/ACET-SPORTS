@@ -39,7 +39,8 @@ export function AdminPage({
     maxGames, setMaxGames,
     maxAthletics, setMaxAthletics,
     adminLogs, setAdminLogs,
-    launchConfig, setLaunchConfig
+    launchConfig, setLaunchConfig,
+    inaugurationDetails, setInaugurationDetails
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -76,9 +77,10 @@ export function AdminPage({
     const xlInputRef = useRef();
     const [emailStatus, setEmailStatus] = useState({}); // key: `${houseId}-${captainKey}` → idle|sending|sent|error
     const [announcementStatus, setAnnouncementStatus] = useState("idle"); // idle|sending|sent|error
-    const [invitationFile, setInvitationFile] = useState(null);
-    const [invitationFileName, setInvitationFileName] = useState("");
+    const [inaugurationInvite, setInaugurationInvite] = useState({ file: null, name: "" });
+    const [eventInvite, setEventInvite] = useState({ file: null, name: "" });
     const [portalUrl, setPortalUrl] = useState(window.location.origin + "/captain");
+    const [broadcastModal, setBroadcastModal] = useState({ open: false, progress: 0, total: 0, status: 'idle', logs: [], success: 0, failed: 0 });
     const [confirmDelete, setConfirmDelete] = useState(null);
 
     const [managementModal, setManagementModal] = useState(null);
@@ -308,40 +310,106 @@ export function AdminPage({
         }
     };
 
-    const sendAnnouncementEmail = async () => {
-        if (!window.confirm("Are you sure you want to email EVERY registered student and authority about the Sports Day schedule?")) return;
-        if (!eventDate?.date) {
+    const sendAnnouncementEmail = async (inviteType = "event") => {
+        const isInauguration = inviteType === "inauguration";
+        const confirmMsg = isInauguration 
+            ? "Are you sure you want to send the Sports Day INAUGURATION Invitation to everyone?" 
+            : "Are you sure you want to email EVERY registered student and authority about the Sports Day schedule?";
+        
+        if (!window.confirm(confirmMsg)) return;
+
+        if (!isInauguration && !eventDate?.date) {
             alert("Please set the Event Date first in the Config tab.");
             return;
         }
-        setAnnouncementStatus("sending");
-        try {
-            const token = localStorage.getItem("adminToken");
-            const res = await fetch(`${API_BASE}/api/send-event-announcement`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    date: eventDate.date,
-                    time: eventDate.time,
-                    portalUrl,
-                    authorities: [...authorities, ...management],
-                    studentsDB,
-                    invitationFile,
-                    invitationFileName,
-                    regardsNames: authorities.map(a => a.name).join(", ")
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed");
-            setAnnouncementStatus("sent");
-            setTimeout(() => setAnnouncementStatus("idle"), 4000);
-        } catch (e) {
-            setAnnouncementStatus("error:" + e.message);
-            setTimeout(() => setAnnouncementStatus("idle"), 5000);
+        if (isInauguration && (!inaugurationDetails?.date || !inaugurationDetails?.venue)) {
+            alert("Please set the Inauguration Date and Venue first in the Config tab.");
+            return;
         }
+
+        const msg = isInauguration ? "Sending Inauguration Invitations..." : "Broadcasting Official Schedule...";
+
+        const allUsers = [
+            ...authorities.map(a => ({ ...a, roleType: "authority" })),
+            ...management.map(m => ({ ...m, roleType: "management" })),
+            ...studentsDB.map(s => ({ ...s, roleType: s.role === "Staff" ? "staff" : "student" }))
+        ].filter(u => u.email && u.email.includes("@"));
+
+        if (allUsers.length === 0) {
+            alert("No valid recipients with emails found.");
+            return;
+        }
+
+        const activeInvite = isInauguration ? inaugurationInvite : eventInvite;
+        const chunkSize = 25;
+        const chunks = [];
+        for (let i = 0; i < allUsers.length; i += chunkSize) {
+            chunks.push(allUsers.slice(i, i + chunkSize));
+        }
+
+        setBroadcastModal({
+            open: true,
+            progress: 0,
+            total: allUsers.length,
+            status: 'sending',
+            logs: [`Starting broadcast to ${allUsers.length} recipients...`],
+            success: 0,
+            failed: 0
+        });
+
+        let totalSuccess = 0;
+        let totalFailed = 0;
+
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            try {
+                const token = localStorage.getItem("adminToken");
+                const res = await fetch(`${API_BASE}/api/send-event-announcement`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        type: inviteType,
+                        date: isInauguration ? inaugurationDetails.date : eventDate.date,
+                        time: isInauguration ? inaugurationDetails.time : eventDate.time,
+                        venue: isInauguration ? inaugurationDetails.venue : "",
+                        portalUrl,
+                        recipients: chunk, // Send only this chunk
+                        invitationFile: activeInvite.file,
+                        invitationFileName: activeInvite.name,
+                        regardsNames: authorities.map(a => a.name).join(", ")
+                    }),
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    totalSuccess += data.successCount || chunk.length; // Fallback if backend doesn't return count
+                    totalFailed += data.failedCount || 0;
+                } else {
+                    totalFailed += chunk.length;
+                }
+            } catch (err) {
+                totalFailed += chunk.length;
+                console.error("Batch error:", err);
+            }
+
+            const currentProgress = Math.round(((i + 1) / chunks.length) * 100);
+            setBroadcastModal(prev => ({
+                ...prev,
+                progress: currentProgress,
+                success: totalSuccess,
+                failed: totalFailed,
+                logs: [...prev.logs, `Batch ${i + 1}/${chunks.length} complete...`]
+            }));
+        }
+
+        setBroadcastModal(prev => ({
+            ...prev,
+            status: 'done',
+            logs: [...prev.logs, `Broadcast finished! Total: ${allUsers.length}, Success: ${totalSuccess}, Failed: ${totalFailed}`]
+        }));
     };
 
     const getHouseNames = (state) => {
@@ -2093,7 +2161,7 @@ export function AdminPage({
 
                             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
                                 <div>
-                                    <label style={lS}>Sports Day Date</label>
+                                    <label style={lS}>Sports Day Date (Main Event)</label>
                                     <input
                                         type="date"
                                         value={eventDate?.date || ""}
@@ -2102,13 +2170,67 @@ export function AdminPage({
                                     />
                                 </div>
                                 <div>
-                                    <label style={lS}>Reporting Time</label>
-                                    <input
-                                        type="time"
-                                        value={eventDate?.time || ""}
-                                        onChange={e => setEventDate(p => ({ ...p, time: e.target.value }))}
-                                        style={iS}
-                                    />
+                                    <label style={lS}>Main Event Invitation</label>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <label style={{ background: dark ? "rgba(255,255,255,.1)" : "#f0f0f0", color: dark ? "#fff" : "#333", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", display: "inline-block", border: `1px solid ${dark ? "#444" : "#ccc"}`, width: "100%" }}>
+                                            📎 Attach Main Invitation
+                                            <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => setEventInvite({ file: ev.target.result, name: file.name });
+                                                reader.readAsDataURL(file);
+                                            }} />
+                                        </label>
+                                        {eventInvite.name && (
+                                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                <span style={{ fontSize: 11, color: dark ? "#aaa" : "#555", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis" }} title={eventInvite.name}>{eventInvite.name}</span>
+                                                <button onClick={() => setEventInvite({ file: null, name: "" })} style={{ background: "none", border: "none", color: "#c00", cursor: "pointer", fontSize: 12 }}>✖</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ ...cS, marginBottom: 20, borderTop: "4px solid #1E3A8A" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+                                    <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0", fontSize: 15 }}>🎊 Sports Day Inauguration Details</h4>
+                                    <div style={{ fontSize: 12, color: dark ? "#888" : "#999" }}>Inauguration Ceremony info</div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+                                    <div>
+                                        <label style={lS}>Inauguration Date</label>
+                                        <input type="date" value={inaugurationDetails?.date || ""} onChange={e => setInaugurationDetails(p => ({ ...p, date: e.target.value }))} style={iS} />
+                                    </div>
+                                    <div>
+                                        <label style={lS}>Time</label>
+                                        <input type="time" value={inaugurationDetails?.time || ""} onChange={e => setInaugurationDetails(p => ({ ...p, time: e.target.value }))} style={iS} />
+                                    </div>
+                                    <div style={{ gridColumn: isMobile ? "span 1" : "span 1" }}>
+                                        <label style={lS}>Venue</label>
+                                        <input placeholder="Auditorium" value={inaugurationDetails?.venue || ""} onChange={e => setInaugurationDetails(p => ({ ...p, venue: e.target.value }))} style={iS} />
+                                    </div>
+                                    <div>
+                                        <label style={lS}>Inauguration Invitation</label>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            <label style={{ background: dark ? "rgba(255,255,255,.1)" : "#f0f0f0", color: dark ? "#fff" : "#333", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", display: "inline-block", border: `1px solid ${dark ? "#444" : "#ccc"}`, width: "100%" }}>
+                                                📎 Attach Inaugural Invite
+                                                <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (!file) return;
+                                                    const reader = new FileReader();
+                                                    reader.onload = (ev) => setInaugurationInvite({ file: ev.target.result, name: file.name });
+                                                    reader.readAsDataURL(file);
+                                                }} />
+                                            </label>
+                                            {inaugurationInvite.name && (
+                                                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                    <span style={{ fontSize: 11, color: dark ? "#aaa" : "#555", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis" }} title={inaugurationInvite.name}>{inaugurationInvite.name}</span>
+                                                    <button onClick={() => setInaugurationInvite({ file: null, name: "" })} style={{ background: "none", border: "none", color: "#c00", cursor: "pointer", fontSize: 12 }}>✖</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2116,32 +2238,28 @@ export function AdminPage({
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                                     <div style={{ flex: 1, paddingRight: 16 }}>
                                         <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#333", marginBottom: 4 }}>Send Official Announcement</div>
-                                        <div style={{ fontSize: 11, color: dark ? "#888" : "#777", marginBottom: 10 }}>Broadcasts this schedule and unique portal links to all students, management, and authorities.</div>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            <label style={{ background: dark ? "rgba(255,255,255,.1)" : "#f0f0f0", color: dark ? "#fff" : "#333", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", display: "inline-block", border: `1px solid ${dark ? "#444" : "#ccc"}` }}>
-                                                📎 Attach Invitation (PDF/Image)
-                                                <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={(e) => {
-                                                    const file = e.target.files[0];
-                                                    if (!file) return;
-                                                    setInvitationFileName(file.name);
-                                                    const reader = new FileReader();
-                                                    reader.onload = (ev) => setInvitationFile(ev.target.result);
-                                                    reader.readAsDataURL(file);
-                                                }} />
-                                            </label>
-                                            {invitationFileName && <span style={{ fontSize: 11, color: dark ? "#aaa" : "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 150 }} title={invitationFileName}>{invitationFileName}</span>}
-                                            {invitationFileName && <button onClick={() => { setInvitationFile(null); setInvitationFileName(""); }} style={{ background: "none", border: "none", color: "#c00", cursor: "pointer", fontSize: 14 }}>✖</button>}
-                                        </div>
+                                        <div style={{ fontSize: 11, color: dark ? "#888" : "#777", marginBottom: 10 }}>Broadcasts schedule and invitations to all registered participants.</div>
                                     </div>
-                                    <button
-                                        onClick={sendAnnouncementEmail}
-                                        disabled={announcementStatus === "sending"}
-                                        style={{
-                                            background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#c00" : "#8B0000",
-                                            color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", alignSelf: "center"
-                                        }}>
-                                        {announcementStatus === "sending" ? "⏳ Sending..." : announcementStatus === "sent" ? "✅ Sent!" : announcementStatus.startsWith("error") ? "❌ Error" : "📢 Broadcast Email"}
-                                    </button>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                                        <button
+                                            onClick={() => sendAnnouncementEmail("inauguration")}
+                                            disabled={announcementStatus === "sending"}
+                                            style={{
+                                                background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#c00" : "#1E3A8A",
+                                                color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", alignSelf: "center"
+                                            }}>
+                                            {announcementStatus === "sending" ? "⏳ Sending..." : "🎊 Invitation for Inauguration"}
+                                        </button>
+                                        <button
+                                            onClick={() => sendAnnouncementEmail("event")}
+                                            disabled={announcementStatus === "sending"}
+                                            style={{
+                                                background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#c00" : "#8B0000",
+                                                color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", alignSelf: "center"
+                                            }}>
+                                            {announcementStatus === "sending" ? "⏳ Sending..." : "📢 Broadcast Main Event"}
+                                        </button>
+                                    </div>
                                 </div>
                                 {announcementStatus.startsWith("error:") && <div style={{ fontSize: 11, color: "#ff4444", marginTop: 4, textAlign: "right" }}>{announcementStatus.replace("error:", "")}</div>}
                             </div>

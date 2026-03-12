@@ -22,6 +22,7 @@ const stateSchema = new mongoose.Schema({
     nav: { type: Array, default: [] },
     registrationOpen: { type: Boolean, default: true },
     eventDate: { type: Object, default: { date: "", time: "" } },
+    inaugurationDetails: { type: Object, default: { date: "", time: "", venue: "" } },
     emptyGame: { type: Object, default: {} },
     starPlayers: { type: Array, default: [] },
     closedEvents: { type: Array, default: [] },
