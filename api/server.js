@@ -23,7 +23,8 @@ import { State, Otp, Query, InvalidatedToken } from "./models.js";
 const app = express();
 app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
 app.set("query parser", "simple"); // Use simple parser to avoid immutable getters in Express 5
-app.use(compression()); // gzip all responses — reduces bandwidth by ~70%
+// app.use(compression()); // DEACTIVATED: Vercel handles compression natively at the production edge.
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -221,11 +222,11 @@ const withDb = async (req, res, next) => {
     next();
   } catch (err) {
     console.error("❌ DB CONNECTION ERROR:", err.message);
-    res.status(503).json({ error: "Database temporarily unavailable", details: err.message });
+    res.status(503).json({ error: "Database temporarily unavailable" });
   }
 };
 
-app.use("/api/", withDb); // Apply to all /api routes
+app.use("/api/", withDb);
 
 // ─── Database Helpers ──────────────────────────────────────────────────────
 const getInitialState = () => ({
@@ -254,13 +255,15 @@ const getInitialState = () => ({
 
 const loadDb = async () => {
   const state = await State.findOne();
-  if (!state) {
-    // SAFETY: Never silently create a blank document.
-    // If the collection is unexpectedly empty, surface the error clearly
-    // instead of overwriting data with a blank state.
-    throw new Error("No state document found in database. Contact admin.");
-  }
+  if (!state) throw new Error("No state document found in database.");
   return state;
+};
+
+// Optimization: Fetch ONLY the active admin token for auth checks.
+// This avoids pulling megabytes of student/registration data on every request.
+const loadAdminToken = async () => {
+  const state = await State.findOne({}, { activeAdminToken: 1 });
+  return state?.activeAdminToken;
 };
 
 
@@ -292,13 +295,15 @@ const authenticateAdmin = async (req, res, next) => {
         return res.status(401).json({ error: "Session revoked. Please log in again." });
     }
 
-    const state = await loadDb();
-    if (token !== state.activeAdminToken) {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== "admin") return res.status(403).json({ error: "Access denied" });
+
+    // Performance Optimization: Fetch ONLY the token, not the entire State
+    const activeToken = await loadAdminToken();
+    if (token !== activeToken) {
         return res.status(401).json({ error: "Session expired. Another admin has logged in." });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== "admin") return res.status(403).json({ error: "Access denied" });
     req.user = decoded;
     next();
   } catch (err) {
@@ -320,13 +325,14 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.role === "admin") {
-      const state = await loadDb();
-      if (token !== state.activeAdminToken) {
+      const activeToken = await loadAdminToken();
+      if (token !== activeToken) {
           return res.status(401).json({ error: "Session expired. Another admin has logged in." });
       }
       req.user = decoded;
       return next();
     }
+
     if (decoded.role === "captain") {
       req.user = decoded;
       return next();
@@ -339,19 +345,12 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
 };
 
 // ─── Health / config check ─────────────────────────────────────────────────
-app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "ok", 
-    timestamp: new Date().toISOString()
-  });
-});
 app.get("/api/health", async (req, res) => {
   try {
     const dbStatus = mongoose.connection.readyState === 1 ? "Connected" : "Disconnected";
     res.json({
       status: "OK",
       db: dbStatus,
-      uriHint: MONGODB_URI ? MONGODB_URI.substring(0, 20) + "..." : "NONE",
       env: {
         node: process.version,
         env: process.env.NODE_ENV,
@@ -359,8 +358,8 @@ app.get("/api/health", async (req, res) => {
         hasSmtp: !!((process.env.SMTP_USER || process.env.EMAIL) && (process.env.SMTP_PASS || process.env.APP_PASSWORD))
       }
     });
-  } catch (err) {
-    res.status(500).json({ status: "ERROR", error: err.message });
+  } catch (e) {
+    res.status(500).json({ status: "ERROR", error: e.message });
   }
 });
 
