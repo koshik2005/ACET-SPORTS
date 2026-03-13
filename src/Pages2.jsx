@@ -173,7 +173,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
 
                 <div style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `2px solid ${rHObj?.color || "#888"}`, borderRadius: 16, padding: isMobile ? 16 : 28, marginBottom: 20 }}>
                     <div style={{ width: 52, height: 52, borderRadius: "50%", background: rHObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18, margin: "0 auto 10px" }}>🏠</div>
-                    <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 20, color: rHObj?.color || "#888", marginBottom: 4 }}>{reg?.house} House</div>
+                    <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 20, color: rHObj?.color || "#888", marginBottom: 4 }}>{rHObj?.displayName || reg?.house} House</div>
                     {waLink ? (
                         <>
                             <p style={{ color: dark ? "#ccc" : "#555", fontSize: 13, margin: "8px 0 16px" }}>
@@ -198,7 +198,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                 <svg width="22" height="22" viewBox="0 0 32 32" fill="white">
                                     <path d="M16 2C8.27 2 2 8.27 2 16c0 2.46.65 4.77 1.78 6.77L2 30l7.47-1.75A13.93 13.93 0 0016 30c7.73 0 14-6.27 14-14S23.73 2 16 2zm0 25.38c-2.2 0-4.28-.6-6.07-1.64l-.43-.26-4.44 1.04 1.06-4.32-.28-.45A11.35 11.35 0 014.64 16C4.64 9.67 9.67 4.64 16 4.64S27.36 9.67 27.36 16 22.33 27.38 16 27.38zm6.28-8.5c-.34-.17-2.03-1-2.35-1.12-.32-.11-.55-.17-.78.17-.23.34-.9 1.12-1.1 1.35-.2.23-.4.26-.74.09-.34-.17-1.44-.53-2.74-1.69-1.01-.9-1.7-2.01-1.9-2.35-.2-.34-.02-.52.15-.69.15-.15.34-.4.51-.6.17-.2.23-.34.34-.57.11-.23.06-.43-.03-.6-.09-.17-.78-1.88-1.07-2.57-.28-.67-.57-.58-.78-.59h-.66c-.23 0-.6.09-.91.43-.31.34-1.19 1.16-1.19 2.83s1.22 3.28 1.39 3.51c.17.23 2.4 3.66 5.82 5.13.81.35 1.44.56 1.93.72.81.26 1.55.22 2.14.13.65-.1 2.03-.83 2.31-1.63.29-.8.29-1.49.2-1.63-.08-.14-.31-.23-.65-.4z"/>
                                 </svg>
-                                Join {reg?.house} {genderLabel} WhatsApp Group
+                                Join {rHObj?.displayName || reg?.house} {genderLabel} WhatsApp Group
                             </a>
                         </>
                     ) : (
@@ -223,7 +223,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
             <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: "10px 0 8px", fontSize: isMobile ? 19 : 24 }}>Already Registered</h2>
             <p style={{ color: dark ? "#aaa" : "#666", marginBottom: 16, fontSize: 13 }}>Your registration is locked. Only an admin can make changes.</p>
             <div style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 14, padding: isMobile ? 14 : 28, textAlign: "left" }}>
-                <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 18, color: hObj?.color, marginBottom: 10 }}>{existingRegistration.name} — {existingRegistration.house} House</div>
+                <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 18, color: hObj?.color, marginBottom: 10 }}>{existingRegistration.name} — {hObj?.displayName || existingRegistration.house} House</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <div style={{ background: dark ? "rgba(139,0,0,.15)" : "#fff5f5", border: "1px solid #8B000033", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#8B0000", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>⚽ Game</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existingRegistration.game || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
                     <div style={{ background: dark ? "rgba(75,0,130,.2)" : "#f5f0ff", border: "1px solid #4B008233", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#4B0082", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>🏃 Athletic</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existingRegistration.athletic || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
@@ -293,8 +293,8 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                     ) : (
                         <>
                             <div style={{ background: dark ? tint(hObj?.color || "#888888") : `rgba(${parseInt((hObj?.color || "#888888").slice(1, 3), 16)},${parseInt((hObj?.color || "#888888").slice(3, 5), 16)},${parseInt((hObj?.color || "#888888").slice(5, 7), 16)},.08)`, border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{hi(student.house)}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
+                                <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{hi(hObj?.displayName || student.house)}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hObj?.displayName || student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
                                 <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); setLockedGames([]); setLockedAthletics([]); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
                             </div>
 
@@ -325,7 +325,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                         {/* Identity Check & Query Link */}
                                         <div style={{ padding: 12, background: dark ? "rgba(0,0,0,.2)" : "rgba(0,0,0,.03)", borderRadius: 10, textAlign: "left" }}>
                                             <div style={{ fontSize: 11, color: dark ? "#aaa" : "#888", marginBottom: 4 }}>House Group Join Link:</div>
-                                            <a href={(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? hObj?.whatsappLinkWomen : hObj?.whatsappLinkMen} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#25D366", fontWeight: 800, textDecoration: "none", display: "block", marginBottom: 8 }}>💬 Join {student.house} WhatsApp Group →</a>
+                                            <a href={(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? hObj?.whatsappLinkWomen : hObj?.whatsappLinkMen} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#25D366", fontWeight: 800, textDecoration: "none", display: "block", marginBottom: 8 }}>💬 Join {hObj?.displayName || student.house} WhatsApp Group →</a>
                                             
                                             <div style={{ borderTop: `1px solid ${dark ? "#444" : "#ddd"}`, paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                 <span style={{ fontSize: 11, color: dark ? "#888" : "#999" }}>Spelling mistake?</span>
@@ -423,9 +423,9 @@ export function ScoreboardPage({ dark, houses, pointLog, registrationOpen = true
             {sh.map((h, i) => (
                 <div key={h.id} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `2px solid ${i === 0 ? h.color : dark ? "#333" : h.color + "44"}`, borderRadius: 14, padding: isMobile ? 12 : 24, marginBottom: isMobile ? 8 : 16, display: "flex", alignItems: "center", gap: isMobile ? 10 : 20, boxShadow: i === 0 ? `0 8px 40px ${h.color}44` : "0 2px 12px rgba(0,0,0,.06)", flexWrap: "wrap" }}>
                     <div style={{ width: isMobile ? 38 : 52, height: isMobile ? 38 : 52, borderRadius: "50%", background: i === 0 ? "linear-gradient(135deg,#FFD700,#FFA500)" : h.color + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 17 : 22, fontWeight: 900, color: i === 0 ? "#000" : h.color, flexShrink: 0 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</div>
-                    <div style={{ width: isMobile ? 34 : 44, height: isMobile ? 34 : 44, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: isMobile ? 12 : 16, flexShrink: 0 }}>{hi(h.name)}</div>
+                    <div style={{ width: isMobile ? 34 : 44, height: isMobile ? 34 : 44, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: isMobile ? 12 : 16, flexShrink: 0 }}>{hi(h.displayName || h.name)}</div>
                     <div style={{ flex: 1, minWidth: 80 }}>
-                        <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22, color: dark ? "#fff" : h.color }}>{h.name} House</div>
+                        <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22, color: dark ? "#fff" : h.color }}>{h.displayName || h.name} House</div>
                         {i === 0 && h.points > 0 && <div style={{ fontSize: 10, color: h.color }}>👑 LEADING</div>}
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -452,8 +452,8 @@ export function ScoreboardPage({ dark, houses, pointLog, registrationOpen = true
                     return (
                         <div key={i} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 9, padding: isMobile ? "9px 11px" : "12px 16px", display: "flex", alignItems: "center", gap: 9 }}>
                             <div style={{ fontSize: isMobile ? 15 : 20, flexShrink: 0 }}>{p.type === "win" ? "🏆" : p.type === "bonus" ? "⭐" : "⚠️"}</div>
-                            <div style={{ width: 24, height: 24, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{hi(p.house)}</div>
-                            <div style={{ flex: 1, minWidth: 0 }}><span style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{p.house}</span><span style={{ color: dark ? "#aaa" : "#888", marginLeft: 6, fontSize: 12 }}>{p.reason}</span></div>
+                            <div style={{ width: 24, height: 24, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{hi(hObj?.displayName || p.house)}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}><span style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{hObj?.displayName || p.house}</span><span style={{ color: dark ? "#aaa" : "#888", marginLeft: 6, fontSize: 12 }}>{p.reason}</span></div>
                             <div style={{ fontWeight: 800, fontSize: isMobile ? 13 : 16, color: p.pts > 0 ? "#228B22" : "#c00", flexShrink: 0 }}>{p.pts > 0 ? "+" : ""}{p.pts}</div>
                             <div style={{ fontSize: 10, color: dark ? "#aaa" : "#aaa", flexShrink: 0 }}>{p.time}</div>
                         </div>
@@ -542,7 +542,7 @@ export function WinnersPage({ dark, results, houses, sportGamesList = [], sportG
                 <span style={{ fontSize: 13, fontWeight: 700, color: dark ? "#888" : "#888", marginRight: 5 }}>FILTERS:</span>
                 <select value={hFilter} onChange={e => setHFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13 }}>
                     <option value="All">All Houses</option>
-                    {houses.map(h => <option key={h.id} value={h.name}>{h.name} House</option>)}
+                    {houses.map(h => <option key={h.id} value={h.name}>{h.displayName || h.name} House</option>)}
                 </select>
                 <select value={eFilter} onChange={e => setEFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13 }}>
                     <option value="All">All Events</option>
@@ -593,9 +593,9 @@ export function WinnersPage({ dark, results, houses, sportGamesList = [], sportG
                                                 <div style={{ fontSize: 10, fontWeight: 700, color: dark ? "#555" : "#ccc" }}>{p.pts}</div>
                                             </div>
                                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-                                                <div style={{ padding: "3px 8px", background: hO?.color || "#888", color: "#fff", borderRadius: 6, fontSize: 12, fontWeight: 900 }}>{win.house}</div>
-                                                <div style={{ fontSize: 14, fontWeight: 700, color: dark ? "#ccc" : "#333" }}>{win.player || "Team Victory"}</div>
-                                            </div>
+                                                 <div style={{ padding: "3px 8px", background: hO?.color || "#888", color: "#fff", borderRadius: 6, fontSize: 12, fontWeight: 900 }}>{hO?.displayName || win.house}</div>
+                                                 <div style={{ fontSize: 14, fontWeight: 700, color: dark ? "#ccc" : "#333" }}>{win.player || "Team Victory"}</div>
+                                             </div>
                                         </div>
                                     </div>
                                 );
@@ -673,7 +673,7 @@ export function StarPlayersPage({ dark, starPlayers = [], houses = [] }) {
                                     fontSize: 11, fontWeight: 800, textTransform: "uppercase",
                                     boxShadow: "0 4px 12px rgba(0,0,0,.3)"
                                 }}>
-                                    {p.house}
+                                    {hObj?.displayName || p.house}
                                 </div>
                                 <div style={{
                                     position: "absolute", bottom: 0, left: 0, right: 0,
