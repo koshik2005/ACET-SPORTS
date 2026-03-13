@@ -989,7 +989,10 @@ export function AdminPage({
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "14px 12px" : "40px 20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? 14 : 28, gap: 8 }}>
                 <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: 0, fontSize: isMobile ? 19 : 26 }}>⚙ Admin Dashboard</h1>
-                <button onClick={() => { localStorage.removeItem("adminToken"); setLoggedIn(false); window.location.reload(); }} style={{ background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" }}>Logout</button>
+                <button onClick={() => { 
+                    fetch("/api/logout", { method: "POST", headers: { "Authorization": `Bearer ${localStorage.getItem("adminToken")}` } })
+                    .finally(() => { localStorage.removeItem("adminToken"); setLoggedIn(false); window.location.reload(); });
+                }} style={{ background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" }}>Logout</button>
             </div>
             <div style={{ display: "flex", gap: 10, marginBottom: isMobile ? 18 : 32, overflowX: "auto", paddingBottom: 8, WebkitOverflowScrolling: "touch", width: "100%", scrollbarWidth: "thin" }}>
                 {TABS.map(t => <button key={t} onClick={() => setTab(t)} style={{ padding: isMobile ? "8px 16px" : "10px 22px", borderRadius: 50, cursor: "pointer", fontWeight: 700, fontSize: isMobile ? 13 : 14, background: tab === t ? "#8B0000" : "transparent", color: tab === t ? "#fff" : dark ? "#ccc" : "#555", border: `2px solid ${tab === t ? "#8B0000" : dark ? "#444" : "#ddd"}`, whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.2s" }}>{t}</button>)}

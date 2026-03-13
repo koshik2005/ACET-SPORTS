@@ -162,7 +162,19 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
     if (registered) {
         const { student: reg, hObj: rHObj } = registered;
         const isFemale = reg?.gender?.toLowerCase() === "female" || reg?.gender?.toLowerCase() === "f";
-        const waLink = isFemale ? (rHObj?.whatsappLinkWomen) : (rHObj?.whatsappLinkMen);
+        const rawWaLink = isFemale ? (rHObj?.whatsappLinkWomen) : (rHObj?.whatsappLinkMen);
+        
+        const sanitizeUrl = (url) => {
+            if (!url || typeof url !== 'string') return "#";
+            try {
+                const parsed = new URL(url.trim());
+                if (["http:", "https:", "mailto:", "whatsapp:"].includes(parsed.protocol)) {
+                    return parsed.href;
+                }
+            } catch (e) {}
+            return "#";
+        };
+        const waLink = sanitizeUrl(rawWaLink);
         const genderLabel = isFemale ? "Women's" : "Men's";
         const genderColor = isFemale ? "#FF69B4" : "#1E90FF";
         return (
@@ -329,7 +341,16 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                         {/* Identity Check & Query Link */}
                                         <div style={{ padding: 12, background: dark ? "rgba(0,0,0,.2)" : "rgba(0,0,0,.03)", borderRadius: 10, textAlign: "left" }}>
                                             <div style={{ fontSize: 11, color: dark ? "#aaa" : "#888", marginBottom: 4 }}>House Group Join Link:</div>
-                                            <a href={(student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? hObj?.whatsappLinkWomen : hObj?.whatsappLinkMen} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#25D366", fontWeight: 800, textDecoration: "none", display: "block", marginBottom: 8 }}>💬 Join {hObj?.displayName || student.house} WhatsApp Group →</a>
+                                            <a href={
+                                                (function sanitizeUrl(url) {
+                                                    if (!url || typeof url !== 'string') return "#";
+                                                    try {
+                                                        const parsed = new URL(url.trim());
+                                                        if (["http:", "https:", "mailto:", "whatsapp:"].includes(parsed.protocol)) return parsed.href;
+                                                    } catch (e) {}
+                                                    return "#";
+                                                })((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? hObj?.whatsappLinkWomen : hObj?.whatsappLinkMen)
+                                            } target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#25D366", fontWeight: 800, textDecoration: "none", display: "block", marginBottom: 8 }}>💬 Join {hObj?.displayName || student.house} WhatsApp Group →</a>
                                             
                                             <div style={{ borderTop: `1px solid ${dark ? "#444" : "#ddd"}`, paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                 <span style={{ fontSize: 11, color: dark ? "#888" : "#999" }}>Spelling mistake?</span>

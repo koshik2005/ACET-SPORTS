@@ -22,7 +22,7 @@ import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import compression from "compression";
 import bcrypt from "bcryptjs";
-import { State, Otp, Query } from "./models.js";
+import { State, Otp, Query, InvalidatedToken } from "./models.js";
 
 const app = express();
 app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
@@ -246,6 +246,9 @@ const authenticateAdmin = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: "No token provided" });
 
   try {
+    const isBlocked = await InvalidatedToken.exists({ token });
+    if (isBlocked) return res.status(401).json({ error: "Session revoked. Please log in again." });
+
     const state = await loadDb();
     if (token !== state.activeAdminToken) return res.status(401).json({ error: "Session expired. Another admin has logged in." });
 
@@ -263,6 +266,9 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: "No token provided" });
 
   try {
+    const isBlocked = await InvalidatedToken.exists({ token });
+    if (isBlocked) return res.status(401).json({ error: "Session revoked. Please log in again." });
+
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.role === "admin") {
       const state = await loadDb();
@@ -743,7 +749,7 @@ app.post("/api/admin-login", loginLimiter, async (req, res) => {
 
   if (stored) await Otp.deleteOne({ _id: stored._id });
 
-  const token = jwt.sign({ role: "admin", name: em, email: em }, JWT_SECRET, { expiresIn: "12h" });
+  const token = jwt.sign({ role: "admin", name: em, email: em }, JWT_SECRET, { expiresIn: "4h" });
 
   // Log login to DB and set active token
   await State.findOneAndUpdate({}, {
@@ -802,7 +808,7 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
 
   if (valid) {
     console.log(`✅ Captain logged in: ${em} (${loggedInRole} in House ${houseId})`);
-    const token = jwt.sign({ role: "captain", house: houseId, houseRole: loggedInRole }, JWT_SECRET, { expiresIn: "12h" });
+    const token = jwt.sign({ role: "captain", house: houseId, houseRole: loggedInRole }, JWT_SECRET, { expiresIn: "2h" });
 
     // Find house details to return
     const houseObj = state.houses.find(h => h.id === houseId);
@@ -821,6 +827,29 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
     console.log(`❌ Login failed for ${em}: No matching email/password found in any house.`);
     res.status(401).json({ success: false, error: "Invalid email or password." });
   }
+});
+
+app.post("/api/logout", async (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.json({ success: true });
+
+  try {
+    const decoded = jwt.decode(token);
+    // If the token is validly formed and has an expiration, add to blocklist
+    if (decoded && decoded.exp) {
+      // Set the document to explicitly expire when the token expires
+      await InvalidatedToken.findOneAndUpdate(
+        { token },
+        { token, expiresAt: new Date(decoded.exp * 1000) },
+        { upsert: true }
+      );
+      console.log(`🔒 Token firmly invalidated until expiry: ${new Date(decoded.exp * 1000)}`);
+    }
+  } catch (err) {
+    console.warn("Logout Token Invalidation Error:", err.message);
+  }
+  
+  res.json({ success: true });
 });
 
 app.post("/api/captain-update-house-name", authenticateCaptainOrAdmin, async (req, res) => {

@@ -59,5 +59,12 @@ const querySchema = new mongoose.Schema({
 
 const Query = mongoose.model("Query", querySchema);
 
-export { State, Otp, Query };
+const invalidatedTokenSchema = new mongoose.Schema({
+    token: { type: String, required: true, index: true },
+    expiresAt: { type: Date, required: true, expires: 0 } // Auto-delete when current time >= expiresAt
+});
+
+const InvalidatedToken = mongoose.model("InvalidatedToken", invalidatedTokenSchema);
+
+export { State, Otp, Query, InvalidatedToken };
 export default State;

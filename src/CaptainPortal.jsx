@@ -278,7 +278,10 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                     <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 800 }}>{captain.name}</div>
                     <div style={{ fontSize: isMobile ? 12 : 14, opacity: .85 }}>{captain.houseDisplayName || captain.house} House</div>
                 </div>
-                <button onClick={() => { localStorage.removeItem("captainToken"); setCaptain(null); setError(""); }} style={{ background: "rgba(255,255,255,.2)", color: "#fff", border: "2px solid rgba(255,255,255,.4)", borderRadius: 50, padding: "8px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>Logout</button>
+                <button onClick={() => { 
+                    fetch("/api/logout", { method: "POST", headers: { "Authorization": `Bearer ${localStorage.getItem("captainToken")}` } })
+                    .finally(() => { localStorage.removeItem("captainToken"); setCaptain(null); setError(""); });
+                }} style={{ background: "rgba(255,255,255,.2)", color: "#fff", border: "2px solid rgba(255,255,255,.4)", borderRadius: 50, padding: "8px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>Logout</button>
             </div>
 
             {/* Navigation Tabs */}
