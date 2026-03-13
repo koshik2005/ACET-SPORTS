@@ -25,7 +25,7 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
     };
 
     const RATIOS = [
-        { label: "Free", val: null },
+        { label: "Free", val: undefined },
         { label: "1:1", val: 1 },
         { label: "4:3", val: 4 / 3 },
         { label: "16:9", val: 16 / 9 },
@@ -43,6 +43,7 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
                 background: dark ? '#1a1a2e' : '#fff', borderRadius: 20, overflow: 'hidden'
             }}>
                 <Cropper
+                    key={aspect}
                     image={image}
                     crop={crop}
                     zoom={zoom}
@@ -50,6 +51,7 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
                     onCropChange={onCropChange}
                     onCropComplete={onCropCompleteInternal}
                     onZoomChange={onZoomChange}
+                    showGrid={true}
                 />
             </div>
 
