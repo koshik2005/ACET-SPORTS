@@ -96,6 +96,7 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => normaliseIp(req.ip),
+  validate: { default: false },
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "global", ip: req.ip, path: req.path });
     res.status(429).json({ error: "Too many requests from this IP, please try again after 15 minutes" });
@@ -108,6 +109,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => normaliseIp(req.ip),
+  validate: { default: false },
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "login", ip: req.ip, path: req.path, email: req.body.email });
     res.status(429).json({ error: "Too many login attempts, please try again later" });
@@ -128,6 +130,7 @@ const submitLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => normaliseIp(req.ip),
+  validate: { default: false },
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "submit", ip: req.ip, path: req.path });
     res.status(429).json({ error: "Too many query submissions. Please try again later." });
@@ -141,6 +144,7 @@ const otpVerifyLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => normaliseIp(req.ip),
+  validate: { default: false },
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "otpVerify", ip: req.ip, path: req.path, email: req.body.email });
     res.status(429).json({ error: "Too many OTP attempts. Please wait 15 minutes before trying again." });
@@ -152,8 +156,15 @@ const otpVerifyLimiter = rateLimit({
 // genuinely originate from our trusted frontends, adding a layer of protection 
 // beyond just CORS, especially for non-browser abuse.
 const requireValidOrigin = (req, res, next) => {
-  // Only apply to POST/PUT/DELETE requests
-  if (req.method === "GET" || req.method === "OPTIONS") return next();
+  // 1. Enforce strict validation for state endpoints even on GET
+  const isStatePath = req.path.includes("public-state") || req.path.includes("secure-state") || req.path.includes("update-state");
+  
+  // Debug log (deactivated)
+  // console.log(`[CORS_DEBUG] Path: ${req.path} isState: ${isStatePath} Method: ${req.method} ip: ${req.ip}`);
+
+  if (req.method === "GET" || req.method === "OPTIONS") {
+      if (!isStatePath) return next();
+  }
 
   let origin = req.headers.origin;
   let referer = req.headers.referer;
@@ -171,8 +182,8 @@ const requireValidOrigin = (req, res, next) => {
 
   const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
 
-  // In production, we strictly require a valid Origin OR Referer matching our allowlist for state changes
-  if (isProd) {
+  // In production (OR for sensitive state paths), we strictly require a valid Origin OR Referer matching our allowlist
+  if (isProd || isStatePath) {
       if (!isValidOrigin && !isValidReferer) {
           SecurityLogger.log("ORIGIN_BLOCK", {
             reason: "Missing/Invalid Origin or Referer",
@@ -366,6 +377,7 @@ app.get("/api/health", async (req, res) => {
 app.get("/api/public-state", async (req, res) => {
   try {
     // Serve from cache if fresh
+    res.setHeader("Cross-Origin-Resource-Policy", "same-site");
     if (stateCache.data && Date.now() - stateCache.ts < CACHE_TTL_MS) {
       return res.json(stateCache.data);
     }
@@ -400,6 +412,7 @@ app.get("/api/public-state", async (req, res) => {
 
 app.get("/api/secure-state", authenticateCaptainOrAdmin, async (req, res) => {
   try {
+    res.setHeader("Cross-Origin-Resource-Policy", "same-site");
     const state = await loadDb();
     const isAdmin = !!req.headers.authorization?.startsWith("Bearer admin-"); // Simplified check: in our system, admin tokens are prefixed or we check role
     
@@ -559,6 +572,7 @@ const lookupLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => normaliseIp(req.ip),
+  validate: { default: false },
   message: { error: "Too many lookup attempts. Please try again later." }
 });
 
@@ -1341,7 +1355,8 @@ app.get("/api/download-admin-logs", authenticateAdmin, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-if (process.env.NODE_ENV !== "production") {
+// Listen locally but not on Vercel
+if (!process.env.VERCEL) {
   app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 }
 
