@@ -228,19 +228,19 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                     ))}
                 </div>
                 {memorial?.enabled && (
-                    <section style={{ 
-                        marginTop: 40, 
-                        background: dark ? "rgba(255,255,255,.03)" : "#fffcfc", 
-                        borderRadius: 24, 
+                    <section style={{
+                        marginTop: 40,
+                        background: dark ? "rgba(255,255,255,.03)" : "#fffcfc",
+                        borderRadius: 24,
                         padding: isMobile ? "30px 20px" : "50px 40px",
                         border: `1px solid ${dark ? "#333" : "#eee"}`,
                         boxShadow: "0 10px 40px rgba(139,0,0,0.05)",
                         textAlign: "center"
                     }}>
                         <div style={{ display: "inline-block", background: "#8B0000", color: "#fff", padding: "4px 16px", borderRadius: 50, fontSize: 11, fontWeight: 800, letterSpacing: 2, marginBottom: 20, textTransform: "uppercase" }}>In Loving Memory</div>
-                        
+
                         <h2 style={{ fontFamily: "'Georgia',serif", fontSize: isMobile ? 28 : 42, color: dark ? "#fff" : "#8B0000", margin: "0 0 16px" }}>{memorial.name || "Our Beloved Staff"}</h2>
-                        
+
                         <div style={{ maxWidth: 700, margin: "0 auto 40px", lineHeight: 1.8, color: dark ? "#ccc" : "#444", fontSize: isMobile ? 15 : 18, fontStyle: "italic" }}>
                             "{memorial.description || "In memory of our dear colleague who served our institution with dedication and passion. Their legacy lives on in our hearts and the lives they touched."}"
                         </div>
@@ -248,11 +248,11 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         {memorial.images?.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 15 }}>
                                 {memorial.images.map((img, i) => (
-                                    <div key={img.id || i} style={{ 
-                                        width: isMobile ? "calc(50% - 10px)" : "250px", 
-                                        aspectRatio: "3/4", 
-                                        borderRadius: 16, 
-                                        overflow: "hidden", 
+                                    <div key={img.id || i} style={{
+                                        width: isMobile ? "calc(50% - 10px)" : "250px",
+                                        aspectRatio: "3/4",
+                                        borderRadius: 16,
+                                        overflow: "hidden",
                                         boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
                                         border: `4px solid ${dark ? "#222" : "#fff"}`,
                                         transform: `rotate(${i % 2 === 0 ? "1.5deg" : "-1.5deg"})`,
@@ -263,7 +263,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                                 ))}
                             </div>
                         )}
-                        
+
                         <div style={{ marginTop: 30, fontSize: 24, opacity: 0.6 }}>🕊️</div>
                     </section>
                 )}
