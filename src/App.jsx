@@ -56,6 +56,8 @@ export default function App() {
   const [maxGames, setMaxGames] = useState(1);
   const [maxAthletics, setMaxAthletics] = useState(1);
   const [memorial, setMemorial] = useState({ enabled: false, name: "", description: "", images: [] });
+  const [commonEventsMen, setCommonEventsMen] = useState([]);
+  const [commonEventsWomen, setCommonEventsWomen] = useState([]);
   const [syncing, setSyncing] = useState(false);
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
@@ -114,6 +116,8 @@ export default function App() {
         if (data.maxAthletics !== undefined) setIfReady("maxAthletics", setMaxAthletics);
         if (data.launchConfig) setIfReady("launchConfig", setLaunchConfig);
         if (data.inaugurationDetails) setIfReady("inaugurationDetails", setInaugurationDetails);
+        if (data.commonEventsMen) setIfReady("commonEventsMen", setCommonEventsMen);
+        if (data.commonEventsWomen) setIfReady("commonEventsWomen", setCommonEventsWomen);
 
         if (isInitial) setLoading(false);
       })
@@ -199,6 +203,8 @@ export default function App() {
   const setStaffGamesListWomensSync = wrap(setStaffGamesListWomens, "staffGamesListWomens");
   const setAthleticsListSync = wrap(setAthleticsList, "athleticsList");
   const setAthleticsListWomensSync = wrap(setAthleticsListWomens, "athleticsListWomens");
+  const setCommonEventsMenSync = wrap(setCommonEventsMen, "commonEventsMen");
+  const setCommonEventsWomenSync = wrap(setCommonEventsWomen, "commonEventsWomen");
   const setAuthorityRolesSync = wrap(setAuthorityRoles, "authorityRoles");
   const setManagementRolesSync = wrap(setManagementRoles, "managementRoles");
   const setRegistrationOpenSync = wrap(setRegistrationOpen, "registrationOpen");
@@ -257,7 +263,7 @@ export default function App() {
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} memorial={memorial} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
         {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
-        {active === "Registration" && <RegistrationPage dark={dark} setRegistrations={setRegistrationsSync} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} closedEvents={closedEvents} maxGames={maxGames} maxAthletics={maxAthletics} />}
+        {active === "Registration" && <RegistrationPage dark={dark} setRegistrations={setRegistrationsSync} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} closedEvents={closedEvents} maxGames={maxGames} maxAthletics={maxAthletics} commonEventsMen={commonEventsMen} commonEventsWomen={commonEventsWomen} />}
         {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
         {active === "Star Players" && <StarPlayersPage dark={dark} starPlayers={starPlayers} houses={houses} />}
         {active === "Gallery" && <GalleryPage dark={dark} gallery={gallery} />}
@@ -294,6 +300,8 @@ export default function App() {
           maxAthletics={maxAthletics} setMaxAthletics={setMaxAthleticsSync}
           launchConfig={launchConfig} setLaunchConfig={setLaunchConfigSync}
           inaugurationDetails={inaugurationDetails} setInaugurationDetails={setInaugurationDetailsSync}
+          commonEventsMen={commonEventsMen} setCommonEventsMen={setCommonEventsMenSync}
+          commonEventsWomen={commonEventsWomen} setCommonEventsWomen={setCommonEventsWomenSync}
         />}
         {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} />}
       </main>

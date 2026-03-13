@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIsMobile, hi, tint, Count, Sheet } from "./utils.jsx";
 import { API_BASE } from "./api.js";
-export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime, closedEvents = [], maxGames = 1, maxAthletics = 1 }) {
+export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime, closedEvents = [], maxGames = 1, maxAthletics = 1, commonEventsMen = [], commonEventsWomen = [] }) {
     const [input, setInput] = useState("");
     const [student, setStudent] = useState(null);
     const [gameSel, setGameSel] = useState([]);
@@ -367,63 +367,68 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                     <div style={{ marginBottom: 20 }}>
                                         <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>{student.role === "Staff" ? `Staff Games (Max ${maxGames})` : `Team Games (Max ${maxGames})`}</label>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                            {student.role === "Staff" ? (
-                                                ((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? staffGamesListWomens : staffGamesList).map(g => {
+                                            {(function() {
+                                                const isWomen = (student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f");
+                                                const commonList = isWomen ? commonEventsWomen : commonEventsMen;
+                                                const gamesList = student.role === "Staff" ? (isWomen ? staffGamesListWomens : staffGamesList) : (isWomen ? sportGamesListWomens : sportGamesList);
+                                                
+                                                if (gamesList.length === 0) return <span style={{ fontSize: 12, color: dark ? "#888" : "#999", fontStyle: "italic" }}>No {student.role === "Staff" ? "staff" : "team"} games available</span>;
+
+                                                return gamesList.map(g => {
                                                     const isClosed = closedEvents?.includes(g);
                                                     const isSelected = gameSel.includes(g);
                                                     const isLocked = lockedGames.includes(g);
+                                                    const isCommon = commonList.includes(g);
                                                     return (
                                                         <button key={g} disabled={isClosed || isLocked} onClick={() => {
                                                             if (isSelected) setGameSel(gameSel.filter(x => x !== g));
-                                                            else if (gameSel.length < maxGames) setGameSel([...gameSel, g]);
-                                                            else alert(`You can only select up to ${maxGames} team games.`);
-                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"} {isLocked && "🔒"}</button>
+                                                            else {
+                                                                const nonCommonCount = gameSel.filter(x => !commonList.includes(x)).length;
+                                                                if (isCommon || nonCommonCount < maxGames) {
+                                                                    setGameSel([...gameSel, g]);
+                                                                } else {
+                                                                    alert(`You can only select up to ${maxGames} team games.`);
+                                                                }
+                                                            }
+                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>
+                                                            {g} {isCommon && <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 400, marginLeft: 4 }}>(Common)</span>} {isClosed && "(Closed)"} {isLocked && "🔒"}
+                                                        </button>
                                                     );
-                                                })
-                                            ) : (
-                                                ((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? sportGamesListWomens : sportGamesList).map(g => {
-                                                    const isClosed = closedEvents?.includes(g);
-                                                    const isSelected = gameSel.includes(g);
-                                                    const isLocked = lockedGames.includes(g);
-                                                    return (
-                                                        <button key={g} disabled={isClosed || isLocked} onClick={() => {
-                                                            if (isSelected) setGameSel(gameSel.filter(x => x !== g));
-                                                            else if (gameSel.length < maxGames) setGameSel([...gameSel, g]);
-                                                            else alert(`You can only select up to ${maxGames} team games.`);
-                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"} {isLocked && "🔒"}</button>
-                                                    );
-                                                })
-                                            )}
-                                            {/* Fallback if no games defined */}
-                                            {student.role === "Staff" && (student.gender?.toLowerCase() === "female" ? staffGamesListWomens : staffGamesList).length === 0 && <span style={{ fontSize: 12, color: dark ? "#888" : "#999", fontStyle: "italic" }}>No staff games available</span>}
-                                            {student.role !== "Staff" && (student.gender?.toLowerCase() === "female" ? sportGamesListWomens : sportGamesList).length === 0 && <span style={{ fontSize: 12, color: dark ? "#888" : "#999", fontStyle: "italic" }}>No team games available</span>}
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                     {student.role !== "Staff" && (
                                         <div style={{ marginBottom: 24 }}>
                                             <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Athletic Events (Max {maxAthletics})</label>
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                                {((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? athleticsListWomens : athleticsList).map(a => {
-                                                    const isClosed = closedEvents?.includes(a);
-                                                    const isSelected = athleticSel.includes(a);
-                                                    const isLocked = lockedAthletics.includes(a);
-                                                    const isRelay = a.toLowerCase().includes("relay");
-                                                    return (
-                                                        <button key={a} disabled={isClosed || isLocked} onClick={() => {
-                                                            if (isSelected) setAthleticSel(athleticSel.filter(x => x !== a));
-                                                            else {
-                                                                const nonRelayCount = athleticSel.filter(x => !x.toLowerCase().includes("relay")).length;
-                                                                if (isRelay || nonRelayCount < maxAthletics) {
-                                                                    setAthleticSel([...athleticSel, a]);
-                                                                } else {
-                                                                    alert(`You can only select up to ${maxAthletics} athletic events (Relays are extra).`);
+                                                {(function() {
+                                                    const isWomen = (student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f");
+                                                    const commonList = isWomen ? commonEventsWomen : commonEventsMen;
+                                                    const athletics = isWomen ? athleticsListWomens : athleticsList;
+
+                                                    return athletics.map(a => {
+                                                        const isClosed = closedEvents?.includes(a);
+                                                        const isSelected = athleticSel.includes(a);
+                                                        const isLocked = lockedAthletics.includes(a);
+                                                        const isCommon = commonList.includes(a);
+                                                        return (
+                                                            <button key={a} disabled={isClosed || isLocked} onClick={() => {
+                                                                if (isSelected) setAthleticSel(athleticSel.filter(x => x !== a));
+                                                                else {
+                                                                    const nonCommonCount = athleticSel.filter(x => !commonList.includes(x)).length;
+                                                                    if (isCommon || nonCommonCount < maxAthletics) {
+                                                                        setAthleticSel([...athleticSel, a]);
+                                                                    } else {
+                                                                        alert(`You can only select up to ${maxAthletics} athletic events.`);
+                                                                    }
                                                                 }
-                                                            }
-                                                        }} style={{ background: isSelected ? "#4B0082" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>
-                                                            {a} {isRelay && <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 400, marginLeft: 4 }}>(Common)</span>} {isClosed && "(Closed)"} {isLocked && "🔒"}
-                                                        </button>
-                                                    );
-                                                })}
+                                                            }} style={{ background: isSelected ? "#4B0082" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>
+                                                                {a} {isCommon && <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 400, marginLeft: 4 }}>(Common)</span>} {isClosed && "(Closed)"} {isLocked && "🔒"}
+                                                            </button>
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         </div>
                                     )}

@@ -41,7 +41,9 @@ export function AdminPage({
     adminLogs, setAdminLogs,
     launchConfig, setLaunchConfig,
     inaugurationDetails, setInaugurationDetails,
-    memorial, setMemorial
+    memorial, setMemorial,
+    commonEventsMen, setCommonEventsMen,
+    commonEventsWomen, setCommonEventsWomen
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -2702,6 +2704,8 @@ export function AdminPage({
                             <ListManager dark={dark} title="🏃 Athletics (Women)" list={athleticsListWomens} setList={setAthleticsListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="👔 Sports Official Roles" list={authorityRoles} setList={setAuthorityRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏛️ Management Roles" list={managementRoles} setList={setManagementRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="⭐ Common Events (Men) - Bypass Limits" list={commonEventsMen || []} setList={setCommonEventsMen} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="⭐ Common Events (Women) - Bypass Limits" list={commonEventsWomen || []} setList={setCommonEventsWomen} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                         </div>
                     </div>
                 )
