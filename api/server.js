@@ -8,11 +8,7 @@ const __dirname = path.dirname(__filename);
 // Explicitly load .env from the api directory
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-console.log("🛠️  Environment Check:");
-console.log("FALLBACK_OTP:", process.env.FALLBACK_OTP ? "Found" : "Missing");
-console.log("DEFAULT_OTP:", process.env.DEFAULT_OTP ? "Found" : "Missing");
-console.log("IMGBB_API_KEY:", process.env.IMGBB_API_KEY ? "Found" : "Missing");
-console.log("ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD ? "Found" : "Missing");
+console.log(`🚀 Server starting [${process.env.NODE_ENV || "development"}]`);
 
 import nodemailer from "nodemailer";
 import cors from "cors";
@@ -137,19 +133,18 @@ const submitLimiter = rateLimit({
   }
 });
 
+// OTP limiter: 5 attempts per 15 minutes (prevents brute-forcing a 6-digit OTP)
 const otpVerifyLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
-  max: 15,
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => normaliseIp(req.ip),
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "otpVerify", ip: req.ip, path: req.path, email: req.body.email });
-    res.status(429).json({ error: "Too many OTP attempts." });
+    res.status(429).json({ error: "Too many OTP attempts. Please wait 15 minutes before trying again." });
   }
 });
-
-const otpStore = {}; // DEPRECATED: Use Otp model
 
 // ─── Security: Origin Validation (Defense in Depth) ─────────────────────────
 // This middleware ensures that sensitive state-changing state requests 
@@ -172,8 +167,6 @@ const requireValidOrigin = (req, res, next) => {
 
   const isValidOrigin = allowedOrigins.includes(origin);
   const isValidReferer = allowedOrigins.some(allowed => referer?.startsWith(allowed));
-  // Allow if the origin/referer matches the server's own host (same-origin, e.g. postman testing locally while developing if needed, though strictly we want frontend origins)
-  const isSameOriginHost = allowedOrigins.some(allowed => allowed.includes(hostBase));
 
   const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
 
@@ -270,11 +263,7 @@ const loadDb = async () => {
   return state;
 };
 
-const saveDb = async (data) => {
-  // Not used anymore as we use findOneAndUpdate for atomic updates, 
-  // but keeping signature for minimal refactor if needed.
-  await State.findOneAndUpdate({}, data, { upsert: true });
-};
+
 
 // ─── Transporter ───────────────────────────────────────────────────────────
 function makeTransporter() {
@@ -305,19 +294,15 @@ const authenticateAdmin = async (req, res, next) => {
 
     const state = await loadDb();
     if (token !== state.activeAdminToken) {
-        SecurityLogger.log("EXPIRED_TOKEN_USAGE", { role: "admin", reason: "Active token mismatch", ip: req.ip, path: req.path });
         return res.status(401).json({ error: "Session expired. Another admin has logged in." });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== "admin") {
-        SecurityLogger.log("AUTH_FAILURE", { role: "admin", reason: "Role mismatch", email: decoded.email, ip: req.ip });
-        return res.status(403).json({ error: "Access denied" });
-    }
+    if (decoded.role !== "admin") return res.status(403).json({ error: "Access denied" });
     req.user = decoded;
     next();
   } catch (err) {
-    SecurityLogger.log("AUTH_FAILURE", { role: "admin", reason: "Invalid/Expired Token signature", error: err.message, ip: req.ip });
+    SecurityLogger.log("AUTH_FAILURE", { role: "admin", ip: req.ip, path: req.path });
     res.status(401).json({ error: "Invalid or expired token" });
   }
 };
@@ -337,7 +322,6 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
     if (decoded.role === "admin") {
       const state = await loadDb();
       if (token !== state.activeAdminToken) {
-          SecurityLogger.log("EXPIRED_TOKEN_USAGE", { role: "admin", reason: "Active token mismatch", ip: req.ip, path: req.path });
           return res.status(401).json({ error: "Session expired. Another admin has logged in." });
       }
       req.user = decoded;
@@ -347,10 +331,9 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
       req.user = decoded;
       return next();
     }
-    SecurityLogger.log("AUTH_FAILURE", { role: "captainOrAdmin", reason: "Role mismatch", ip: req.ip });
     return res.status(403).json({ error: "Access denied" });
   } catch (err) {
-    SecurityLogger.log("AUTH_FAILURE", { role: "captainOrAdmin", reason: "Invalid Token signature", error: err.message, ip: req.ip });
+    SecurityLogger.log("AUTH_FAILURE", { role: "captainOrAdmin", ip: req.ip, path: req.path });
     res.status(401).json({ error: "Invalid token" });
   }
 };
@@ -920,10 +903,10 @@ app.post("/api/logout", async (req, res) => {
         { token, expiresAt: new Date(decoded.exp * 1000) },
         { upsert: true }
       );
-      SecurityLogger.log("TOKEN_REVOKED", { role: decoded.role || "unknown", email: decoded.email || "unknown", expiry: new Date(decoded.exp * 1000) });
+      SecurityLogger.log("TOKEN_REVOKED", { role: decoded.role || "unknown", email: decoded.email || "unknown" });
     }
-  } catch (err) {
-    SecurityLogger.log("LOGOUT_ERROR", { reason: "Token Invalidation Error", error: err.message });
+  } catch {
+    // Silently ignore malformed token on logout — user is logging out regardless
   }
   
   res.json({ success: true });
