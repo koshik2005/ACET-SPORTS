@@ -333,6 +333,19 @@ export function AdminPage({
     const sendCaptainEmail = async (house, captainKey, roleLabel) => {
         const c = house[captainKey];
         if (!c?.email || !c?.password) return;
+
+        let passwordToSend = c.password;
+        const isHash = passwordToSend.startsWith("$2b$") || passwordToSend.startsWith("$2a$") || passwordToSend.startsWith("$2y$");
+
+        if (isHash) {
+            const clearPw = window.prompt(`The password for ${c.name} is currently encrypted (hashed) in the database for security.\n\nPlease enter the plain-text password to send in the email:`);
+            if (!clearPw) {
+                alert("Email cancelled. You must provide the plain-text password to send the credentials email.");
+                return;
+            }
+            passwordToSend = clearPw;
+        }
+
         const statusKey = `${house.id}-${captainKey}`;
         setEmailStatus(s => ({ ...s, [statusKey]: "sending" }));
         try {
@@ -346,7 +359,7 @@ export function AdminPage({
                 body: JSON.stringify({
                     captainName: c.name || "Captain",
                     captainEmail: c.email,
-                    password: c.password,
+                    password: passwordToSend,
                     house: house.name,
                     role: roleLabel,
                     portalUrl,
@@ -1282,7 +1295,13 @@ export function AdminPage({
                                                     )}
                                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
                                                         <input value={h[role]?.email || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], email: e.target.value } } : x))} placeholder="Email" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
-                                                        <input value={h[role]?.password || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], password: e.target.value } } : x))} placeholder="PW" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
+                                                        <input 
+                                                            value={(h[role]?.password?.startsWith("$2") ? "" : h[role]?.password) || ""} 
+                                                            onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], password: e.target.value } } : x))} 
+                                                            placeholder={h[role]?.password?.startsWith("$2") ? "Saved 🔐" : "PW"} 
+                                                            title={h[role]?.password?.startsWith("$2") ? "Password is encrypted for security. Type a new one to change it." : ""}
+                                                            style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} 
+                                                        />
                                                     </div>
                                                     <div style={{ width: "100%", marginTop: 10 }}>
                                                         <button onClick={() => sendCaptainEmail(h, role, role.replace(/([A-Z])/g, ' $1').trim())} disabled={!h[role]?.email || !h[role]?.password} style={{ width: "100%", padding: "6px 0", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: (!h[role]?.email || !h[role]?.password) ? "not-allowed" : "pointer", border: `1px solid ${dark ? "#444" : "#ddd"}`, background: emailStatus[`${h.id}-${role}`] === "sent" ? "#228B22" : emailStatus[`${h.id}-${role}`]?.startsWith("error") ? "#c00" : "transparent", color: emailStatus[`${h.id}-${role}`] === "sent" ? "#fff" : dark ? "#ccc" : "#666" }}>

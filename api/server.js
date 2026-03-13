@@ -855,6 +855,11 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
   if (!captainEmail || !password || !captainName) {
     return res.status(400).json({ error: "Missing required fields: captainName, captainEmail, password" });
   }
+
+  // Safety check: Don't send hashed passwords!
+  if (password.startsWith("$2b$") || password.startsWith("$2a$") || password.startsWith("$2y$")) {
+    return res.status(400).json({ error: "Security Alert: Cannot send a hashed password. Please enter the plain-text password in the Admin Panel." });
+  }
   const smtpUser = process.env.SMTP_USER || process.env.EMAIL;
   const smtpPass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
   if (!smtpUser || !smtpPass) {
