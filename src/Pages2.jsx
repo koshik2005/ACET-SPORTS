@@ -407,12 +407,21 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                                     const isClosed = closedEvents?.includes(a);
                                                     const isSelected = athleticSel.includes(a);
                                                     const isLocked = lockedAthletics.includes(a);
+                                                    const isRelay = a.toLowerCase().includes("relay");
                                                     return (
                                                         <button key={a} disabled={isClosed || isLocked} onClick={() => {
                                                             if (isSelected) setAthleticSel(athleticSel.filter(x => x !== a));
-                                                            else if (athleticSel.length < maxAthletics) setAthleticSel([...athleticSel, a]);
-                                                            else alert(`You can only select up to ${maxAthletics} athletic events.`);
-                                                        }} style={{ background: isSelected ? "#4B0082" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{a} {isClosed && "(Closed)"} {isLocked && "🔒"}</button>
+                                                            else {
+                                                                const nonRelayCount = athleticSel.filter(x => !x.toLowerCase().includes("relay")).length;
+                                                                if (isRelay || nonRelayCount < maxAthletics) {
+                                                                    setAthleticSel([...athleticSel, a]);
+                                                                } else {
+                                                                    alert(`You can only select up to ${maxAthletics} athletic events (Relays are extra).`);
+                                                                }
+                                                            }
+                                                        }} style={{ background: isSelected ? "#4B0082" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>
+                                                            {a} {isRelay && <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 400, marginLeft: 4 }}>(Common)</span>} {isClosed && "(Closed)"} {isLocked && "🔒"}
+                                                        </button>
                                                     );
                                                 })}
                                             </div>
