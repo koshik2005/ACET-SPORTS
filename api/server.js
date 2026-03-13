@@ -85,6 +85,25 @@ const loginLimiter = rateLimit({
 
 app.use("/api/", globalLimiter);
 
+// Make sure caching layers respect Origin differences
+app.use((req, res, next) => {
+  res.setHeader("Vary", "Origin");
+  next();
+});
+
+const submitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // Max 10 queries per IP per 15m
+  validate: { trustProxy: false, xForwardedForHeader: false },
+  message: { error: "Too many query submissions. Please try again later." }
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 15, // Max 15 OTP verifications or registrations per 5m
+  validate: { trustProxy: false, xForwardedForHeader: false },
+  message: { error: "Too many OTP attempts." }
+});
 
 const otpStore = {}; // DEPRECATED: Use Otp model
 
@@ -531,7 +550,7 @@ app.get("/api/lookup-student", lookupLimiter, async (req, res) => {
   });
 });
 
-app.post("/api/register-event", async (req, res) => {
+app.post("/api/register-event", otpVerifyLimiter, async (req, res) => {
   const { email, otp, game, athletic } = req.body;
   if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
 
@@ -601,7 +620,7 @@ app.post("/api/register-event", async (req, res) => {
   }
 });
 
-app.post("/api/verify-otp", async (req, res) => {
+app.post("/api/verify-otp", otpVerifyLimiter, async (req, res) => {
   const { email, otp } = req.body;
   const defaultOtp = process.env.DEFAULT_OTP;
   
@@ -618,7 +637,7 @@ app.post("/api/verify-otp", async (req, res) => {
 
 // ─── Student Queries ─────────────────────────────────────────────────────────
 
-app.post("/api/submit-query", async (req, res) => {
+app.post("/api/submit-query", submitLimiter, async (req, res) => {
   const { regNo, studentName, issueType, details } = req.body;
   if (!regNo || !studentName || !issueType || !details) {
     return res.status(400).json({ error: "All fields are required" });
@@ -1162,6 +1181,17 @@ app.post("/api/upload-image", authenticateAdmin, async (req, res) => {
   try {
     const { data } = req.body;
     if (!data) return res.status(400).json({ error: "No image data provided" });
+
+    // 1. Validate File Type (must be image via Data URI)
+    if (!data.startsWith("data:image/")) {
+      return res.status(400).json({ error: "Invalid file type. Only images are allowed." });
+    }
+
+    // 2. Validate Size (approximate from base64 length, 5MB limit)
+    const approxBytes = data.length * 0.75;
+    if (approxBytes > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: "Image too large. Maximum size is 5MB." });
+    }
 
     if (!process.env.IMGBB_API_KEY) {
       return res.status(503).json({ error: "ImgBB not configured. Add IMGBB_API_KEY to .env" });
