@@ -524,7 +524,6 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
   if (!email) return res.status(400).json({ error: "Email is required" });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email] = { otp, expires: Date.now() + 5 * 60 * 1000 }; // 5 mins
 
   try {
     const transporter = makeTransporter();
@@ -556,8 +555,11 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
 
 // ── Secure Student Lookup (For Registration) ──────────────────────────
 const lookupLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 lookups per window
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => normaliseIp(req.ip),
   message: { error: "Too many lookup attempts. Please try again later." }
 });
 
@@ -730,14 +732,12 @@ app.post("/api/admin-resolve-query", authenticateAdmin, async (req, res) => {
 });
 
 // ─── Admin Authentication ────────────────────────────────────────────────────────
-const adminOtpStore = {}; // DEPRECATED: Use Otp model
 
 app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email || !email.includes("@")) return res.status(400).json({ error: "Valid Admin Email is required" });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  adminOtpStore[email] = { otp, expires: Date.now() + 5 * 60 * 1000 };
 
   try {
     const transporter = makeTransporter();
@@ -757,13 +757,12 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
       `,
     });
 
-    // Persistent storage
+    // Persistent storage (DB-backed, replaces deprecated in-memory store)
     await Otp.findOneAndUpdate({ email, type: "admin" }, { otp, createdAt: new Date() }, { upsert: true });
 
     res.json({ success: true });
   } catch (err) {
     console.error("ADMIN OTP EMAIL ERROR:", err);
-    // Return the actual error so user can debug (e.g. SMTP failures)
     res.status(500).json({ success: false, error: "Failed to send email: " + err.message });
   }
 });
@@ -982,7 +981,8 @@ app.post("/api/captain-toggle-tshirt", authenticateCaptainOrAdmin, async (req, r
   }
 });
 
-app.get("/api/email-config", (req, res) => {
+// SECURITY: Protected — exposes SMTP config (user, host). Admin-only.
+app.get("/api/email-config", authenticateAdmin, (req, res) => {
   res.json({
     configured: !!((process.env.SMTP_USER || process.env.EMAIL) && (process.env.SMTP_PASS || process.env.APP_PASSWORD)),
     user: process.env.SMTP_USER || process.env.EMAIL || "",
@@ -991,7 +991,8 @@ app.get("/api/email-config", (req, res) => {
   });
 });
 
-app.get("/api/check-email-connection", async (req, res) => {
+// SECURITY: Protected — triggers live SMTP network call. Admin-only.
+app.get("/api/check-email-connection", authenticateAdmin, async (req, res) => {
   try {
     const transporter = makeTransporter();
     await transporter.verify();
