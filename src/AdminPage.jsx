@@ -1222,6 +1222,15 @@ export function AdminPage({
                             <div key={h.id} style={{ ...cS, borderTop: `6px solid ${h.color}`, padding: isMobile ? 14 : 20, display: "flex", flexDirection: "column" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 10, borderBottom: `1px solid ${dark ? "#333" : "#f0f0f0"}` }}>
                                     <div style={{ display: "flex", gap: 10, alignItems: "center", flex: 1 }}>
+                                        <div style={{ position: "relative" }}>
+                                            <ImgUploadBtn
+                                                img={h.logo}
+                                                onUpload={d => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, logo: d } : x))}
+                                                size={40}
+                                                dark={dark}
+                                            />
+                                            {h.logo && <button onClick={() => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, logo: null } : x))} style={{ position: "absolute", top: -5, right: -5, background: "rgba(200,0,0,0.8)", color: "#fff", border: "none", borderRadius: "50%", width: 16, height: 16, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
+                                        </div>
                                         <input type="color" value={h.color || "#000000"} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, color: e.target.value } : x))} style={{ width: 32, height: 32, padding: 0, border: "none", borderRadius: 4, cursor: "pointer", background: "none" }} title="Change House Color" />
                                         <input value={h.name} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, name: e.target.value } : x))} placeholder="House Name" style={{ ...iS, margin: 0, padding: "6px 10px", fontSize: 18, fontWeight: 900, color: h.color, border: `1px dashed ${dark ? "#444" : "#ccc"}`, background: "transparent", maxWidth: 160 }} />
                                     </div>

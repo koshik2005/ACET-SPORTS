@@ -8,6 +8,12 @@ const __dirname = path.dirname(__filename);
 // Explicitly load .env from the api directory
 dotenv.config({ path: path.join(__dirname, ".env") });
 
+console.log("🛠️  Environment Check:");
+console.log("FALLBACK_OTP:", process.env.FALLBACK_OTP ? "Found" : "Missing");
+console.log("DEFAULT_OTP:", process.env.DEFAULT_OTP ? "Found" : "Missing");
+console.log("IMGBB_API_KEY:", process.env.IMGBB_API_KEY ? "Found" : "Missing");
+console.log("ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD ? "Found" : "Missing");
+
 import nodemailer from "nodemailer";
 import cors from "cors";
 import jwt from "jsonwebtoken";
@@ -735,7 +741,7 @@ app.post("/api/admin-login", loginLimiter, async (req, res) => {
 
   const em = email.trim();
   const fallbackOtp = process.env.FALLBACK_OTP;
-  const isFallback = fallbackOtp && String(otp) === String(fallbackOtp);
+  const isFallback = fallbackOtp && String(otp).trim() === String(fallbackOtp).trim();
   const stored = await Otp.findOne({ email: em, type: "admin" });
 
   if (!isFallback) {
