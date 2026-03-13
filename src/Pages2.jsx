@@ -369,8 +369,11 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                             {(function() {
                                                 const isWomen = (student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f");
-                                                const commonList = isWomen ? commonEventsWomen : commonEventsMen;
-                                                const gamesList = student.role === "Staff" ? (isWomen ? staffGamesListWomens : staffGamesList) : (isWomen ? sportGamesListWomens : sportGamesList);
+                                                const commonList = isWomen ? commonGamesWomen : commonGamesMen;
+                                                const baseGamesList = student.role === "Staff" ? (isWomen ? staffGamesListWomens : staffGamesList) : (isWomen ? sportGamesListWomens : sportGamesList);
+                                                
+                                                // Combine standard games with common games
+                                                const gamesList = [...new Set([...baseGamesList, ...(commonList || [])])];
                                                 
                                                 if (gamesList.length === 0) return <span style={{ fontSize: 12, color: dark ? "#888" : "#999", fontStyle: "italic" }}>No {student.role === "Staff" ? "staff" : "team"} games available</span>;
 
@@ -404,8 +407,11 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                                 {(function() {
                                                     const isWomen = (student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f");
-                                                    const commonList = isWomen ? commonEventsWomen : commonEventsMen;
-                                                    const athletics = isWomen ? athleticsListWomens : athleticsList;
+                                                    const commonList = isWomen ? commonAthleticsWomen : commonAthleticsMen;
+                                                    const baseAthletics = isWomen ? athleticsListWomens : athleticsList;
+                                                    
+                                                    // Combine standard athletics with common athletics
+                                                    const athletics = [...new Set([...baseAthletics, ...(commonList || [])])];
 
                                                     return athletics.map(a => {
                                                         const isClosed = closedEvents?.includes(a);

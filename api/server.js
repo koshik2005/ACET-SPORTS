@@ -461,7 +461,7 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
       "athleticsListWomens", "authorityRoles", "managementRoles", "nav", 
       "registrationOpen", "eventDate", "emptyGame", "starPlayers", "closedEvents",
       "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails", "memorial",
-      "commonEventsMen", "commonEventsWomen"
+      "commonGamesMen", "commonAthleticsMen", "commonGamesWomen", "commonAthleticsWomen"
     ];
 
     if (!allowedTypes.includes(type)) {
