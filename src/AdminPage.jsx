@@ -42,8 +42,10 @@ export function AdminPage({
     launchConfig, setLaunchConfig,
     inaugurationDetails, setInaugurationDetails,
     memorial, setMemorial,
-    commonEventsMen, setCommonEventsMen,
-    commonEventsWomen, setCommonEventsWomen
+    commonGamesMen, setCommonGamesMen,
+    commonAthleticsMen, setCommonAthleticsMen,
+    commonGamesWomen, setCommonGamesWomen,
+    commonAthleticsWomen, setCommonAthleticsWomen
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -2704,10 +2706,10 @@ export function AdminPage({
                             <ListManager dark={dark} title="🏃 Athletics (Women)" list={athleticsListWomens} setList={setAthleticsListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="👔 Sports Official Roles" list={authorityRoles} setList={setAuthorityRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏛️ Management Roles" list={managementRoles} setList={setManagementRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="⭐ Common Games (Men) - Bypass Limits" list={commonGamesMen || []} setList={setCommonGamesMen} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="⭐ Common Athletics (Men) - Bypass Limits" list={commonAthleticsMen || []} setList={setCommonAthleticsMen} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="⭐ Common Games (Women) - Bypass Limits" list={commonGamesWomen || []} setList={setCommonGamesWomen} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
-                            <ListManager dark={dark} title="⭐ Common Athletics (Women) - Bypass Limits" list={commonAthleticsWomen || []} setList={setCommonAthleticsWomen} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="⭐ Common Games (Men) - Bypass Limits" list={commonGamesMen || []} setList={setCommonGamesMen} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="⭐ Common Athletics (Men) - Bypass Limits" list={commonAthleticsMen || []} setList={setCommonAthleticsMen} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="⭐ Common Games (Women) - Bypass Limits" list={commonGamesWomen || []} setList={setCommonGamesWomen} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="⭐ Common Athletics (Women) - Bypass Limits" list={commonAthleticsWomen || []} setList={setCommonAthleticsWomen} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                         </div>
                     </div>
                 )
