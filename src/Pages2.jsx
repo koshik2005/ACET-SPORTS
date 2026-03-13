@@ -172,7 +172,9 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                 <p style={{ color: dark ? "#aaa" : "#555", fontSize: 13, marginBottom: 20 }}>You're all set, <strong>{reg?.name}</strong>.</p>
 
                 <div style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `2px solid ${rHObj?.color || "#888"}`, borderRadius: 16, padding: isMobile ? 16 : 28, marginBottom: 20 }}>
-                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: rHObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18, margin: "0 auto 10px" }}>🏠</div>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: rHObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 18, margin: "0 auto 10px", overflow: "hidden" }}>
+                        {rHObj?.logo ? <img src={rHObj.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🏠"}
+                    </div>
                     <div style={{ fontWeight: 800, fontSize: isMobile ? 16 : 20, color: rHObj?.color || "#888", marginBottom: 4 }}>{rHObj?.displayName || reg?.house} House</div>
                     {waLink ? (
                         <>
@@ -293,7 +295,9 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                     ) : (
                         <>
                             <div style={{ background: dark ? tint(hObj?.color || "#888888") : `rgba(${parseInt((hObj?.color || "#888888").slice(1, 3), 16)},${parseInt((hObj?.color || "#888888").slice(3, 5), 16)},${parseInt((hObj?.color || "#888888").slice(5, 7), 16)},.08)`, border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{hi(hObj?.displayName || student.house)}</div>
+                                <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#fff"}` }}>
+                                    {hObj?.logo ? <img src={hObj.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(hObj?.displayName || student.house)}
+                                </div>
                                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hObj?.displayName || student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
                                 <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); setLockedGames([]); setLockedAthletics([]); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
                             </div>
@@ -423,7 +427,9 @@ export function ScoreboardPage({ dark, houses, pointLog, registrationOpen = true
             {sh.map((h, i) => (
                 <div key={h.id} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `2px solid ${i === 0 ? h.color : dark ? "#333" : h.color + "44"}`, borderRadius: 14, padding: isMobile ? 12 : 24, marginBottom: isMobile ? 8 : 16, display: "flex", alignItems: "center", gap: isMobile ? 10 : 20, boxShadow: i === 0 ? `0 8px 40px ${h.color}44` : "0 2px 12px rgba(0,0,0,.06)", flexWrap: "wrap" }}>
                     <div style={{ width: isMobile ? 38 : 52, height: isMobile ? 38 : 52, borderRadius: "50%", background: i === 0 ? "linear-gradient(135deg,#FFD700,#FFA500)" : h.color + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 17 : 22, fontWeight: 900, color: i === 0 ? "#000" : h.color, flexShrink: 0 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</div>
-                    <div style={{ width: isMobile ? 34 : 44, height: isMobile ? 34 : 44, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: isMobile ? 12 : 16, flexShrink: 0 }}>{hi(h.displayName || h.name)}</div>
+                    <div style={{ width: isMobile ? 34 : 44, height: isMobile ? 34 : 44, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: isMobile ? 12 : 16, flexShrink: 0, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#fff"}` }}>
+                        {h.logo ? <img src={h.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(h.displayName || h.name)}
+                    </div>
                     <div style={{ flex: 1, minWidth: 80 }}>
                         <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22, color: dark ? "#fff" : h.color }}>{h.displayName || h.name} House</div>
                         {i === 0 && h.points > 0 && <div style={{ fontSize: 10, color: h.color }}>👑 LEADING</div>}
@@ -452,7 +458,9 @@ export function ScoreboardPage({ dark, houses, pointLog, registrationOpen = true
                     return (
                         <div key={i} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 9, padding: isMobile ? "9px 11px" : "12px 16px", display: "flex", alignItems: "center", gap: 9 }}>
                             <div style={{ fontSize: isMobile ? 15 : 20, flexShrink: 0 }}>{p.type === "win" ? "🏆" : p.type === "bonus" ? "⭐" : "⚠️"}</div>
-                            <div style={{ width: 24, height: 24, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{hi(hObj?.displayName || p.house)}</div>
+                            <div style={{ width: 24, height: 24, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 800, flexShrink: 0, overflow: "hidden", border: `1px solid ${dark ? "#444" : "#fff"}` }}>
+                                {hObj?.logo ? <img src={hObj.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(hObj?.displayName || p.house)}
+                            </div>
                             <div style={{ flex: 1, minWidth: 0 }}><span style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{hObj?.displayName || p.house}</span><span style={{ color: dark ? "#aaa" : "#888", marginLeft: 6, fontSize: 12 }}>{p.reason}</span></div>
                             <div style={{ fontWeight: 800, fontSize: isMobile ? 13 : 16, color: p.pts > 0 ? "#228B22" : "#c00", flexShrink: 0 }}>{p.pts > 0 ? "+" : ""}{p.pts}</div>
                             <div style={{ fontSize: 10, color: dark ? "#aaa" : "#aaa", flexShrink: 0 }}>{p.time}</div>
