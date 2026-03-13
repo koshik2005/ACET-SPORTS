@@ -39,76 +39,46 @@ app.use(helmet({
       connectSrc: ["'self'", "https://res.cloudinary.com", "https://*.vercel.app", "http://localhost:*", "http://127.0.0.1:*"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
+      frameAncestors: ["'none'"] // Prevent clickjacking
     },
   },
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  xFrameOptions: { action: "deny" }
 }));
-// Configure CORS for all routes
+// Explicitly loaded exact allowlist (no dynamic reflection unless matched)
 const allowedOrigins = [
   "https://acet-sports-seven.vercel.app",
   "https://acetsports.favoflex.com",
   "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:3001",
-  "http://127.0.0.1:3001"
+  "http://127.0.0.1:5173"
 ];
 
-const isAllowedOrigin = (origin) => {
-  if (!origin) return false;
-  if (allowedOrigins.includes(origin)) return true;
-
-  // Allow all localhost/127.0.0.1 variations in local development
-  const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
-  if (!isProd && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) {
-    return true;
-  }
-
-  // Allow Vercel preview deployments (e.g., https://acet-sports-r7cef9k0u-koshik2005s-projects.vercel.app)
-  if (/^https:\/\/acet-sports-[a-z0-9]+-[a-z0-9-]+\.vercel\.app$/.test(origin)) return true;
-  return false;
-};
-
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Browsers don't send Origin for same-origin GETs.
-    // We allow !origin here, but requireValidOrigin middleware will later catch
-    // malicious !origin requests that also lack Referer headers.
-    if (!origin || isAllowedOrigin(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
+  credentials: false // Explicitly disabled: API uses JWT Bearer tokens, not cross-origin cookies.
 };
 
-// Apply CORS but catch the specific Error to return a clean 403
-app.use((req, res, next) => {
-  cors(corsOptions)(req, res, (err) => {
-    if (err) {
-      console.warn(`🔒 CORS Bloced: Origin "${req.headers.origin}" not in whitelist.`);
-      return res.status(403).json({ error: "Access Denied: Origin not allowed or missing." });
-    }
-    next();
-  });
-});
-app.options(/(.*)/, cors()); // Handle preflight requests for all routes
+// Apply standard CORS middleware. It handles preflight (OPTIONS) automatically.
+app.use(cors(corsOptions));
+
 app.use(express.json({ limit: "20mb" })); // allow larger payloads for image base64
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-production";
 
-// Rate Limiters
+// Rate Limiters - tightened for abuse protection
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
-  max: 1000, // Reduced from 5000: still generous for normal users, but better against abuse
+  max: 300, // Reduced from 1000 for strict abuse protection
   validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many requests from this IP, please try again after 15 minutes" }
 });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
+  max: 20, // Reduced from 50 to prevent brute force
   validate: { trustProxy: false, xForwardedForHeader: false },
   message: { error: "Too many login attempts, please try again later" }
 });
@@ -118,36 +88,38 @@ app.use("/api/", globalLimiter);
 
 const otpStore = {}; // DEPRECATED: Use Otp model
 
-// ─── Security: Block Non-Browser API Testing Tools ──────────────────────────
-const allowedHosts = [
-  "acet-sports-seven.vercel.app",
-  "acetsports.favoflex.com",
-  "localhost",
-  "127.0.0.1"
-];
-
+// ─── Security: Origin Validation (Defense in Depth) ─────────────────────────
+// This middleware ensures that sensitive state-changing state requests 
+// genuinely originate from our trusted frontends, adding a layer of protection 
+// beyond just CORS, especially for non-browser abuse.
 const requireValidOrigin = (req, res, next) => {
-  if (req.path === "/api/health") return next();
+  // Only apply to POST/PUT/DELETE requests
+  if (req.method === "GET" || req.method === "OPTIONS") return next();
 
-  let origin = req.headers.origin || req.headers.referer;
+  let origin = req.headers.origin;
+  let referer = req.headers.referer;
 
-  // Clean up referer trailing slashes to match origin format if needed
-  if (origin && origin.endsWith('/')) {
-    origin = origin.slice(0, -1);
-  }
+  // Clean trailing slashes for comparison
+  if (origin && origin.endsWith('/')) origin = origin.slice(0, -1);
+  if (referer && referer.endsWith('/')) referer = referer.slice(0, -1);
 
-  // Also check Host header as a fallback for same-origin requests
-  // (Browsers don't send Origin for same-origin GET requests)
+  // The actual host of the server (e.g. localhost:3001, acet-sports.vercel.app)
   const host = req.headers["x-forwarded-host"] || req.headers.host || "";
-  const hostBase = host.split(":")[0]; // strip port if present
-  const isAllowedHost = allowedHosts.includes(hostBase) || /^acet-sports-[a-z0-9-]+\.vercel\.app$/.test(hostBase);
+  const hostBase = host.split(":")[0];
 
-  // Only enforce strict origin checks in production (Vercel) to avoid breaking local Vite proxies
+  const isValidOrigin = allowedOrigins.includes(origin);
+  const isValidReferer = allowedOrigins.some(allowed => referer?.startsWith(allowed));
+  // Allow if the origin/referer matches the server's own host (same-origin, e.g. postman testing locally while developing if needed, though strictly we want frontend origins)
+  const isSameOriginHost = allowedOrigins.some(allowed => allowed.includes(hostBase));
+
   const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
 
-  if (isProd && !isAllowedHost && (!origin || !isAllowedOrigin(origin))) {
-    console.warn(`Blocked API request. Host: ${host}, Origin: ${origin || 'NONE'}`);
-    return res.status(403).json({ error: "Access Denied: strictly frontend access only." });
+  // In production, we strictly require a valid Origin OR Referer matching our allowlist for state changes
+  if (isProd) {
+      if (!isValidOrigin && !isValidReferer) {
+          console.warn(`🛡️ Blocked state-changing request. Missing/Invalid Origin. Origin: ${origin}, Referer: ${referer}`);
+          return res.status(403).json({ error: "Access Denied: Invalid Origin." });
+      }
   }
 
   next();
