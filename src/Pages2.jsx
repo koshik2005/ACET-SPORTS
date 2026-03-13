@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIsMobile, hi, tint, Count, Sheet } from "./utils.jsx";
 import { API_BASE } from "./api.js";
-export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime, closedEvents = [], maxGames = 1, maxAthletics = 1, commonEventsMen = [], commonEventsWomen = [] }) {
+export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = [], sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], registrationOpen = true, registrationCloseTime, closedEvents = [], maxGames = 1, maxAthletics = 1, commonGamesMen = [], commonAthleticsMen = [], commonGamesWomen = [], commonAthleticsWomen = [] }) {
     const [input, setInput] = useState("");
     const [student, setStudent] = useState(null);
     const [gameSel, setGameSel] = useState([]);
