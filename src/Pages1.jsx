@@ -72,9 +72,9 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         }}>
                             {i === 0 && !isInitial && <div style={{ position: "absolute", top: 8, right: 10, fontSize: isMobile ? 18 : 26 }}>🏆</div>}
                             <div style={{ width: isMobile ? 32 : 48, height: isMobile ? 32 : 48, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: isMobile ? 13 : 19, marginBottom: 8, boxShadow: `0 4px 12px ${h.color}44`, overflow: "hidden" }}>
-                                {h.logo ? <img src={h.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(h.name)}
+                                {h.logo ? <img src={h.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(h.displayName || h.name)}
                             </div>
-                            <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 18, color: h.color, letterSpacing: 0.5 }}>{h.name}</div>
+                            <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 18, color: h.color, letterSpacing: 0.5 }}>{h.displayName || h.name}</div>
                             <div style={{ fontSize: isMobile ? 28 : 40, fontWeight: 900, color: dark ? "#fff" : "#1a1a1a", fontFamily: "'Georgia',serif", margin: "2px 0" }}><Count v={h.points} /></div>
                             <div style={{ fontSize: 10, fontWeight: 700, color: dark ? "#aaa" : "#888", marginBottom: 10, letterSpacing: 1 }}>POINTS</div>
                             <div style={{ height: 6, background: dark ? "#333" : "#f0f0f0", borderRadius: 10, overflow: "hidden" }}>
@@ -182,9 +182,9 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                             {/* House header */}
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isMobile ? 12 : 18 }}>
                                 <div style={{ width: 34, height: 34, borderRadius: "50%", background: h.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: 13, flexShrink: 0, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#fff"}` }}>
-                                    {h.logo ? <img src={h.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(h.name)}
+                                    {h.logo ? <img src={h.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(h.displayName || h.name)}
                                 </div>
-                                <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 17, color: h.color }}>{h.name} House</div>
+                                <div style={{ fontWeight: 800, fontSize: isMobile ? 14 : 17, color: h.color }}>{h.displayName || h.name} House</div>
                             </div>
                             {/* Staff Captain info */}
                             {(h.staffCaptainMale?.name || h.staffCaptainFemale?.name) && (

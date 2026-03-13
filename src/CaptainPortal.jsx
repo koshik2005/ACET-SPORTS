@@ -7,7 +7,9 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPwd, setShowPwd] = useState(false);
-    const [captain, setCaptain] = useState(null); // { name, role, houseRole, house, houseColor }
+    const [captain, setCaptain] = useState(null); // { name, role, houseRole, house, houseColor, houseId, houseDisplayName }
+    const [newName, setNewName] = useState("");
+    const [updating, setUpdating] = useState(false);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("Dashboard"); // Dashboard, Roster, Participation, T-Shirt Issue
     const [shirtIssueTab, setShirtIssueTab] = useState("Pending"); // Pending, Issued
@@ -44,8 +46,11 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                     role: ROLE_LABELS[data.houseRole],
                     houseRole: data.houseRole,
                     house: data.houseName,
-                    houseColor: data.houseColor
+                    houseColor: data.houseColor,
+                    houseId: data.houseId,
+                    houseDisplayName: data.houseDisplayName
                 });
+                setNewName(data.houseDisplayName || data.houseName);
                 setEmail(""); setPassword("");
             } else {
                 setError(data.error || "Incorrect email or password.");
@@ -158,6 +163,33 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
         setStudentsDB(updated);
     };
 
+    const saveHouseName = async () => {
+        if (!newName.trim() || newName.trim() === (captain.houseDisplayName || captain.house)) return;
+        setUpdating(true);
+        setError("");
+        try {
+            const res = await fetch(`${API_BASE}/api/captain-update-house-name`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("captainToken")}`
+                },
+                body: JSON.stringify({ houseId: captain.houseId, displayName: newName })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setCaptain({ ...captain, houseDisplayName: data.displayName });
+                alert("House name updated successfully!");
+            } else {
+                setError(data.error || "Failed to update name.");
+            }
+        } catch (err) {
+            setError("Connection failed.");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const cS = { background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 14, padding: isMobile ? 16 : 28, boxShadow: "0 4px 24px rgba(0,0,0,.08)" };
 
     if (!captain) return (
@@ -209,7 +241,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", opacity: .8 }}>{captain.role}</div>
                     <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 800 }}>{captain.name}</div>
-                    <div style={{ fontSize: isMobile ? 12 : 14, opacity: .85 }}>{captain.house} House</div>
+                    <div style={{ fontSize: isMobile ? 12 : 14, opacity: .85 }}>{captain.houseDisplayName || captain.house} House</div>
                 </div>
                 <button onClick={() => { localStorage.removeItem("captainToken"); setCaptain(null); setError(""); }} style={{ background: "rgba(255,255,255,.2)", color: "#fff", border: "2px solid rgba(255,255,255,.4)", borderRadius: 50, padding: "8px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>Logout</button>
             </div>
@@ -221,6 +253,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                 <button onClick={() => setActiveTab("Participation")} style={{ ...(activeTab === "Participation" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>⚽ PARTICIPATION</button>
                 <button onClick={() => setActiveTab("T-Shirt Issue")} style={{ ...(activeTab === "T-Shirt Issue" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>👕 T-SHIRT ISSUE</button>
                 <button onClick={() => setActiveTab("Staff")} style={{ ...(activeTab === "Staff" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>👨‍🏫 STAFF REGS</button>
+                <button onClick={() => setActiveTab("Settings")} style={{ ...(activeTab === "Settings" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>⚙️ SETTINGS</button>
             </div>
 
             <div style={{ marginBottom: 24 }} />
@@ -452,6 +485,36 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                             ))}
                         </div>
                     )}
+                </div>
+            )}
+            {activeTab === "Settings" && (
+                <div style={cS}>
+                    <h3 style={{ margin: "0 0 8px", fontSize: 18, color: dark ? "#fff" : "#222" }}>⚙️ House Settings</h3>
+                    <p style={{ fontSize: 13, color: dark ? "#aaa" : "#666", marginBottom: 20 }}>Customize how your house appears across the platform.</p>
+                    
+                    <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: dark ? "#ccc" : "#444", marginBottom: 8 }}>House Display Name</label>
+                        <div style={{ display: "flex", gap: 10 }}>
+                            <input 
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                placeholder="e.g. Red Dragons"
+                                style={{ flex: 1, padding: "12px 14px", borderRadius: 8, fontSize: 15, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#1a1a2e" : "#f8f8f8", color: dark ? "#fff" : "#333" }}
+                            />
+                            <button 
+                                onClick={saveHouseName}
+                                disabled={updating || !newName.trim() || newName.trim() === (captain.houseDisplayName || captain.house)}
+                                style={{ background: captain.houseColor, color: "#fff", border: "none", borderRadius: 8, padding: "0 24px", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (updating || !newName.trim() || newName.trim() === (captain.houseDisplayName || captain.house)) ? 0.5 : 1 }}
+                            >
+                                {updating ? "Saving..." : "Save Name"}
+                            </button>
+                        </div>
+                        <div style={{ fontSize: 11, color: dark ? "#666" : "#888", marginTop: 8 }}>
+                            💡 This will change your house name in standings, cards, and reports. The internal category (<strong>{captain.house}</strong>) will remain unchanged for admin records.
+                        </div>
+                    </div>
+
+                    {error && <div style={{ color: "#c00", fontSize: 13, marginTop: 10 }}>⚠️ {error}</div>}
                 </div>
             )}
         </div>

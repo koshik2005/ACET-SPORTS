@@ -818,14 +818,50 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
     res.json({
       success: true,
       token,
+      houseId: houseObj?.id,
       houseRole: loggedInRole,
       houseName: houseObj?.name || "House",
+      houseDisplayName: houseObj?.displayName || "",
       houseColor: houseObj?.color || "#8B0000",
       captainName: houseObj?.[loggedInRole]?.name || "Captain"
     });
   } else {
     console.log(`❌ Login failed for ${em}: No matching email/password found in any house.`);
     res.status(401).json({ success: false, error: "Invalid email or password." });
+  }
+});
+
+app.post("/api/captain-update-house-name", authenticateCaptainOrAdmin, async (req, res) => {
+  const { houseId, displayName } = req.body;
+  
+  if (!houseId || !displayName) {
+    return res.status(400).json({ error: "Missing houseId or displayName." });
+  }
+
+  // Security: Captain can only update THEIR own house
+  if (req.user.role === "captain" && req.user.house !== houseId) {
+    return res.status(403).json({ error: "Access Denied: You can only rename your own house." });
+  }
+
+  try {
+    const state = await loadDb();
+    const houseIndex = state.houses.findIndex(h => h.id === houseId);
+    
+    if (houseIndex === -1) {
+      return res.status(404).json({ error: "House not found." });
+    }
+
+    // Atomic update using findOneAndUpdate to avoid race conditions
+    const update = {};
+    update[`houses.${houseIndex}.displayName`] = displayName.trim();
+    
+    await State.findOneAndUpdate({}, { $set: update });
+    invalidateCache();
+
+    res.json({ success: true, displayName: displayName.trim() });
+  } catch (err) {
+    console.error("HOUSE RENAME ERROR:", err);
+    res.status(500).json({ error: "Failed to update house name.", details: err.message });
   }
 });
 

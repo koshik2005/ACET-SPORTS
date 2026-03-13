@@ -7,6 +7,10 @@ import { AdminPage } from "./AdminPage.jsx";
 import { CaptainPortal } from "./CaptainPortal.jsx";
 import { LaunchScreen } from "./LaunchScreen.jsx";
 
+const SYNC_DEBOUNCE_MS = 1000;
+const syncTimeouts = {};
+const pendingSyncs = new Set();
+
 export default function App() {
   const [active, setActive] = useState(() => {
     const path = window.location.pathname.toLowerCase();
@@ -52,6 +56,7 @@ export default function App() {
   const [maxGames, setMaxGames] = useState(1);
   const [maxAthletics, setMaxAthletics] = useState(1);
   const [memorial, setMemorial] = useState({ enabled: false, name: "", description: "", images: [] });
+  const [syncing, setSyncing] = useState(false);
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -73,38 +78,42 @@ export default function App() {
       })
       .then(data => {
         if (!data) return;
-        if (data.houses) setHouses(data.houses);
-        if (data.authorities) setAuthorities(data.authorities);
-        if (data.management) setManagement(data.management);
-        if (data.studentCommittee) setStudentCommittee(data.studentCommittee);
-        if (data.games) setGames(data.games);
-        if (data.gallery) setGallery(data.gallery);
-        if (data.registrations) setRegistrations(data.registrations);
-        if (data.pointLog) setPointLog(data.pointLog);
-        if (data.studentsDB) setStudentsDB(data.studentsDB);
-        if (data.adminLogs) setAdminLogs(data.adminLogs);
-        if (data.results) setResults(data.results);
-        if (data.memorial) setMemorial(data.memorial);
-        if (data.starPlayers) setStarPlayers(data.starPlayers);
+        const setIfReady = (key, setter) => {
+          if (!pendingSyncs.has(key)) setter(data[key]);
+        };
 
-        if (data.nav) setNav(data.nav);
-        if (data.sportGamesList) setSportGamesList(data.sportGamesList);
-        if (data.sportGamesListWomens) setSportGamesListWomens(data.sportGamesListWomens);
-        if (data.staffGamesList) setStaffGamesList(data.staffGamesList);
-        if (data.staffGamesListWomens) setStaffGamesListWomens(data.staffGamesListWomens);
-        if (data.athleticsList) setAthleticsList(data.athleticsList);
-        if (data.athleticsListWomens) setAthleticsListWomens(data.athleticsListWomens);
-        if (data.authorityRoles) setAuthorityRoles(data.authorityRoles);
-        if (data.managementRoles) setManagementRoles(data.managementRoles);
-        if (typeof data.registrationOpen === 'boolean') setRegistrationOpen(data.registrationOpen);
-        if (data.registrationCloseTime) setRegistrationCloseTime(data.registrationCloseTime);
-        if (data.eventDate) setEventDate(data.eventDate);
-        if (data.emptyGame) setEmptyGame(data.emptyGame);
-        if (data.closedEvents) setClosedEvents(data.closedEvents);
-        if (data.maxGames !== undefined) setMaxGames(data.maxGames);
-        if (data.maxAthletics !== undefined) setMaxAthletics(data.maxAthletics);
-        if (data.launchConfig) setLaunchConfig(data.launchConfig);
-        if (data.inaugurationDetails) setInaugurationDetails(data.inaugurationDetails);
+        if (data.houses) setIfReady("houses", setHouses);
+        if (data.authorities) setIfReady("authorities", setAuthorities);
+        if (data.management) setIfReady("management", setManagement);
+        if (data.studentCommittee) setIfReady("studentCommittee", setStudentCommittee);
+        if (data.games) setIfReady("games", setGames);
+        if (data.gallery) setIfReady("gallery", setGallery);
+        if (data.registrations) setIfReady("registrations", setRegistrations);
+        if (data.pointLog) setIfReady("pointLog", setPointLog);
+        if (data.studentsDB) setIfReady("studentsDB", setStudentsDB);
+        if (data.adminLogs) setIfReady("adminLogs", setAdminLogs);
+        if (data.results) setIfReady("results", setResults);
+        if (data.memorial) setIfReady("memorial", setMemorial);
+        if (data.starPlayers) setIfReady("starPlayers", setStarPlayers);
+
+        if (data.nav) setIfReady("nav", setNav);
+        if (data.sportGamesList) setIfReady("sportGamesList", setSportGamesList);
+        if (data.sportGamesListWomens) setIfReady("sportGamesListWomens", setSportGamesListWomens);
+        if (data.staffGamesList) setIfReady("staffGamesList", setStaffGamesList);
+        if (data.staffGamesListWomens) setIfReady("staffGamesListWomens", setStaffGamesListWomens);
+        if (data.athleticsList) setIfReady("athleticsList", setAthleticsList);
+        if (data.athleticsListWomens) setIfReady("athleticsListWomens", setAthleticsListWomens);
+        if (data.authorityRoles) setIfReady("authorityRoles", setAuthorityRoles);
+        if (data.managementRoles) setIfReady("managementRoles", setManagementRoles);
+        if (typeof data.registrationOpen === 'boolean') setIfReady("registrationOpen", setRegistrationOpen);
+        if (data.registrationCloseTime) setIfReady("registrationCloseTime", setRegistrationCloseTime);
+        if (data.eventDate) setIfReady("eventDate", setEventDate);
+        if (data.emptyGame) setIfReady("emptyGame", setEmptyGame);
+        if (data.closedEvents) setIfReady("closedEvents", setClosedEvents);
+        if (data.maxGames !== undefined) setIfReady("maxGames", setMaxGames);
+        if (data.maxAthletics !== undefined) setIfReady("maxAthletics", setMaxAthletics);
+        if (data.launchConfig) setIfReady("launchConfig", setLaunchConfig);
+        if (data.inaugurationDetails) setIfReady("inaugurationDetails", setInaugurationDetails);
 
         if (isInitial) setLoading(false);
       })
@@ -123,33 +132,44 @@ export default function App() {
     if (active === "Admin" || active === "Captain") {
       const interval = setInterval(() => {
         refreshState(false);
-      }, 10000); // refresh every 10 seconds
+      }, 30000); // refresh every 30 seconds
       return () => clearInterval(interval);
     }
   }, [active]);
 
   const sync = (type, data) => {
-    const adminToken = localStorage.getItem("adminToken");
-    const captainToken = localStorage.getItem("captainToken");
-    const token = adminToken || captainToken;
+    pendingSyncs.add(type);
+    setSyncing(true);
+    
+    if (syncTimeouts[type]) clearTimeout(syncTimeouts[type]);
 
-    fetch(`${API_BASE}/api/update-state`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { "Authorization": `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({ type, data })
-    }).then(res => {
-      if (!res.ok) {
-        res.json().then(data => {
-          console.error(`Sync failed for ${type}: ${data.error || res.statusText}`);
-          if (res.status === 401 || res.status === 403) {
-            console.error("Authentication/Permission error during sync.");
-          }
-        }).catch(() => console.error(`Sync failed for ${type} with status ${res.status}`));
-      }
-    }).catch(err => console.error(`Network error during Sync for ${type}:`, err));
+    syncTimeouts[type] = setTimeout(() => {
+      const adminToken = localStorage.getItem("adminToken");
+      const captainToken = localStorage.getItem("captainToken");
+      const token = adminToken || captainToken;
+
+      fetch(`${API_BASE}/api/update-state`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ type, data })
+      }).then(res => {
+        pendingSyncs.delete(type);
+        if (pendingSyncs.size === 0) setSyncing(false);
+
+        if (!res.ok) {
+          res.json().then(data => {
+            console.error(`Sync failed for ${type}: ${data.error || res.statusText}`);
+          }).catch(() => {});
+        }
+      }).catch(err => {
+        pendingSyncs.delete(type);
+        if (pendingSyncs.size === 0) setSyncing(false);
+        console.error(`Network error during Sync for ${type}:`, err);
+      });
+    }, SYNC_DEBOUNCE_MS);
   };
 
   const wrap = (setter, type) => (updater) => {
@@ -222,6 +242,16 @@ export default function App() {
         window.history.pushState({}, "", tab === "Home" ? "/" : `/${tab.toLowerCase()}`);
         setActive(tab);
       }} dark={dark} setDark={setDark} nav={nav.filter(n => n !== "Admin" && n !== "Captain")} games={games} />
+
+      {syncing && (
+        <div style={{ position: "fixed", top: 12, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,.8)", color: "#fff", padding: "6px 14px", borderRadius: 50, fontSize: 11, fontWeight: 700, zIndex: 9999, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 12px rgba(0,0,0,.2)" }}>
+          <span className="sync-spinner">⏳</span> SYNCING CHANGES...
+          <style>{`
+            .sync-spinner { animation: rotate 1s linear infinite; display: inline-block; }
+            @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          `}</style>
+        </div>
+      )}
 
       <main>
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} memorial={memorial} />}
