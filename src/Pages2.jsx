@@ -13,6 +13,8 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
     const [isVerifying, setIsVerifying] = useState(false);
     const [registered, setRegistered] = useState(null); // holds { student, hObj } after successful registration
     const [existingRegistration, setExistingRegistration] = useState(null);
+    const [lockedGames, setLockedGames] = useState([]);
+    const [lockedAthletics, setLockedAthletics] = useState([]);
     const [isPartial, setIsPartial] = useState(false);
     const [showQuery, setShowQuery] = useState(false);
     const [queryData, setQueryData] = useState({ issueType: "Name Spelling", details: "" });
@@ -23,7 +25,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
     const hObj = houses.find(h => h.name === student?.house);
 
     const lookup = async () => {
-        setError(""); setGameSel([]); setAthleticSel([]); setOtpSent(false); setIsOtpVerified(false); setOtp(""); setExistingRegistration(null);
+        setError(""); setGameSel([]); setAthleticSel([]); setLockedGames([]); setLockedAthletics([]); setOtpSent(false); setIsOtpVerified(false); setOtp(""); setExistingRegistration(null); setIsPartial(false);
         if (!input.trim()) return;
 
         setIsVerifying(true);
@@ -36,8 +38,16 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                 if (data.student.alreadyRegistered) {
                     setExistingRegistration(data.student.existingRegistration);
                     // Pre-fill existing selections only if they are valid
-                    if (data.student.hasGame) setGameSel(data.student.existingRegistration.game.split(", "));
-                    if (data.student.hasAthletic) setAthleticSel(data.student.existingRegistration.athletic.split(", "));
+                    if (data.student.hasGame) {
+                        const gs = data.student.existingRegistration.game.split(", ");
+                        setGameSel(gs);
+                        setLockedGames(gs);
+                    }
+                    if (data.student.hasAthletic) {
+                        const as = data.student.existingRegistration.athletic.split(", ");
+                        setAthleticSel(as);
+                        setLockedAthletics(as);
+                    }
                 }
             } else {
                 setError(data.error || "Student not found. Check your email or register number.");
@@ -110,7 +120,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                     setRegistrations(p => [...p.filter(r => r.email !== student.email), data.registration]);
                 }
                 setRegistered({ student, hObj });
-                setStudent(null); setInput(""); setGameSel([]); setAthleticSel([]); setError(""); setIsOtpVerified(false); setOtpSent(false); setExistingRegistration(null); setIsPartial(false);
+                setStudent(null); setInput(""); setGameSel([]); setAthleticSel([]); setLockedGames([]); setLockedAthletics([]); setError(""); setIsOtpVerified(false); setOtpSent(false); setExistingRegistration(null); setIsPartial(false);
             } else {
                 setError(data.error || "Registration failed.");
             }
@@ -285,7 +295,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                             <div style={{ background: dark ? tint(hObj?.color || "#888888") : `rgba(${parseInt((hObj?.color || "#888888").slice(1, 3), 16)},${parseInt((hObj?.color || "#888888").slice(3, 5), 16)},${parseInt((hObj?.color || "#888888").slice(5, 7), 16)},.08)`, border: `2px solid ${hObj?.color || "#888"}`, borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
                                 <div style={{ width: 42, height: 42, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{hi(student.house)}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
-                                <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
+                                <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); setLockedGames([]); setLockedAthletics([]); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
                             </div>
 
                             {!isOtpVerified ? (
@@ -336,24 +346,26 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                                 ((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? staffGamesListWomens : staffGamesList).map(g => {
                                                     const isClosed = closedEvents?.includes(g);
                                                     const isSelected = gameSel.includes(g);
+                                                    const isLocked = lockedGames.includes(g);
                                                     return (
-                                                        <button key={g} disabled={isClosed} onClick={() => {
+                                                        <button key={g} disabled={isClosed || isLocked} onClick={() => {
                                                             if (isSelected) setGameSel(gameSel.filter(x => x !== g));
                                                             else if (gameSel.length < maxGames) setGameSel([...gameSel, g]);
                                                             else alert(`You can only select up to ${maxGames} team games.`);
-                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: isClosed ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"}</button>
+                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"} {isLocked && "🔒"}</button>
                                                     );
                                                 })
                                             ) : (
                                                 ((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? sportGamesListWomens : sportGamesList).map(g => {
                                                     const isClosed = closedEvents?.includes(g);
                                                     const isSelected = gameSel.includes(g);
+                                                    const isLocked = lockedGames.includes(g);
                                                     return (
-                                                        <button key={g} disabled={isClosed} onClick={() => {
+                                                        <button key={g} disabled={isClosed || isLocked} onClick={() => {
                                                             if (isSelected) setGameSel(gameSel.filter(x => x !== g));
                                                             else if (gameSel.length < maxGames) setGameSel([...gameSel, g]);
                                                             else alert(`You can only select up to ${maxGames} team games.`);
-                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: isClosed ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"}</button>
+                                                        }} style={{ background: isSelected ? "#8B0000" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#8B0000" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{g} {isClosed && "(Closed)"} {isLocked && "🔒"}</button>
                                                     );
                                                 })
                                             )}
@@ -368,13 +380,13 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                                 {((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? athleticsListWomens : athleticsList).map(a => {
                                                     const isClosed = closedEvents?.includes(a);
-                                                    const isSelected = athleticSel.includes(a);
+                                                    const isLocked = lockedAthletics.includes(a);
                                                     return (
-                                                        <button key={a} disabled={isClosed} onClick={() => {
+                                                        <button key={a} disabled={isClosed || isLocked} onClick={() => {
                                                             if (isSelected) setAthleticSel(athleticSel.filter(x => x !== a));
                                                             else if (athleticSel.length < maxAthletics) setAthleticSel([...athleticSel, a]);
                                                             else alert(`You can only select up to ${maxAthletics} athletic events.`);
-                                                        }} style={{ background: isSelected ? "#4B0082" : (isClosed ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: isClosed ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{a} {isClosed && "(Closed)"}</button>
+                                                        }} style={{ background: isSelected ? "#4B0082" : (isClosed || isLocked ? (dark ? "#333" : "#eee") : "transparent"), color: isSelected ? "#fff" : (isClosed || isLocked ? (dark ? "#777" : "#aaa") : (dark ? "#aaa" : "#555")), border: `1px solid ${isSelected ? "#4B0082" : dark ? "#444" : "#ddd"}`, borderRadius: 50, padding: "8px 16px", cursor: (isClosed || isLocked) ? "not-allowed" : "pointer", fontSize: 13, transition: "all .2s", textDecoration: isClosed ? "line-through" : "none" }}>{a} {isClosed && "(Closed)"} {isLocked && "🔒"}</button>
                                                     );
                                                 })}
                                             </div>
