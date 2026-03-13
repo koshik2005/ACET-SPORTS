@@ -487,13 +487,18 @@ export function AdminPage({
 
     const exportAdminExcel = () => {
         const filtered = registrations.filter(r => {
-            if (exportType === "All") return true;
+            if (exportType === "All") {
+                // For "All" we might want to skip cleared ones too if they have NO events
+                const hasG = r.game && !["None", "—", ""].includes(r.game);
+                const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
+                return hasG || hasA;
+            }
             if (exportType === "Game") {
-                if (!r.game) return false;                          // must have a game
+                if (!r.game || ["None", "—", ""].includes(r.game)) return false; 
                 return exportVal === "All" || r.game === exportVal;
             }
             if (exportType === "Athletic") {
-                if (!r.athletic) return false;                      // must have an athletic event
+                if (!r.athletic || ["None", "—", ""].includes(r.athletic)) return false;
                 return exportVal === "All" || r.athletic === exportVal;
             }
             return true;
@@ -732,7 +737,12 @@ export function AdminPage({
                 const g = (s.gender || "").trim().toLowerCase();
                 const isMen = genderName === "Men" && (g === "male" || g === "m");
                 const isWomen = genderName === "Women" && (g === "female" || g === "f");
-                return s && (isMen || isWomen);
+                
+                const hasG = r.game && !["None", "—", ""].includes(r.game);
+                const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
+                const hasEvent = hasG || hasA;
+
+                return s && (isMen || isWomen) && hasEvent;
             }).map((r, i) => new TableRow({
                 children: [
                     new TableCell({ children: [new Paragraph(String(i + 1))] }),
@@ -1435,16 +1445,26 @@ export function AdminPage({
                 tab === "Registrations" && (
                     <div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-                            <div><h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>📝 Registrations</h3><div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{registrations.length} total entries</div></div>
+                            {(() => {
+                                const validRegs = registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic)));
+                                return (
+                                    <div>
+                                        <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>📝 Registrations</h3>
+                                        <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{validRegs.length} active entries ({registrations.length} raw)</div>
+                                    </div>
+                                );
+                            })()}
                         </div>
-                        {registrations.length === 0 ? <div style={{ padding: 20, color: dark ? "#666" : "#aaa", textAlign: "center", background: dark ? "rgba(255,255,255,.02)" : "#f9f9f9", borderRadius: 12, border: `1px solid ${dark ? "#333" : "#eee"}`, fontSize: 13 }}>No registrations found.</div> : (
-                            <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                                    <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                        {["Name", "Reg No", "House", "Game", "Athletic", "Approve"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
-                                    </tr></thead>
-                                    <tbody>
-                                        {registrations.slice(0, 100).map((r, i) => (
+                        {(() => {
+                            const validRegs = registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic)));
+                            return validRegs.length === 0 ? <div style={{ padding: 20, color: dark ? "#666" : "#aaa", textAlign: "center", background: dark ? "rgba(255,255,255,.02)" : "#f9f9f9", borderRadius: 12, border: `1px solid ${dark ? "#333" : "#eee"}`, fontSize: 13 }}>No active registrations found.</div> : (
+                                <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                        <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
+                                            {["Name", "Reg No", "House", "Game", "Athletic", "Approve"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                        </tr></thead>
+                                        <tbody>
+                                            {validRegs.slice(0, 100).map((r, i) => (
                                             <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
                                                 <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{r.name}</td>
                                                 <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.regNo}</td>
@@ -1458,9 +1478,9 @@ export function AdminPage({
                                         ))}
                                     </tbody>
                                 </table>
-                                {registrations.length > 100 && <div style={{ textAlign: "center", padding: 12, color: "#888", fontSize: 12 }}>Showing first 100 entries. Export for full list.</div>}
+                                {validRegs.length > 100 && <div style={{ textAlign: "center", padding: 12, color: "#888", fontSize: 12 }}>Showing first 100 entries. Export for full list.</div>}
                             </div>
-                        )}
+                        )()})}
                     </div>
                 )
             }
@@ -2192,7 +2212,9 @@ export function AdminPage({
                                 <button onClick={() => {
                                     const staffRegs = registrations.filter(r => {
                                         const dbStaff = studentsDB.find(s => s.regNo === r.regNo);
-                                        return dbStaff?.role === "Staff";
+                                        const hasG = r.game && !["None", "—", ""].includes(r.game);
+                                        const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
+                                        return dbStaff?.role === "Staff" && (hasG || hasA);
                                     });
                                     if (staffRegs.length === 0) return alert("No staff registrations found.");
 

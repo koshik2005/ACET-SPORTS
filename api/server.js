@@ -536,8 +536,16 @@ app.get("/api/lookup-student", lookupLimiter, async (req, res) => {
       dept: student.dept,
       gender: student.gender,
       role: student.role,
-      alreadyRegistered: !!registration,
-      isPartial: registration ? (!registration.game || !registration.athletic) : false,
+      hasGame: !!(registration?.game && !["None", "—", ""].includes(registration.game)),
+      hasAthletic: !!(registration?.athletic && !["None", "—", ""].includes(registration.athletic)),
+      alreadyRegistered: !!(
+        (registration?.game && !["None", "—", ""].includes(registration.game)) || 
+        (registration?.athletic && !["None", "—", ""].includes(registration.athletic))
+      ),
+      isPartial: !!registration && (
+        (!registration.game || ["None", "—", ""].includes(registration.game)) !== 
+        (!registration.athletic || ["None", "—", ""].includes(registration.athletic))
+      ),
       existingRegistration: registration || null
     }
   });

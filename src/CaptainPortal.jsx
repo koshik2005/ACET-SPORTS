@@ -67,6 +67,12 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
             const student = studentsDB.find(s => s.regNo === r.regNo);
             if (!student || student.role === "Staff") return false;
             if ((r.house || "").toLowerCase() !== captain.house.toLowerCase()) return false;
+            
+            // Filter out cleared registrations
+            const hasGame = r.game && !["None", "—", ""].includes(r.game);
+            const hasAthletic = r.athletic && !["None", "—", ""].includes(r.athletic);
+            if (!hasGame && !hasAthletic) return false;
+
             // gender filter
             const g = (student.gender || "").toLowerCase();
             return captainIsMale ? (g === "male" || g === "m") : (g === "female" || g === "f");
@@ -83,6 +89,9 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
         : [];
 
     const staffRegs = registrations.filter(r => {
+        const hasGame = r.game && !["None", "—", ""].includes(r.game);
+        const hasAthletic = r.athletic && !["None", "—", ""].includes(r.athletic);
+        if (!hasGame && !hasAthletic) return false;
         return studentsDB.find(s => s.regNo === r.regNo)?.role === "Staff";
     });
 
@@ -236,7 +245,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                         <div style={cS}>
                             <h4 style={{ margin: "0 0 16px", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 20 }}>🎮</span> Game Breakdown</h4>
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                {Array.from(new Set(houseRegs.filter(r => r.game).map(r => r.game))).map(g => (
+                                {Array.from(new Set(houseRegs.filter(r => r.game && !["None", "—"].includes(r.game)).map(r => r.game))).map(g => (
                                     <div key={g} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                                         <span style={{ fontWeight: 600, color: dark ? "#ccc" : "#444" }}>{g}</span>
                                         <span style={{ fontWeight: 800, color: "#8B0000" }}>{houseRegs.filter(r => r.game === g).length}</span>
@@ -247,7 +256,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                         <div style={cS}>
                             <h4 style={{ margin: "0 0 16px", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 20 }}>🏃</span> Athletics Breakdown</h4>
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                {Array.from(new Set(houseRegs.filter(r => r.athletic).map(r => r.athletic))).map(a => (
+                                {Array.from(new Set(houseRegs.filter(r => r.athletic && !["None", "—"].includes(r.athletic)).map(r => r.athletic))).map(a => (
                                     <div key={a} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                                         <span style={{ fontWeight: 600, color: dark ? "#ccc" : "#444" }}>{a}</span>
                                         <span style={{ fontWeight: 800, color: "#4B0082" }}>{houseRegs.filter(r => r.athletic === a).length}</span>

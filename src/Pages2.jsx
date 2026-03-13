@@ -35,9 +35,9 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                 setIsPartial(data.student.isPartial);
                 if (data.student.alreadyRegistered) {
                     setExistingRegistration(data.student.existingRegistration);
-                    // Pre-fill existing selections
-                    if (data.student.existingRegistration.game) setGameSel(data.student.existingRegistration.game.split(", "));
-                    if (data.student.existingRegistration.athletic) setAthleticSel(data.student.existingRegistration.athletic.split(", "));
+                    // Pre-fill existing selections only if they are valid
+                    if (data.student.hasGame) setGameSel(data.student.existingRegistration.game.split(", "));
+                    if (data.student.hasAthletic) setAthleticSel(data.student.existingRegistration.athletic.split(", "));
                 }
             } else {
                 setError(data.error || "Student not found. Check your email or register number.");
@@ -324,9 +324,9 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                         </div>
                                     </div>
 
-                                    {existingRegistration && isPartial && (
+                                    {existingRegistration && isPartial && (student.hasGame || student.hasAthletic) && (
                                         <div style={{ padding: "8px 12px", background: "#FFD70022", border: "1px solid #FFD70055", borderRadius: 8, fontSize: 11, color: dark ? "#ffd700" : "#856404", marginBottom: 16, textAlign: "center", fontWeight: 700 }}>
-                                            ⚠️ You have already registered for {existingRegistration.game ? "a Game" : "an Athletic Event"}. You can now add your missing selection.
+                                            ⚠️ You have already registered for {student.hasGame ? "a Game" : "an Athletic Event"}. You can now add your missing selection.
                                         </div>
                                     )}
                                     <div style={{ marginBottom: 20 }}>

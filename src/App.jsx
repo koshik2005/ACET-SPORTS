@@ -54,7 +54,7 @@ export default function App() {
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-  useEffect(() => {
+  const refreshState = (isInitial = false) => {
     const adminToken = localStorage.getItem("adminToken");
     const captainToken = localStorage.getItem("captainToken");
     const token = adminToken || captainToken;
@@ -64,7 +64,6 @@ export default function App() {
     fetch(`${API_BASE}${fetchPath}`, { headers })
       .then(res => {
         if (!res.ok && token) {
-          // If secure fetch fails (expired token), fallback to public
           localStorage.removeItem("adminToken");
           localStorage.removeItem("captainToken");
           return fetch(`${API_BASE}/api/public-state`).then(r => r.json());
@@ -86,7 +85,6 @@ export default function App() {
         if (data.results) setResults(data.results);
         if (data.starPlayers) setStarPlayers(data.starPlayers);
 
-        // Set config
         if (data.nav) setNav(data.nav);
         if (data.sportGamesList) setSportGamesList(data.sportGamesList);
         if (data.sportGamesListWomens) setSportGamesListWomens(data.sportGamesListWomens);
@@ -106,13 +104,27 @@ export default function App() {
         if (data.launchConfig) setLaunchConfig(data.launchConfig);
         if (data.inaugurationDetails) setInaugurationDetails(data.inaugurationDetails);
 
-        setLoading(false);
+        if (isInitial) setLoading(false);
       })
       .catch(err => {
         console.error("Failed to fetch state:", err);
-        setLoading(false);
+        if (isInitial) setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    refreshState(true);
   }, []);
+
+  // Polling for Admin and Captain portals
+  useEffect(() => {
+    if (active === "Admin" || active === "Captain") {
+      const interval = setInterval(() => {
+        refreshState(false);
+      }, 10000); // refresh every 10 seconds
+      return () => clearInterval(interval);
+    }
+  }, [active]);
 
   const sync = (type, data) => {
     const adminToken = localStorage.getItem("adminToken");
