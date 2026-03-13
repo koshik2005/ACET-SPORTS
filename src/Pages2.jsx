@@ -380,6 +380,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                                 {((student.gender?.toLowerCase() === "female" || student.gender?.toLowerCase() === "f") ? athleticsListWomens : athleticsList).map(a => {
                                                     const isClosed = closedEvents?.includes(a);
+                                                    const isSelected = athleticSel.includes(a);
                                                     const isLocked = lockedAthletics.includes(a);
                                                     return (
                                                         <button key={a} disabled={isClosed || isLocked} onClick={() => {
