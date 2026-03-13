@@ -155,12 +155,47 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
         XLSX.writeFile(wb, `${captain.house}_TShirt_${type}_List.xlsx`);
     };
 
-    const toggleShirtIssued = (regNo) => {
-        const updated = studentsDB.map(s => {
-            if (s.regNo === regNo) return { ...s, shirtIssued: !s.shirtIssued };
-            return s;
-        });
+    const toggleShirtIssued = async (regNo) => {
+        // Optimistic UI update
+        const studentIndex = studentsDB.findIndex(s => s.regNo === regNo);
+        if (studentIndex === -1) return;
+        
+        const currentStatus = studentsDB[studentIndex].shirtIssued;
+        const newStatus = !currentStatus;
+
+        const updated = [...studentsDB];
+        updated[studentIndex] = { ...updated[studentIndex], shirtIssued: newStatus };
+        
+        // Update local state ONLY (do not trigger global sync)
         setStudentsDB(updated);
+
+        // Send restricted atomic update to backend
+        try {
+            const res = await fetch(`${API_BASE}/api/captain-toggle-tshirt`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("captainToken")}`
+                },
+                body: JSON.stringify({ regNo, shirtIssued: newStatus })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                console.error("Failed to sync t-shirt status:", data.error);
+                // Revert on failure
+                const revert = [...studentsDB];
+                revert[studentIndex] = { ...revert[studentIndex], shirtIssued: currentStatus };
+                setStudentsDB(revert);
+                alert(`Failed to update status: ${data.error}`);
+            }
+        } catch (err) {
+            console.error("Network error syncing t-shirt status:", err);
+            // Revert on failure
+            const revert = [...studentsDB];
+            revert[studentIndex] = { ...revert[studentIndex], shirtIssued: currentStatus };
+            setStudentsDB(revert);
+            alert("Network error while syncing status.");
+        }
     };
 
     const saveHouseName = async () => {

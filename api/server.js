@@ -406,9 +406,10 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
       return res.status(400).json({ error: `Unauthorized update type: ${type}` });
     }
 
-    // Authorization Check: Captains can ONLY update studentsDB
-    if (req.user.role === "captain" && type !== "studentsDB") {
-      return res.status(403).json({ error: "Captains can only update T-shirt issuance." });
+    // Authorization Check: Captains can no longer use this endpoint bulk update. 
+    // They must use the specific /api/captain-toggle-tshirt endpoint.
+    if (req.user.role === "captain") {
+      return res.status(403).json({ error: "Captains cannot use the bulk update API. Please use the specific endpoints." });
     }
 
     // Prepare update payload
@@ -862,6 +863,42 @@ app.post("/api/captain-update-house-name", authenticateCaptainOrAdmin, async (re
   } catch (err) {
     console.error("HOUSE RENAME ERROR:", err);
     res.status(500).json({ error: "Failed to update house name.", details: err.message });
+  }
+});
+
+app.post("/api/captain-toggle-tshirt", authenticateCaptainOrAdmin, async (req, res) => {
+  const { regNo, shirtIssued } = req.body;
+
+  if (!regNo || typeof shirtIssued !== "boolean") {
+    return res.status(400).json({ error: "Missing regNo or invalid shirtIssued status." });
+  }
+
+  try {
+    const state = await loadDb();
+    const studentIndex = state.studentsDB.findIndex(s => s.regNo === regNo);
+
+    if (studentIndex === -1) {
+      return res.status(404).json({ error: "Student not found." });
+    }
+
+    const student = state.studentsDB[studentIndex];
+
+    // Security: Captains can only update students within THEIR own house.
+    if (req.user.role === "captain" && req.user.house && student.house !== req.user.house) {
+      return res.status(403).json({ error: "Access Denied: You can only update T-shirts for students in your own house." });
+    }
+
+    // Atomic update using findOneAndUpdate to target ONLY the specific student's shirtIssued field
+    const update = {};
+    update[`studentsDB.${studentIndex}.shirtIssued`] = shirtIssued;
+
+    await State.findOneAndUpdate({}, { $set: update });
+    invalidateCache();
+
+    res.json({ success: true, regNo, shirtIssued });
+  } catch (err) {
+    console.error("T-SHIRT TOGGLE ERROR:", err);
+    res.status(500).json({ error: "Failed to update T-shirt status.", details: err.message });
   }
 });
 
