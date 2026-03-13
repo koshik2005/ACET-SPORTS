@@ -1480,7 +1480,7 @@ export function AdminPage({
                                 </table>
                                 {validRegs.length > 100 && <div style={{ textAlign: "center", padding: 12, color: "#888", fontSize: 12 }}>Showing first 100 entries. Export for full list.</div>}
                             </div>
-                        )()})}
+                        )})()}
                     </div>
                 )
             }
