@@ -89,10 +89,16 @@ const SecurityLogger = {
 
 
 // Rate Limiters - tightened for abuse protection
+// keyGenerator explicitly normalises IPv4-mapped IPv6 so ::ffff:1.2.3.4 and
+// 1.2.3.4 always hit the same bucket (fixes GHSA-46wh-pxpv-q5gq).
+const normaliseIp = (ip = "") => ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 300, // Reduced from 1000 for strict abuse protection
-  validate: { trustProxy: false, xForwardedForHeader: false },
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => normaliseIp(req.ip),
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "global", ip: req.ip, path: req.path });
     res.status(429).json({ error: "Too many requests from this IP, please try again after 15 minutes" });
@@ -101,8 +107,10 @@ const globalLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, // Reduced from 50 to prevent brute force
-  validate: { trustProxy: false, xForwardedForHeader: false },
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => normaliseIp(req.ip),
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "login", ip: req.ip, path: req.path, email: req.body.email });
     res.status(429).json({ error: "Too many login attempts, please try again later" });
@@ -119,8 +127,10 @@ app.use((req, res, next) => {
 
 const submitLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, // Max 10 queries per IP per 15m
-  validate: { trustProxy: false, xForwardedForHeader: false },
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => normaliseIp(req.ip),
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "submit", ip: req.ip, path: req.path });
     res.status(429).json({ error: "Too many query submissions. Please try again later." });
@@ -129,8 +139,10 @@ const submitLimiter = rateLimit({
 
 const otpVerifyLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 15, // Max 15 OTP verifications or registrations per 5m
-  validate: { trustProxy: false, xForwardedForHeader: false },
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => normaliseIp(req.ip),
   handler: (req, res) => {
     SecurityLogger.log("RATE_LIMIT_HIT", { type: "otpVerify", ip: req.ip, path: req.path, email: req.body.email });
     res.status(429).json({ error: "Too many OTP attempts." });
