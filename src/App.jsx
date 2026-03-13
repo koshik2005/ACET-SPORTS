@@ -51,6 +51,7 @@ export default function App() {
   const [closedEvents, setClosedEvents] = useState([]);
   const [maxGames, setMaxGames] = useState(1);
   const [maxAthletics, setMaxAthletics] = useState(1);
+  const [memorial, setMemorial] = useState({ enabled: false, name: "", description: "", images: [] });
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -83,6 +84,7 @@ export default function App() {
         if (data.studentsDB) setStudentsDB(data.studentsDB);
         if (data.adminLogs) setAdminLogs(data.adminLogs);
         if (data.results) setResults(data.results);
+        if (data.memorial) setMemorial(data.memorial);
         if (data.starPlayers) setStarPlayers(data.starPlayers);
 
         if (data.nav) setNav(data.nav);
@@ -187,6 +189,7 @@ export default function App() {
   const setMaxAthleticsSync = wrap(setMaxAthletics, "maxAthletics");
   const setLaunchConfigSync = wrap(setLaunchConfig, "launchConfig");
   const setInaugurationDetailsSync = wrap(setInaugurationDetails, "inaugurationDetails");
+  const setMemorialSync = wrap(setMemorial, "memorial");
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f0f1a" : "#f4f4f8", color: dark ? "#fff" : "#8B0000", fontSize: 24, fontWeight: 800 }}>⚡ Loading Achariya Sports...</div>;
 
@@ -221,7 +224,7 @@ export default function App() {
       }} dark={dark} setDark={setDark} nav={nav.filter(n => n !== "Admin" && n !== "Captain")} games={games} />
 
       <main>
-        {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} />}
+        {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} memorial={memorial} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
         {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
         {active === "Registration" && <RegistrationPage dark={dark} setRegistrations={setRegistrationsSync} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} closedEvents={closedEvents} maxGames={maxGames} maxAthletics={maxAthletics} />}
@@ -247,7 +250,8 @@ export default function App() {
           sportGamesListWomens={sportGamesListWomens} setSportGamesListWomens={setSportGamesListWomensSync}
           staffGamesList={staffGamesList} setStaffGamesList={setStaffGamesListSync}
           staffGamesListWomens={staffGamesListWomens} setStaffGamesListWomens={setStaffGamesListWomensSync}
-          athleticsList={athleticsList} setAthleticsList={setAthleticsListSync}
+           athleticsList={athleticsList} setAthleticsList={setAthleticsListSync}
+          memorial={memorial} setMemorial={setMemorialSync}
           athleticsListWomens={athleticsListWomens} setAthleticsListWomens={setAthleticsListWomensSync}
           authorityRoles={authorityRoles} setAuthorityRoles={setAuthorityRolesSync}
           managementRoles={managementRoles} setManagementRoles={setManagementRolesSync}

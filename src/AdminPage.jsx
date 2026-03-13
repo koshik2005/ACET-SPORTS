@@ -40,7 +40,8 @@ export function AdminPage({
     maxAthletics, setMaxAthletics,
     adminLogs, setAdminLogs,
     launchConfig, setLaunchConfig,
-    inaugurationDetails, setInaugurationDetails
+    inaugurationDetails, setInaugurationDetails,
+    memorial, setMemorial
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -69,6 +70,9 @@ export function AdminPage({
     const [galForm, setGalForm] = useState({ category: "current", label: "" });
     const [galFiles, setGalFiles] = useState([]); // Array of { src, name, id }
     const [galUploading, setGalUploading] = useState(false);
+    const [memFiles, setMemFiles] = useState([]);
+    const [memUploading, setMemUploading] = useState(false);
+    const memorialInputRef = useRef();
     const [authModal, setAuthModal] = useState(null);
     const [authForm, setAuthForm] = useState(EMPTY_AUTH);
     const [xlPreview, setXlPreview] = useState(null); // parsed rows before confirm
@@ -104,7 +108,7 @@ export function AdminPage({
     const [starPlayerForm, setStarPlayerForm] = useState({ name: "", dept: "", year: "", game: "", house: "", img: null });
     const [spUploading, setSpUploading] = useState(false);
 
-    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Settings", "Exports", "Config", "Resolver"];
+    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Memorial", "Settings", "Exports", "Config", "Resolver"];
     const [studentSearch, setStudentSearch] = useState("");
     const [editingRegNo, setEditingRegNo] = useState(null);
     const [editStudentForm, setEditStudentForm] = useState({});
@@ -2071,6 +2075,114 @@ export function AdminPage({
                                 </tbody>
                             </table>
                             {studentsDB.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#888" }}>No students in database</div>}
+                        </div>
+                    </div>
+                )
+            }
+            {
+                tab === "Memorial" && (
+                    <div>
+                        <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>🕯️ In-Memoriam Management</h3>
+                        <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginBottom: 14 }}>Honor deceased staff members on the home page</div>
+                        
+                        <div style={{ ...cS, marginBottom: 18 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                                <div>
+                                    <h4 style={{ color: dark ? "#ccc" : "#444", margin: 0, fontSize: 16 }}>Enable Memorial Section</h4>
+                                    <p style={{ margin: "4px 0 0", fontSize: 12, color: dark ? "#888" : "#666" }}>Show or hide the memorial section on the homepage</p>
+                                </div>
+                                <div onClick={() => setMemorial({ ...memorial, enabled: !memorial.enabled })} style={{ width: 50, height: 26, background: memorial.enabled ? "#2E8B57" : (dark ? "#444" : "#ccc"), borderRadius: 20, position: "relative", cursor: "pointer", transition: "background .3s" }}>
+                                    <div style={{ position: "absolute", top: 3, left: memorial.enabled ? 27 : 3, width: 20, height: 20, background: "#fff", borderRadius: "50%", transition: "left .3s", boxShadow: "0 2px 4px rgba(0,0,0,.2)" }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 15, marginBottom: 10 }}>
+                                <div>
+                                    <label style={lS}>Staff Name</label>
+                                    <input value={memorial?.name || ""} onChange={e => setMemorial({ ...memorial, name: e.target.value })} placeholder="e.g. Late Mr. Monte" style={iS} />
+                                </div>
+                                <div>
+                                    <label style={lS}>Description / Tribute Message</label>
+                                    <textarea value={memorial?.description || ""} onChange={e => setMemorial({ ...memorial, description: e.target.value })} placeholder="A heartful tribute message..." style={{ ...iS, minHeight: 100, fontFamily: "inherit" }} />
+                                </div>
+                            </div>
+
+                            <h4 style={{ color: dark ? "#ccc" : "#444", margin: "16px 0 12px", fontSize: 14 }}>Tribute Images</h4>
+                            <input type="file" multiple accept="image/*" ref={memorialInputRef} style={{ display: "none" }} onChange={e => {
+                                const files = Array.from(e.target.files);
+                                if (files.length === 0) return;
+                                files.forEach(file => {
+                                    const reader = new FileReader();
+                                    reader.onload = ev => {
+                                        setMemFiles(prev => [...prev, { src: ev.target.result, name: file.name, id: Math.random().toString(36).substr(2, 9) }]);
+                                    };
+                                    reader.readAsDataURL(file);
+                                });
+                                e.target.value = "";
+                            }} />
+
+                            {memFiles.length > 0 && (
+                                <div style={{ marginBottom: 15 }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 8, marginBottom: 10, maxHeight: 200, overflowY: "auto", padding: 5 }}>
+                                        {memFiles.map((f, i) => (
+                                            <div key={f.id} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#eee"}` }}>
+                                                <img src={f.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                {!memUploading && <button onClick={() => setMemFiles(prev => prev.filter(x => x.id !== f.id))} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display: "flex", gap: 10 }}>
+                                        <button 
+                                            onClick={async () => {
+                                                setMemUploading(true);
+                                                const token = localStorage.getItem("adminToken");
+                                                const newImgs = [];
+                                                for(let f of memFiles) {
+                                                    try {
+                                                        const res = await fetch(`${API_BASE}/api/upload-image`, {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                                                            body: JSON.stringify({ data: f.src })
+                                                        });
+                                                        const d = await res.json();
+                                                        if(d.success) newImgs.push({ src: d.url, id: Date.now() + Math.random() });
+                                                    } catch(err) { console.error(err); }
+                                                }
+                                                setMemorial({ ...memorial, images: [...(memorial.images || []), ...newImgs] });
+                                                setMemFiles([]);
+                                                setMemUploading(false);
+                                            }} 
+                                            disabled={memUploading}
+                                            style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: memUploading ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 14 }}
+                                        >
+                                            {memUploading ? "Uploading..." : `Upload ${memFiles.length} Tribute Images`}
+                                        </button>
+                                        <button onClick={() => setMemFiles([])} style={{ background: "transparent", color: "#888", border: "1px solid #ddd", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 14 }}>Cancel</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!memFiles.length && (
+                                <div onClick={() => memorialInputRef.current?.click()} style={{ border: `2px dashed ${dark ? "#444" : "#ccc"}`, borderRadius: 10, padding: 30, textAlign: "center", cursor: "pointer", background: dark ? "rgba(255,255,255,.02)" : "#fafafa", marginBottom: 15 }}>
+                                    <div style={{ fontSize: 32, marginBottom: 8 }}>🖼️</div>
+                                    <div style={{ color: dark ? "#888" : "#aaa", fontSize: 14, fontWeight: 600 }}>Tap to add tribute images</div>
+                                    <div style={{ color: dark ? "#666" : "#bbb", fontSize: 11, marginTop: 4 }}>These will be displayed in an elegant slideshow</div>
+                                </div>
+                            )}
+
+                            {memorial?.images?.length > 0 && (
+                                <>
+                                    <h5 style={{ margin: "20px 0 12px", color: dark ? "#aaa" : "#888", fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 800 }}>Live Tribute Gallery</h5>
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 12 }}>
+                                        {memorial.images.map((img, idx) => (
+                                            <div key={img.id || idx} style={{ position: "relative", aspectRatio: "1", borderRadius: 12, overflow: "hidden", border: `1px solid ${dark ? "#333" : "#eee"}`, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+                                                <img src={img.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                <button onClick={() => setMemorial({ ...memorial, images: memorial.images.filter((_, i) => i !== idx) })} style={{ position: "absolute", top: 5, right: 5, background: "rgba(200,0,0,0.9)", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.3)" }}>✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )

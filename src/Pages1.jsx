@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIsMobile, hi, tint, Count, Confetti, Avatar, Sheet } from "./utils.jsx";
 
-export function HomePage({ dark, houses, authorities, management = [], studentCommittee = [], games, gallery, eventDate }) {
+export function HomePage({ dark, houses, authorities, management = [], studentCommittee = [], games, gallery, eventDate, memorial }) {
     const [confetti, setConfetti] = useState(false);
     const isMobile = useIsMobile();
     const sortedH = [...houses].sort((a, b) => b.points - a.points);
@@ -82,32 +82,37 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         </div>
                     ))}
                 </div>
-                {management.length > 0 && (
-                    <>
-                        <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>🏛️ Management Authority</h2>
-                        {(() => {
-                            const sorted = [...management].sort((a, b) => a.priority - b.priority);
-                            const isOdd = sorted.length % 2 !== 0;
-                            return (
+                {(() => {
+                    const sortedMan = [...management].sort((a, b) => a.priority - b.priority);
+                    const topMan = sortedMan.filter(a => a.priority <= 2);
+                    const otherMan = sortedMan.filter(a => a.priority > 2);
+                    const sortedAuth = [...authorities].sort((a, b) => a.priority - b.priority);
+
+                    const AuthorityBlock = ({ title, items, isTop = false }) => {
+                        if (items.length === 0) return null;
+                        const isOdd = items.length % 2 !== 0;
+                        return (
+                            <>
+                                <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>{title}</h2>
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: isMobile ? 12 : 20, marginBottom: isMobile ? 28 : 48 }}>
-                                    {sorted.map((a, i) => {
-                                        const isLast = i === sorted.length - 1;
+                                    {items.map((a, i) => {
+                                        const isLast = i === items.length - 1;
                                         return (
                                             <div key={a.id || a.name || i} style={{
                                                 background: dark ? "rgba(255,255,255,.05)" : "#fff",
-                                                border: `1px solid ${i === 0 ? "#8B000055" : dark ? "#333" : "#eee"}`,
-                                                borderTop: `3px solid ${i === 0 ? "#8B0000" : "#ccc"}`,
+                                                border: `1px solid ${isTop && i === 0 ? "#8B000055" : dark ? "#333" : "#eee"}`,
+                                                borderTop: `3px solid ${isTop && i === 0 ? "#8B0000" : "#ccc"}`,
                                                 borderRadius: 16,
                                                 padding: isMobile ? "18px 12px" : "28px 20px",
                                                 textAlign: "center",
-                                                boxShadow: i === 0 ? "0 8px 32px rgba(139,0,0,.15)" : "0 2px 12px rgba(0,0,0,.06)",
+                                                boxShadow: isTop && i === 0 ? "0 8px 32px rgba(139,0,0,.15)" : "0 2px 12px rgba(0,0,0,.06)",
                                                 gridColumn: isOdd && isLast ? "1 / -1" : undefined,
                                                 maxWidth: isOdd && isLast ? (isMobile ? "60%" : "45%") : undefined,
                                                 margin: isOdd && isLast ? "0 auto" : undefined,
                                                 width: isOdd && isLast ? "100%" : undefined,
                                             }}>
                                                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-                                                    <Avatar img={a.img} name={a.name} size={isMobile ? 72 : 96} color={i === 0 ? "#8B0000" : "#555"} />
+                                                    <Avatar img={a.img} name={a.name} size={isMobile ? 72 : 96} color={isTop && i === 0 ? "#8B0000" : "#555"} />
                                                 </div>
                                                 <div style={{ fontSize: isMobile ? 15 : 19, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", marginBottom: 4 }}>{a.name}</div>
                                                 <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: 1.3, color: "#8B0000", textTransform: "uppercase", marginBottom: 3 }}>{a.role}</div>
@@ -116,48 +121,18 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                                         );
                                     })}
                                 </div>
-                            );
-                        })()}
-                    </>
-                )}
-                {authorities.length > 0 && (
-                    <>
-                        <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>🎖️ Sports Authority</h2>
-                        {(() => {
-                            const sorted = [...authorities].sort((a, b) => a.priority - b.priority);
-                            const isOdd = sorted.length % 2 !== 0;
-                            return (
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: isMobile ? 12 : 20, marginBottom: isMobile ? 28 : 48 }}>
-                                    {sorted.map((a, i) => {
-                                        const isLast = i === sorted.length - 1;
-                                        return (
-                                            <div key={a.id || a.name || i} style={{
-                                                background: dark ? "rgba(255,255,255,.05)" : "#fff",
-                                                border: `1px solid ${i === 0 ? "#8B000055" : dark ? "#333" : "#eee"}`,
-                                                borderTop: `3px solid ${i === 0 ? "#8B0000" : "#ccc"}`,
-                                                borderRadius: 16,
-                                                padding: isMobile ? "18px 12px" : "28px 20px",
-                                                textAlign: "center",
-                                                boxShadow: i === 0 ? "0 8px 32px rgba(139,0,0,.15)" : "0 2px 12px rgba(0,0,0,.06)",
-                                                gridColumn: isOdd && isLast ? "1 / -1" : undefined,
-                                                maxWidth: isOdd && isLast ? (isMobile ? "60%" : "45%") : undefined,
-                                                margin: isOdd && isLast ? "0 auto" : undefined,
-                                                width: isOdd && isLast ? "100%" : undefined,
-                                            }}>
-                                                <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-                                                    <Avatar img={a.img} name={a.name} size={isMobile ? 72 : 96} color={i === 0 ? "#8B0000" : "#555"} />
-                                                </div>
-                                                <div style={{ fontSize: isMobile ? 15 : 19, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", marginBottom: 4 }}>{a.name}</div>
-                                                <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: 1.3, color: "#8B0000", textTransform: "uppercase", marginBottom: 3 }}>{a.role}</div>
-                                                <div style={{ fontSize: isMobile ? 11 : 12, color: dark ? "#aaa" : "#777" }}>{a.designation}</div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })()}
-                    </>
-                )}
+                            </>
+                        );
+                    };
+
+                    return (
+                        <>
+                            <AuthorityBlock title="🏛️ Management Authority" items={topMan} isTop={true} />
+                            <AuthorityBlock title="🎖️ Sports Authority" items={sortedAuth} isTop={true} />
+                            <AuthorityBlock title="👥 Academic Staff" items={otherMan} />
+                        </>
+                    );
+                })()}
                 {
                     studentCommittee.length > 0 && (
                         <>
@@ -248,17 +223,45 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         </div>
                     ))}
                 </div>
-                {gallery.length > 0 && (
-                    <>
-                        <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 14, fontSize: isMobile ? 19 : 24 }}>📸 Gallery</h2>
-                        <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill,minmax(${isMobile ? 100 : 150}px,1fr))`, gap: isMobile ? 7 : 10 }}>
-                            {gallery.slice(0, isMobile ? 4 : 6).map((img, i) => (
-                                <div key={i} style={{ borderRadius: 10, overflow: "hidden", aspectRatio: "1", background: dark ? "#222" : "#f0f0f0" }}>
-                                    <img src={img.src} alt={img.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                </div>
-                            ))}
+                {memorial?.enabled && (
+                    <section style={{ 
+                        marginTop: 40, 
+                        background: dark ? "rgba(255,255,255,.03)" : "#fffcfc", 
+                        borderRadius: 24, 
+                        padding: isMobile ? "30px 20px" : "50px 40px",
+                        border: `1px solid ${dark ? "#333" : "#eee"}`,
+                        boxShadow: "0 10px 40px rgba(139,0,0,0.05)",
+                        textAlign: "center"
+                    }}>
+                        <div style={{ display: "inline-block", background: "#8B0000", color: "#fff", padding: "4px 16px", borderRadius: 50, fontSize: 11, fontWeight: 800, letterSpacing: 2, marginBottom: 20, textTransform: "uppercase" }}>In Loving Memory</div>
+                        
+                        <h2 style={{ fontFamily: "'Georgia',serif", fontSize: isMobile ? 28 : 42, color: dark ? "#fff" : "#8B0000", margin: "0 0 16px" }}>{memorial.name || "Our Beloved Staff"}</h2>
+                        
+                        <div style={{ maxWidth: 700, margin: "0 auto 40px", lineHeight: 1.8, color: dark ? "#ccc" : "#444", fontSize: isMobile ? 15 : 18, fontStyle: "italic" }}>
+                            "{memorial.description || "In memory of our dear colleague who served our institution with dedication and passion. Their legacy lives on in our hearts and the lives they touched."}"
                         </div>
-                    </>
+
+                        {memorial.images?.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 15 }}>
+                                {memorial.images.map((img, i) => (
+                                    <div key={img.id || i} style={{ 
+                                        width: isMobile ? "calc(50% - 10px)" : "250px", 
+                                        aspectRatio: "3/4", 
+                                        borderRadius: 16, 
+                                        overflow: "hidden", 
+                                        boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                                        border: `4px solid ${dark ? "#222" : "#fff"}`,
+                                        transform: `rotate(${i % 2 === 0 ? "1.5deg" : "-1.5deg"})`,
+                                        transition: "transform .3s ease"
+                                    }}>
+                                        <img src={img.src} alt="Tribute" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        <div style={{ marginTop: 30, fontSize: 24, opacity: 0.6 }}>🕊️</div>
+                    </section>
                 )}
             </div>
         </div>

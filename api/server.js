@@ -204,6 +204,7 @@ const getInitialState = () => ({
   managementRoles: [],
   nav: ["Home", "Events", "Registration", "Scoreboard", "Star Players", "Gallery", "Captain", "Admin"],
   eventDate: { date: "", time: "" },
+  memorial: { enabled: false, name: "", description: "", images: [] },
   emptyGame: { name: "", venue: "", official: "", status: "Upcoming", start: "", end: "", participants: "" },
 });
 
@@ -392,7 +393,7 @@ app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
       "sportGamesListWomens", "staffGamesList", "staffGamesListWomens", "athleticsList", 
       "athleticsListWomens", "authorityRoles", "managementRoles", "nav", 
       "registrationOpen", "eventDate", "emptyGame", "starPlayers", "closedEvents",
-      "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails"
+      "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails", "memorial"
     ];
 
     if (!allowedTypes.includes(type)) {
