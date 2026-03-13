@@ -68,19 +68,45 @@ app.use(express.json({ limit: "20mb" })); // allow larger payloads for image bas
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key-change-in-production";
 
+// ─── Security Logger ────────────────────────────────────────────────────────
+const SecurityLogger = {
+  log: (event, details = {}) => {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      event,
+      ...details
+    };
+    
+    // Redact sensitive fields
+    if (logEntry.token) logEntry.token = "[REDACTED]";
+    if (logEntry.password) logEntry.password = "[REDACTED]";
+    if (logEntry.otp) logEntry.otp = "[REDACTED]";
+    if (logEntry.appPassword) logEntry.appPassword = "[REDACTED]";
+    
+    console.log(JSON.stringify(logEntry));
+  }
+};
+
+
 // Rate Limiters - tightened for abuse protection
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: 300, // Reduced from 1000 for strict abuse protection
   validate: { trustProxy: false, xForwardedForHeader: false },
-  message: { error: "Too many requests from this IP, please try again after 15 minutes" }
+  handler: (req, res) => {
+    SecurityLogger.log("RATE_LIMIT_HIT", { type: "global", ip: req.ip, path: req.path });
+    res.status(429).json({ error: "Too many requests from this IP, please try again after 15 minutes" });
+  }
 });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20, // Reduced from 50 to prevent brute force
   validate: { trustProxy: false, xForwardedForHeader: false },
-  message: { error: "Too many login attempts, please try again later" }
+  handler: (req, res) => {
+    SecurityLogger.log("RATE_LIMIT_HIT", { type: "login", ip: req.ip, path: req.path, email: req.body.email });
+    res.status(429).json({ error: "Too many login attempts, please try again later" });
+  }
 });
 
 app.use("/api/", globalLimiter);
@@ -95,14 +121,20 @@ const submitLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10, // Max 10 queries per IP per 15m
   validate: { trustProxy: false, xForwardedForHeader: false },
-  message: { error: "Too many query submissions. Please try again later." }
+  handler: (req, res) => {
+    SecurityLogger.log("RATE_LIMIT_HIT", { type: "submit", ip: req.ip, path: req.path });
+    res.status(429).json({ error: "Too many query submissions. Please try again later." });
+  }
 });
 
 const otpVerifyLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 15, // Max 15 OTP verifications or registrations per 5m
   validate: { trustProxy: false, xForwardedForHeader: false },
-  message: { error: "Too many OTP attempts." }
+  handler: (req, res) => {
+    SecurityLogger.log("RATE_LIMIT_HIT", { type: "otpVerify", ip: req.ip, path: req.path, email: req.body.email });
+    res.status(429).json({ error: "Too many OTP attempts." });
+  }
 });
 
 const otpStore = {}; // DEPRECATED: Use Otp model
@@ -136,7 +168,14 @@ const requireValidOrigin = (req, res, next) => {
   // In production, we strictly require a valid Origin OR Referer matching our allowlist for state changes
   if (isProd) {
       if (!isValidOrigin && !isValidReferer) {
-          console.warn(`🛡️ Blocked state-changing request. Missing/Invalid Origin. Origin: ${origin}, Referer: ${referer}`);
+          SecurityLogger.log("ORIGIN_BLOCK", {
+            reason: "Missing/Invalid Origin or Referer",
+            origin: origin || "undefined",
+            referer: referer || "undefined",
+            path: req.path,
+            method: req.method,
+            ip: req.ip
+          });
           return res.status(403).json({ error: "Access Denied: Invalid Origin." });
       }
   }
@@ -247,16 +286,26 @@ const authenticateAdmin = async (req, res, next) => {
 
   try {
     const isBlocked = await InvalidatedToken.exists({ token });
-    if (isBlocked) return res.status(401).json({ error: "Session revoked. Please log in again." });
+    if (isBlocked) {
+        SecurityLogger.log("REVOKED_TOKEN_USAGE", { role: "admin", ip: req.ip, path: req.path });
+        return res.status(401).json({ error: "Session revoked. Please log in again." });
+    }
 
     const state = await loadDb();
-    if (token !== state.activeAdminToken) return res.status(401).json({ error: "Session expired. Another admin has logged in." });
+    if (token !== state.activeAdminToken) {
+        SecurityLogger.log("EXPIRED_TOKEN_USAGE", { role: "admin", reason: "Active token mismatch", ip: req.ip, path: req.path });
+        return res.status(401).json({ error: "Session expired. Another admin has logged in." });
+    }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== "admin") return res.status(403).json({ error: "Access denied" });
+    if (decoded.role !== "admin") {
+        SecurityLogger.log("AUTH_FAILURE", { role: "admin", reason: "Role mismatch", email: decoded.email, ip: req.ip });
+        return res.status(403).json({ error: "Access denied" });
+    }
     req.user = decoded;
     next();
   } catch (err) {
+    SecurityLogger.log("AUTH_FAILURE", { role: "admin", reason: "Invalid/Expired Token signature", error: err.message, ip: req.ip });
     res.status(401).json({ error: "Invalid or expired token" });
   }
 };
@@ -267,12 +316,18 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
 
   try {
     const isBlocked = await InvalidatedToken.exists({ token });
-    if (isBlocked) return res.status(401).json({ error: "Session revoked. Please log in again." });
+    if (isBlocked) {
+        SecurityLogger.log("REVOKED_TOKEN_USAGE", { role: "captainOrAdmin", ip: req.ip, path: req.path });
+        return res.status(401).json({ error: "Session revoked. Please log in again." });
+    }
 
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.role === "admin") {
       const state = await loadDb();
-      if (token !== state.activeAdminToken) return res.status(401).json({ error: "Session expired. Another admin has logged in." });
+      if (token !== state.activeAdminToken) {
+          SecurityLogger.log("EXPIRED_TOKEN_USAGE", { role: "admin", reason: "Active token mismatch", ip: req.ip, path: req.path });
+          return res.status(401).json({ error: "Session expired. Another admin has logged in." });
+      }
       req.user = decoded;
       return next();
     }
@@ -280,8 +335,10 @@ const authenticateCaptainOrAdmin = async (req, res, next) => {
       req.user = decoded;
       return next();
     }
+    SecurityLogger.log("AUTH_FAILURE", { role: "captainOrAdmin", reason: "Role mismatch", ip: req.ip });
     return res.status(403).json({ error: "Access denied" });
   } catch (err) {
+    SecurityLogger.log("AUTH_FAILURE", { role: "captainOrAdmin", reason: "Invalid Token signature", error: err.message, ip: req.ip });
     res.status(401).json({ error: "Invalid token" });
   }
 };
@@ -743,13 +800,21 @@ app.post("/api/admin-login", loginLimiter, async (req, res) => {
   const stored = await Otp.findOne({ email: em, type: "admin" });
 
   if (!isFallback) {
-    if (!stored) return res.status(400).json({ error: "OTP expired or not sent" });
-    if (String(stored.otp) !== String(otp)) return res.status(400).json({ error: "Invalid OTP" });
+    if (!stored) {
+      SecurityLogger.log("AUTH_FAILURE", { role: "admin", reason: "OTP expired or not sent", email: em, ip: req.ip });
+      return res.status(400).json({ error: "OTP expired or not sent" });
+    }
+    if (String(stored.otp) !== String(otp)) {
+      SecurityLogger.log("AUTH_FAILURE", { role: "admin", reason: "Invalid OTP", email: em, ip: req.ip });
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
   }
 
   if (stored) await Otp.deleteOne({ _id: stored._id });
 
   const token = jwt.sign({ role: "admin", name: em, email: em }, JWT_SECRET, { expiresIn: "4h" });
+
+  SecurityLogger.log("AUTH_SUCCESS", { role: "admin", email: em, ip: req.ip });
 
   // Log login to DB and set active token
   await State.findOneAndUpdate({}, {
@@ -799,7 +864,7 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
           loggedInRole = role;
           houseId = houseObj.id;
         } else {
-          console.log(`❌ Login failed for ${em}: Password mismatch.`);
+          SecurityLogger.log("AUTH_FAILURE", { role: "captain", reason: "Password mismatch", email: em, ip: req.ip, houseId: houseObj.id });
         }
       }
     }
@@ -807,7 +872,7 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
   }
 
   if (valid) {
-    console.log(`✅ Captain logged in: ${em} (${loggedInRole} in House ${houseId})`);
+    SecurityLogger.log("AUTH_SUCCESS", { role: "captain", email: em, houseRole: loggedInRole, houseId, ip: req.ip });
     const token = jwt.sign({ role: "captain", house: houseId, houseRole: loggedInRole }, JWT_SECRET, { expiresIn: "2h" });
 
     // Find house details to return
@@ -824,7 +889,7 @@ app.post("/api/captain-login", loginLimiter, async (req, res) => {
       captainName: houseObj?.[loggedInRole]?.name || "Captain"
     });
   } else {
-    console.log(`❌ Login failed for ${em}: No matching email/password found in any house.`);
+    SecurityLogger.log("AUTH_FAILURE", { role: "captain", reason: "No matching email/password found", email: em, ip: req.ip });
     res.status(401).json({ success: false, error: "Invalid email or password." });
   }
 });
@@ -843,10 +908,10 @@ app.post("/api/logout", async (req, res) => {
         { token, expiresAt: new Date(decoded.exp * 1000) },
         { upsert: true }
       );
-      console.log(`🔒 Token firmly invalidated until expiry: ${new Date(decoded.exp * 1000)}`);
+      SecurityLogger.log("TOKEN_REVOKED", { role: decoded.role || "unknown", email: decoded.email || "unknown", expiry: new Date(decoded.exp * 1000) });
     }
   } catch (err) {
-    console.warn("Logout Token Invalidation Error:", err.message);
+    SecurityLogger.log("LOGOUT_ERROR", { reason: "Token Invalidation Error", error: err.message });
   }
   
   res.json({ success: true });
@@ -1213,12 +1278,14 @@ app.post("/api/upload-image", authenticateAdmin, async (req, res) => {
 
     // 1. Validate File Type (must be image via Data URI)
     if (!data.startsWith("data:image/")) {
+      SecurityLogger.log("UPLOAD_REJECTED", { reason: "Invalid MIME prefix", ip: req.ip, user: req.user.email });
       return res.status(400).json({ error: "Invalid file type. Only images are allowed." });
     }
 
     // 2. Validate Size (approximate from base64 length, 5MB limit)
     const approxBytes = data.length * 0.75;
     if (approxBytes > 5 * 1024 * 1024) {
+      SecurityLogger.log("UPLOAD_REJECTED", { reason: "Payload too large (>5MB)", bytes: approxBytes, ip: req.ip, user: req.user.email });
       return res.status(400).json({ error: "Image too large. Maximum size is 5MB." });
     }
 
