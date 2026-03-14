@@ -324,6 +324,8 @@ function getTransporter(index = null) {
       maxMessages: 200,
       rateDelta: 1000,
       rateLimit: 3, // Slightly slower to keep Gmail happy
+      connectionTimeout: 2000, // 2000ms timeout for faster rotation on dead connections
+      greetingTimeout: 2000,
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
       secure: process.env.SMTP_SECURE === "true",
@@ -368,8 +370,8 @@ async function robustSendMail(mailOptions, specificIndex = null) {
         if (specificIndex === null) {
           // Increment counter to ensure NEXT try uses a different account
           console.log(`[SMTP_ROTATING] Attempting next account due to failure...`);
-          // Add delay to prevent IP rate-limiting from Gmail
-          await new Promise(r => setTimeout(r, 1500));
+          // Fast delay to break IP flag but avoid Vercel 10s serverless timeout
+          await new Promise(r => setTimeout(r, 300));
         } else {
           // If we were targeted, we can't easily rotate, but we can retry once
           await new Promise(r => setTimeout(r, 1000));
