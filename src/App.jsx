@@ -37,7 +37,7 @@ export default function App() {
     return sessionStorage.getItem("launched") === "true";
   });
   const [showCurtains, setShowCurtains] = useState(false);
-  const [launchConfig, setLaunchConfig] = useState({ enabled: true, title: "Achariya Sports Day", year: "2026" });
+  const [launchConfig, setLaunchConfig] = useState({ enabled: true, title: "Achariya Sports Day", year: "2026", released: false });
 
   // Configuration from API
   const [nav, setNav] = useState([]);
@@ -146,6 +146,24 @@ export default function App() {
       return () => clearInterval(interval);
     }
   }, [active]);
+
+  // High-frequency polling for Launch Screen (Chief Guest Reveal)
+  useEffect(() => {
+    let interval;
+    if (!hasLaunched && launchConfig?.enabled && !launchConfig?.released) {
+      interval = setInterval(() => {
+        fetch(`${API_BASE}/api/public-state`)
+          .then(res => res.json())
+          .then(data => {
+            if (data?.launchConfig?.released) {
+              setLaunchConfig(prev => ({ ...prev, released: true }));
+            }
+          })
+          .catch(() => {});
+      }, 3000); // Polling every 3 seconds during launch
+    }
+    return () => clearInterval(interval);
+  }, [hasLaunched, launchConfig?.enabled, launchConfig?.released]);
 
   const sync = (type, data) => {
     pendingSyncs.add(type);

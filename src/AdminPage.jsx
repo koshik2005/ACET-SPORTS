@@ -2473,7 +2473,7 @@ export function AdminPage({
                                 </div>
                                 <label style={{ ...lS, marginBottom: 0, cursor: "pointer", color: dark ? "#fff" : "#222" }} onClick={() => setLaunchConfig(prev => ({ ...prev, enabled: !(prev?.enabled ?? true) }))}>Enable Launch Animation</label>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, opacity: launchConfig?.enabled ? 1 : 0.5, pointerEvents: launchConfig?.enabled ? "auto" : "none" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, opacity: launchConfig?.enabled ? 1 : 0.5, pointerEvents: launchConfig?.enabled ? "auto" : "none", marginBottom: 16 }}>
                                 <div>
                                     <label style={lS}>Main Title</label>
                                     <input value={launchConfig?.title || ""} onChange={e => setLaunchConfig({ ...launchConfig, title: e.target.value })} placeholder="Achariya Sports Day" style={iS} />
@@ -2483,6 +2483,51 @@ export function AdminPage({
                                     <input value={launchConfig?.year || ""} onChange={e => setLaunchConfig({ ...launchConfig, year: e.target.value })} placeholder="2026" style={iS} />
                                 </div>
                             </div>
+
+                            {launchConfig?.enabled && (
+                                <div style={{ 
+                                    padding: "16px", 
+                                    background: dark ? "rgba(255,215,0,0.05)" : "#FFD70008", 
+                                    borderRadius: 12, 
+                                    border: `1px dashed ${dark ? "#FFD70044" : "#FFD700"}`,
+                                    display: "flex",
+                                    flexDirection: isMobile ? "column" : "row",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: 16
+                                }}>
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 800, color: dark ? "#FFD700" : "#8B4513" }}>Ceremonial Launch Control</div>
+                                        <div style={{ fontSize: 11, color: dark ? "#aaa" : "#666" }}>
+                                            Status: {launchConfig?.released ? 
+                                                <span style={{ color: "#2E8B57", fontWeight: 800 }}>LIVE (Curtains Open)</span> : 
+                                                <span style={{ color: "#8B0000", fontWeight: 800 }}>HIDDEN (Curtains Closed)</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            const isReleased = !!launchConfig?.released;
+                                            if (!isReleased && !window.confirm("This will trigger the curtain reveal for ALL students currently on the homepage. Proceed with the ceremonial launch?")) return;
+                                            setLaunchConfig({ ...launchConfig, released: !isReleased });
+                                        }}
+                                        style={{
+                                            background: launchConfig?.released ? "#4B5563" : "linear-gradient(135deg, #FFD700, #DAA520)",
+                                            color: launchConfig?.released ? "#fff" : "#000",
+                                            border: "none",
+                                            borderRadius: 8,
+                                            padding: "10px 20px",
+                                            fontWeight: 800,
+                                            fontSize: 13,
+                                            cursor: "pointer",
+                                            boxShadow: launchConfig?.released ? "none" : "0 4px 15px rgba(218,165,32,0.4)",
+                                            whiteSpace: "nowrap"
+                                        }}
+                                    >
+                                        {launchConfig?.released ? "🔒 LOCK CURTAINS" : "🎬 REVEAL EVENT"}
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ ...cS, marginBottom: 20, borderTop: "4px solid #8B0000" }}>

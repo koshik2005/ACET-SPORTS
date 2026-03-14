@@ -4,7 +4,9 @@ export function LaunchScreen({ config, onLaunch }) {
   const [shouldRender, setShouldRender] = useState(true);
 
   useEffect(() => {
-    // Start the curtain reveal slightly after mount for a smooth feel
+    if (!config?.released) return;
+
+    // Start the curtain reveal slightly after release for a smooth feel
     const timer = setTimeout(() => setIsLaunching(true), 500);
     
     // Unmount and trigger complete after animation finishes
@@ -14,7 +16,7 @@ export function LaunchScreen({ config, onLaunch }) {
     }, 2500); // 500ms delay + 2000ms animation
 
     return () => { clearTimeout(timer); clearTimeout(finishTimer); };
-  }, [onLaunch]);
+  }, [onLaunch, config?.released]);
 
   if (!shouldRender) return null;
 
@@ -68,6 +70,24 @@ export function LaunchScreen({ config, onLaunch }) {
         }}>
           {config?.title || "Achariya Sports Day"} <span style={{ color: "#FFD700" }}>{config?.year || "2026"}</span>
         </h1>
+        
+        {!config?.released && (
+          <div style={{
+            marginTop: "30px",
+            color: "#FFD700",
+            fontSize: "18px",
+            fontWeight: "700",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            animation: "pulse 2s infinite",
+            background: "rgba(0,0,0,0.3)",
+            padding: "10px 20px",
+            borderRadius: "30px",
+            border: "1px solid rgba(255,215,0,0.3)"
+          }}>
+            ⏳ Waiting for Ceremonial Launch...
+          </div>
+        )}
       </div>
 
       <div style={{
