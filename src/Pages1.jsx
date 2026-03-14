@@ -131,7 +131,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         <>
                             <AuthorityBlock title="🏛️ Management Authority" items={topMan} isTop={true} />
                             <AuthorityBlock title="🎖️ Sports Authority" items={sortedAuth} isTop={true} />
-                            <AuthorityBlock title="👥 Academic Staff" items={otherMan} />
+                            <AuthorityBlock title="👥 HODs & Academic Heads" items={otherMan} />
                         </>
                     );
                 })()}
