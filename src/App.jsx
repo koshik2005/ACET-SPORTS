@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./index.css";
 import { Header, Footer } from "./Layout.jsx";
-import { HomePage, EventsPage } from "./Pages1.jsx";
+import { HomePage, EventsPage, AboutPage } from "./Pages1.jsx";
 import { RegistrationPage, ScoreboardPage, GalleryPage, WinnersPage, StarPlayersPage } from "./Pages2.jsx";
 import { AdminPage } from "./AdminPage.jsx";
 import { CaptainPortal } from "./CaptainPortal.jsx";
@@ -64,6 +64,7 @@ export default function App() {
   const [commonAthleticsMen, setCommonAthleticsMen] = useState([]);
   const [commonGamesWomen, setCommonGamesWomen] = useState([]);
   const [commonAthleticsWomen, setCommonAthleticsWomen] = useState([]);
+  const [about, setAbout] = useState({ sponsors: [], credits: "" });
   const [syncing, setSyncing] = useState(false);
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
@@ -251,6 +252,7 @@ export default function App() {
   const setLaunchConfigSync = wrap(setLaunchConfig, "launchConfig");
   const setInaugurationDetailsSync = wrap(setInaugurationDetails, "inaugurationDetails");
   const setMemorialSync = wrap(setMemorial, "memorial");
+  const setAboutSync = wrap(setAbout, "about");
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f0f1a" : "#f4f4f8", color: dark ? "#fff" : "#8B0000", fontSize: 24, fontWeight: 800 }}>⚡ Loading Achariya Sports...</div>;
 
@@ -302,6 +304,7 @@ export default function App() {
         {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
         {active === "Star Players" && <StarPlayersPage dark={dark} starPlayers={starPlayers} houses={houses} />}
         {active === "Gallery" && <GalleryPage dark={dark} gallery={gallery} />}
+        {active === "About" && <AboutPage dark={dark} about={about} />}
         {active === "Admin" && <AdminPage
           dark={dark}
           houses={houses} setHouses={setHousesSync}
@@ -323,6 +326,7 @@ export default function App() {
           staffGamesListWomens={staffGamesListWomens} setStaffGamesListWomens={setStaffGamesListWomensSync}
            athleticsList={athleticsList} setAthleticsList={setAthleticsListSync}
           memorial={memorial} setMemorial={setMemorialSync}
+          about={about} setAbout={setAboutSync}
           athleticsListWomens={athleticsListWomens} setAthleticsListWomens={setAthleticsListWomensSync}
           authorityRoles={authorityRoles} setAuthorityRoles={setAuthorityRolesSync}
           managementRoles={managementRoles} setManagementRoles={setManagementRolesSync}

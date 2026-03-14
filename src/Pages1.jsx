@@ -331,3 +331,70 @@ function SportsAnimations({ isMobile }) {
         </div>
     );
 }
+
+export function AboutPage({ dark, about = { sponsors: [], credits: "" } }) {
+    const isMobile = useIsMobile();
+    const p = isMobile ? "20px 12px" : "40px 20px";
+
+    return (
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: p }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+                <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 10, fontSize: isMobile ? 32 : 48 }}>About</h1>
+                <div style={{ width: 60, height: 4, background: "#8B0000", margin: "0 auto", borderRadius: 2 }} />
+            </div>
+
+            {/* Sponsorship Section */}
+            <section style={{ marginBottom: 60 }}>
+                <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#eee"}`, paddingBottom: 10, marginBottom: 25, fontSize: isMobile ? 21 : 28 }}>🤝 Our Proud Sponsors</h2>
+                {about?.sponsors?.length > 0 ? (
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(200px, 1fr))", gap: 20 }}>
+                        {about.sponsors.map((s, i) => (
+                            <div key={s.id || i} style={{ 
+                                background: dark ? "rgba(255,255,255,.05)" : "#fff", 
+                                borderRadius: 16, 
+                                padding: 15, 
+                                border: `1px solid ${dark ? "#333" : "#eee"}`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                aspectRatio: "1",
+                                boxShadow: "0 4px 12px rgba(0,0,0,.05)",
+                                transition: "transform .3s ease"
+                            }}>
+                                <img src={s.src} alt="Sponsor" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div style={{ textAlign: "center", padding: 40, color: "#888", border: `2px dashed ${dark ? "#333" : "#eee"}`, borderRadius: 16 }}>
+                        No sponsorship details uploaded yet.
+                    </div>
+                )}
+            </section>
+
+            {/* Developer Credits Section */}
+            <section style={{ 
+                background: dark ? "linear-gradient(135deg, #1e1e2e, #111)" : "linear-gradient(135deg, #8b0000, #4b0082)", 
+                borderRadius: 24, 
+                padding: isMobile ? "30px 20px" : "50px 40px",
+                color: "#fff",
+                boxShadow: "0 10px 40px rgba(0,0,0,.2)",
+                textAlign: "center"
+            }}>
+                <div style={{ fontSize: 40, marginBottom: 20 }}>💻</div>
+                <h2 style={{ fontFamily: "'Georgia',serif", fontSize: isMobile ? 24 : 32, margin: "0 0 20px" }}>Development Team Team</h2>
+                <div style={{ 
+                    whiteSpace: "pre-wrap", 
+                    lineHeight: 1.8, 
+                    fontSize: isMobile ? 14 : 17, 
+                    opacity: .9,
+                    maxWidth: 700,
+                    margin: "0 auto"
+                }}>
+                    {about?.credits || "This Sports Day ERP System was conceptualized and developed to streamline sports management with cutting-edge technology."}
+                </div>
+                <div style={{ marginTop: 30, opacity: .6, fontSize: 13, letterSpacing: 1 }}>POWERED BY INNOVATION</div>
+            </section>
+        </div>
+    );
+}

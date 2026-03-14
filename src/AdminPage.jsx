@@ -42,6 +42,7 @@ export function AdminPage({
     launchConfig, setLaunchConfig,
     inaugurationDetails, setInaugurationDetails,
     memorial, setMemorial,
+    about, setAbout,
     commonGamesMen, setCommonGamesMen,
     commonAthleticsMen, setCommonAthleticsMen,
     commonGamesWomen, setCommonGamesWomen,
@@ -77,6 +78,9 @@ export function AdminPage({
     const [memFiles, setMemFiles] = useState([]);
     const [memUploading, setMemUploading] = useState(false);
     const memorialInputRef = useRef();
+    const [aboutFiles, setAboutFiles] = useState([]);
+    const [aboutUploading, setAboutUploading] = useState(false);
+    const aboutInputRef = useRef();
     const [authModal, setAuthModal] = useState(null);
     const [authForm, setAuthForm] = useState(EMPTY_AUTH);
     const [xlPreview, setXlPreview] = useState(null); // parsed rows before confirm
@@ -114,7 +118,7 @@ export function AdminPage({
     const [starPlayerForm, setStarPlayerForm] = useState({ name: "", dept: "", year: "", game: "", house: "", img: null });
     const [spUploading, setSpUploading] = useState(false);
 
-    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Memorial", "Settings", "Exports", "Config", "Resolver"];
+    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Memorial", "About", "Settings", "Exports", "Config", "Resolver"];
     const [studentSearch, setStudentSearch] = useState("");
     const [editingRegNo, setEditingRegNo] = useState(null);
     const [editStudentForm, setEditStudentForm] = useState({});
@@ -2322,6 +2326,104 @@ export function AdminPage({
                                     </div>
                                 </>
                             )}
+                        </div>
+                    </div>
+                )
+            }
+            {
+                tab === "About" && (
+                    <div style={{ maxWidth: 800 }}>
+                        <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: 18 }}>ℹ️ About Page Management</h3>
+                        <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginBottom: 20 }}>Manage sponsorship details and developer credits</div>
+
+                        <div style={{ ...cS, marginBottom: 20 }}>
+                            <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>🤝 Sponsorship Images</h4>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(100px, 1fr))", gap: 10, marginBottom: 15 }}>
+                                {about.sponsors?.map((s, idx) => (
+                                    <div key={idx} style={{ position: "relative", aspectRatio: "1", borderRadius: 12, overflow: "hidden", border: `2px solid ${dark ? "#333" : "#eee"}`, background: dark ? "rgba(255,255,255,.02)" : "#fff", padding: 8 }}>
+                                        <img src={s.src} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                        <button 
+                                            onClick={() => setConfirmDelete({ message: "Remove this sponsor?", onConfirm: () => setAbout(prev => ({ ...prev, sponsors: prev.sponsors.filter((_, i) => i !== idx) })) })}
+                                            style={{ position: "absolute", top: 4, right: 4, background: "rgba(255,0,0,0.8)", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontWeight: "bold" }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <input type="file" multiple accept="image/*" ref={aboutInputRef} style={{ display: "none" }} onChange={e => {
+                                const files = Array.from(e.target.files);
+                                files.forEach(file => {
+                                    const reader = new FileReader();
+                                    reader.onload = ev => setAboutFiles(prev => [...prev, { src: ev.target.result, name: file.name, id: Date.now() + Math.random() }]);
+                                    reader.readAsDataURL(file);
+                                });
+                                e.target.value = "";
+                            }} />
+
+                            {aboutFiles.length > 0 ? (
+                                <div style={{ marginBottom: 15 }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(60px, 1fr))", gap: 8, marginBottom: 10 }}>
+                                        {aboutFiles.map(f => (
+                                            <div key={f.id} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `1px solid #8B0000` }}>
+                                                <img src={f.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                {!aboutUploading && <button onClick={() => setAboutFiles(p => p.filter(x => x.id !== f.id))} style={{ position: "absolute", top: 0, right: 0, background: "#000", color: "#fff", border: "none", borderBottomLeftRadius: 8, width: 16, height: 16 }}>✕</button>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button 
+                                        onClick={async () => {
+                                            if (aboutUploading) return;
+                                            setAboutUploading(true);
+                                            const newSponsors = [...(about.sponsors || [])];
+                                            const token = localStorage.getItem("adminToken");
+                                            for (const f of aboutFiles) {
+                                                try {
+                                                    const res = await fetch(`${API_BASE}/api/upload-image`, {
+                                                        method: "POST",
+                                                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                                                        body: JSON.stringify({ data: f.src, folder: "acet-sports/sponsors" })
+                                                    });
+                                                    const data = await res.json();
+                                                    if (data.url) newSponsors.push({ src: data.url, id: Date.now() + Math.random() });
+                                                } catch (err) { console.error("Upload failed", err); }
+                                            }
+                                            setAbout({ ...about, sponsors: newSponsors });
+                                            setAboutFiles([]);
+                                            setAboutUploading(false);
+                                        }}
+                                        style={{ width: "100%", padding: "12px", background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}
+                                    >
+                                        {aboutUploading ? "⏳ Uploading..." : "⬆️ Confirm & Upload Sponsorship Images"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <button onClick={() => aboutInputRef.current?.click()} style={{ width: "100%", padding: "15px", border: `2px dashed ${dark ? "#444" : "#ccc"}`, borderRadius: 12, background: "transparent", color: dark ? "#ccc" : "#666", cursor: "pointer", fontSize: 14 }}>
+                                    📂 Choose Sponsorship Images to Upload
+                                </button>
+                            )}
+                        </div>
+
+                        <div style={cS}>
+                            <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>💻 Developer Credits</h4>
+                            <textarea 
+                                value={about.credits || ""} 
+                                onChange={e => setAbout({ ...about, credits: e.target.value })}
+                                placeholder="Write credits for the development team here..."
+                                style={{ ...iS, minHeight: 150, padding: 15, lineHeight: 1.6 }}
+                            />
+                            <div style={{ fontSize: 11, color: "#8B0000", marginTop: 8, fontWeight: 600 }}>✨ Informative and appreciative credits boost team morale!</div>
+                        </div>
+
+                        {/* Live Preview */}
+                        <div style={{ marginTop: 20, padding: 20, background: dark ? "rgba(255,165,0,.05)" : "rgba(139,0,0,.05)", borderRadius: 12, border: `1px solid ${dark ? "rgba(255,165,0,.2)" : "rgba(139,0,0,.2)"}` }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: "#8B0000", textTransform: "uppercase", marginBottom: 10 }}>Live Preview (How it looks on About page)</div>
+                            <div style={{ background: dark ? "#111" : "#fff", borderRadius: 8, padding: 20, border: `1px solid ${dark ? "#222" : "#eee"}` }}>
+                                <div style={{ fontSize: 14, color: dark ? "#eee" : "#222", fontWeight: 700, marginBottom: 10 }}>Development Team Credits:</div>
+                                <div style={{ fontSize: 13, opacity: .7, whiteSpace: "pre-wrap" }}>{about.credits || "No credits entered yet."}</div>
+                                <div style={{ marginTop: 15, fontSize: 13, color: dark ? "#eee" : "#222", fontWeight: 700, marginBottom: 10 }}>Sponsors Count: {about.sponsors?.length || 0}</div>
+                            </div>
                         </div>
                     </div>
                 )
