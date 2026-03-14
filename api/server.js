@@ -474,7 +474,7 @@ app.post("/api/update-state", async (req, res) => {
       "sportGamesListWomens", "staffGamesList", "staffGamesListWomens", "athleticsList", 
       "athleticsListWomens", "authorityRoles", "managementRoles", "nav", 
       "registrationOpen", "eventDate", "emptyGame", "starPlayers", "closedEvents",
-      "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails", "memorial",
+      "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails", "memorial", "about",
       "commonGamesMen", "commonAthleticsMen", "commonGamesWomen", "commonAthleticsWomen"
     ];
 
@@ -1320,14 +1320,13 @@ app.post("/api/upload-image", authenticateAdmin, async (req, res) => {
     // data may be a full Data URI like "data:image/jpeg;base64,/9j/4AA...". Extract just the base64 part.
     const base64Image = data.includes("base64,") ? data.split("base64,")[1] : data;
 
-    const formData = new FormData();
-    formData.append("key", process.env.IMGBB_API_KEY);
-    formData.append("image", base64Image);
+    const params = new URLSearchParams();
+    params.append("key", process.env.IMGBB_API_KEY);
+    params.append("image", base64Image);
 
     const imgbbRes = await fetch("https://api.imgbb.com/1/upload", {
       method: "POST",
-      body: formData,
-      // FormData automatically sets the right multipart headers when used with node-fetch / native fetch
+      body: params
     });
 
     const imgbbData = await imgbbRes.json();
