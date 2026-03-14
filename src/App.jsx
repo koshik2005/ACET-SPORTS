@@ -73,7 +73,7 @@ export default function App() {
     const adminToken = localStorage.getItem("adminToken");
     const captainToken = localStorage.getItem("captainToken");
     const token = adminToken || captainToken;
-    const fetchPath = token ? "/api/secure-state" : "/api/public-state";
+    const fetchPath = `${token ? "/api/secure-state" : "/api/public-state"}?t=${Date.now()}`;
     const headers = token ? { "Authorization": `Bearer ${token}` } : {};
 
     fetch(`${API_BASE}${fetchPath}`, { headers })
@@ -81,7 +81,7 @@ export default function App() {
         if (!res.ok && token) {
           localStorage.removeItem("adminToken");
           localStorage.removeItem("captainToken");
-          return fetch(`${API_BASE}/api/public-state`).then(r => r.json());
+          return fetch(`${API_BASE}/api/public-state?t=${Date.now()}`).then(r => r.json());
         }
         return res.json();
       })

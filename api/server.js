@@ -472,6 +472,9 @@ app.get("/api/public-state", async (req, res) => {
   try {
     // Serve from cache if fresh
     res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     if (stateCache.data && Date.now() - stateCache.ts < CACHE_TTL_MS) {
       return res.json(stateCache.data);
     }
@@ -507,6 +510,9 @@ app.get("/api/public-state", async (req, res) => {
 app.get("/api/secure-state", authenticateCaptainOrAdmin, async (req, res) => {
   try {
     res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     const state = await loadDb();
     const isAdmin = !!req.headers.authorization?.startsWith("Bearer admin-"); // Simplified check: in our system, admin tokens are prefixed or we check role
     
