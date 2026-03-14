@@ -382,7 +382,7 @@ export function AboutPage({ dark, about = { sponsors: [], credits: "" } }) {
                 textAlign: "center"
             }}>
                 <div style={{ fontSize: 40, marginBottom: 20 }}>💻</div>
-                <h2 style={{ fontFamily: "'Georgia',serif", fontSize: isMobile ? 24 : 32, margin: "0 0 20px" }}>Development Team Team</h2>
+                <h2 style={{ fontFamily: "'Georgia',serif", fontSize: isMobile ? 24 : 32, margin: "0 0 20px" }}>Development Team</h2>
                 <div style={{ 
                     whiteSpace: "pre-wrap", 
                     lineHeight: 1.8, 

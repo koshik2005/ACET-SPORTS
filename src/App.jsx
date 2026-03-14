@@ -132,6 +132,7 @@ export default function App() {
         if (data.commonAthleticsMen) setIfReady("commonAthleticsMen", setCommonAthleticsMen);
         if (data.commonGamesWomen) setIfReady("commonGamesWomen", setCommonGamesWomen);
         if (data.commonAthleticsWomen) setIfReady("commonAthleticsWomen", setCommonAthleticsWomen);
+        if (data.about) setIfReady("about", setAbout);
 
         if (isInitial) setLoading(false);
       })
