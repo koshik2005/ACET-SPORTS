@@ -242,6 +242,37 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                     <div style={{ background: dark ? "rgba(139,0,0,.15)" : "#fff5f5", border: "1px solid #8B000033", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#8B0000", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>⚽ Game</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existingRegistration.game || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
                     <div style={{ background: dark ? "rgba(75,0,130,.2)" : "#f5f0ff", border: "1px solid #4B008233", borderRadius: 9, padding: 12 }}><div style={{ fontSize: 10, color: "#4B0082", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>🏃 Athletic</div><div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{existingRegistration.athletic || <span style={{ color: "#aaa", fontStyle: "italic" }}>None</span>}</div></div>
                 </div>
+
+                {/* WhatsApp Link Addition */}
+                {(function() {
+                    const isFemale = student?.gender?.toLowerCase() === "female" || student?.gender?.toLowerCase() === "f";
+                    const rawWaLink = isFemale ? (hObj?.whatsappLinkWomen) : (hObj?.whatsappLinkMen);
+                    const sanitizeUrl = (url) => {
+                        if (!url || typeof url !== 'string') return "#";
+                        try {
+                            const parsed = new URL(url.trim());
+                            if (["http:", "https:", "mailto:", "whatsapp:"].includes(parsed.protocol)) return parsed.href;
+                        } catch (e) {}
+                        return "#";
+                    };
+                    const waLink = sanitizeUrl(rawWaLink);
+                    const genderLabel = isFemale ? "Women's" : "Men's";
+                    const genderColor = isFemale ? "#FF69B4" : "#1E90FF";
+
+                    if (!rawWaLink) return <div style={{ marginTop: 16, fontSize: 11, color: dark ? "#666" : "#aaa", fontStyle: "italic", textAlign: "center" }}>WhatsApp group link not configured yet.</div>;
+
+                    return (
+                        <a href={waLink} target="_blank" rel="noopener noreferrer" style={{
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16,
+                            background: "linear-gradient(135deg,#25D366,#128C7E)", color: "#fff", textDecoration: "none",
+                            borderRadius: 10, padding: 12, fontWeight: 800, fontSize: 14, boxShadow: "0 4px 12px rgba(37,211,102,.2)"
+                        }}>
+                             <svg width="18" height="18" viewBox="0 0 32 32" fill="white"><path d="M16 2C8.27 2 2 8.27 2 16c0 2.46.65 4.77 1.78 6.77L2 30l7.47-1.75A13.93 13.93 0 0016 30c7.73 0 14-6.27 14-14S23.73 2 16 2zm0 25.38c-2.2 0-4.28-.6-6.07-1.64l-.43-.26-4.44 1.04 1.06-4.32-.28-.45A11.35 11.35 0 014.64 16C4.64 9.67 9.67 4.64 16 4.64S27.36 9.67 27.36 16 22.33 27.38 16 27.38zm6.28-8.5c-.34-.17-2.03-1-2.35-1.12-.32-.11-.55-.17-.78.17-.23.34-.9 1.12-1.1 1.35-.2.23-.4.26-.74.09-.34-.17-1.44-.53-2.74-1.69-1.01-.9-1.7-2.01-1.9-2.35-.2-.34-.02-.52.15-.69.15-.15.34-.4.51-.6.17-.2.23-.34.34-.57.11-.23.06-.43-.03-.6-.09-.17-.78-1.88-1.07-2.57-.28-.67-.57-.58-.78-.59h-.66c-.23 0-.6.09-.91.43-.31.34-1.19 1.16-1.19 2.83s1.22 3.28 1.39 3.51c.17.23 2.4 3.66 5.82 5.13.81.35 1.44.56 1.93.72.81.26 1.55.22 2.14.13.65-.1 2.03-.83 2.31-1.63.29-.8.29-1.49.2-1.63-.08-.14-.31-.23-.65-.4z"/></svg>
+                             Join {genderLabel} WhatsApp Group →
+                        </a>
+                    );
+                })()}
+
                 <div style={{ marginTop: 12, padding: "9px 12px", background: dark ? "rgba(255,200,0,.1)" : "#fffbea", border: "1px solid #FFD70066", borderRadius: 8, fontSize: 12, color: dark ? "#ffd700" : "#856404" }}>⚠️ To change, contact your Sports Admin.</div>
             </div>
             <button onClick={() => { setStudent(null); setInput(""); setOtpSent(false); setIsOtpVerified(false); setExistingRegistration(null); setIsPartial(false); }} style={{ marginTop: 14, background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 50, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>← Back</button>
