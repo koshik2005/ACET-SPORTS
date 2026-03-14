@@ -340,7 +340,7 @@ function getTransporter(index = null) {
 // Global helper for robust email sending with automatic retry/rotation
 async function robustSendMail(mailOptions, specificIndex = null) {
   let lastError;
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 5;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const { transporter, user } = getTransporter(specificIndex);
