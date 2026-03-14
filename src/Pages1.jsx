@@ -227,8 +227,8 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         </div>
                     ))}
                 </div>
-                {memorial?.enabled && (
-                    <section style={{
+                {memorial?.enabled && (memorial.list || []).map((m, idx) => (
+                    <section key={idx} style={{
                         marginTop: 40,
                         background: dark ? "rgba(255,255,255,.03)" : "#fffcfc",
                         borderRadius: 24,
@@ -239,15 +239,15 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                     }}>
                         <div style={{ display: "inline-block", background: "#8B0000", color: "#fff", padding: "4px 16px", borderRadius: 50, fontSize: 11, fontWeight: 800, letterSpacing: 2, marginBottom: 20, textTransform: "uppercase" }}>In Loving Memory</div>
 
-                        <h2 style={{ fontFamily: "'Georgia',serif", fontSize: isMobile ? 28 : 42, color: dark ? "#fff" : "#8B0000", margin: "0 0 16px" }}>{memorial.name || "Our Beloved Staff"}</h2>
+                        <h2 style={{ fontFamily: "'Georgia',serif", fontSize: isMobile ? 28 : 42, color: dark ? "#fff" : "#8B0000", margin: "0 0 16px" }}>{m.name || "Our Beloved Staff"}</h2>
 
                         <div style={{ maxWidth: 700, margin: "0 auto 40px", lineHeight: 1.8, color: dark ? "#ccc" : "#444", fontSize: isMobile ? 15 : 18, fontStyle: "italic" }}>
-                            "{memorial.description || "In memory of our dear colleague who served our institution with dedication and passion. Their legacy lives on in our hearts and the lives they touched."}"
+                            "{m.description || "In memory of our dear colleague who served our institution with dedication and passion. Their legacy lives on in our hearts and the lives they touched."}"
                         </div>
 
-                        {memorial.images?.length > 0 && (
+                        {m.images?.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 15 }}>
-                                {memorial.images.map((img, i) => (
+                                {m.images.map((img, i) => (
                                     <div key={img.id || i} style={{
                                         width: isMobile ? "calc(50% - 10px)" : "250px",
                                         aspectRatio: "3/4",
@@ -266,7 +266,7 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
 
                         <div style={{ marginTop: 30, fontSize: 24, opacity: 0.6 }}>🕊️</div>
                     </section>
-                )}
+                ))}
             </div>
         </div>
     );

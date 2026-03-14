@@ -59,7 +59,7 @@ export default function App() {
   const [closedEvents, setClosedEvents] = useState([]);
   const [maxGames, setMaxGames] = useState(1);
   const [maxAthletics, setMaxAthletics] = useState(1);
-  const [memorial, setMemorial] = useState({ enabled: false, name: "", description: "", images: [] });
+  const [memorial, setMemorial] = useState({ enabled: false, list: [] });
   const [commonGamesMen, setCommonGamesMen] = useState([]);
   const [commonAthleticsMen, setCommonAthleticsMen] = useState([]);
   const [commonGamesWomen, setCommonGamesWomen] = useState([]);

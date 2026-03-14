@@ -30,7 +30,7 @@ const stateSchema = new mongoose.Schema({
     maxAthletics: { type: Number, default: 1 },
     adminLogs: { type: Array, default: [] },
     launchConfig: { type: Object, default: { enabled: true, title: "Achariya Sports Day", year: "2026", released: false } },
-    memorial: { type: Object, default: { enabled: false, name: "", description: "", images: [] } },
+    memorial: { type: Object, default: { enabled: false, list: [] } },
     commonGamesMen: { type: Array, default: [] },
     commonAthleticsMen: { type: Array, default: [] },
     commonGamesWomen: { type: Array, default: [] },
