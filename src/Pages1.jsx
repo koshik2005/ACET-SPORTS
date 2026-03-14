@@ -347,7 +347,12 @@ export function AboutPage({ dark, about = { sponsors: [], credits: "" } }) {
             <section style={{ marginBottom: 60 }}>
                 <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#eee"}`, paddingBottom: 10, marginBottom: 25, fontSize: isMobile ? 21 : 28 }}>🤝 Our Proud Sponsors</h2>
                 {about?.sponsors?.length > 0 ? (
-                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(200px, 1fr))", gap: 20 }}>
+                    <div style={{ 
+                        display: "grid", 
+                        gridTemplateColumns: about.sponsors.length === 1 ? "1fr" : (isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(200px, 1fr))"), 
+                        gap: 20,
+                        justifyItems: "center"
+                    }}>
                         {about.sponsors.map((s, i) => (
                             <div key={s.id || i} style={{ 
                                 background: dark ? "rgba(255,255,255,.05)" : "#fff", 
@@ -358,6 +363,8 @@ export function AboutPage({ dark, about = { sponsors: [], credits: "" } }) {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 aspectRatio: "1",
+                                width: "100%",
+                                maxWidth: about.sponsors.length === 1 ? 400 : "none",
                                 boxShadow: "0 4px 12px rgba(0,0,0,.05)",
                                 transition: "transform .3s ease"
                             }}>
