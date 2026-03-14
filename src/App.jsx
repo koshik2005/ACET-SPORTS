@@ -6,6 +6,7 @@ import { RegistrationPage, ScoreboardPage, GalleryPage, WinnersPage, StarPlayers
 import { AdminPage } from "./AdminPage.jsx";
 import { CaptainPortal } from "./CaptainPortal.jsx";
 import { LaunchScreen } from "./LaunchScreen.jsx";
+import { WelcomeScreen } from "./WelcomeScreen.jsx";
 
 const SYNC_DEBOUNCE_MS = 1000;
 const syncTimeouts = {};
@@ -35,6 +36,7 @@ export default function App() {
   const [hasLaunched, setHasLaunched] = useState(() => {
     return sessionStorage.getItem("launched") === "true";
   });
+  const [showCurtains, setShowCurtains] = useState(false);
   const [launchConfig, setLaunchConfig] = useState({ enabled: true, title: "Achariya Sports Day", year: "2026" });
 
   // Configuration from API
@@ -317,10 +319,14 @@ export default function App() {
       <Footer dark={dark} nav={nav.filter(n => n !== "Admin" && n !== "Captain")} houses={houses} />
       
       {launchConfig?.enabled && !hasLaunched && (
-        <LaunchScreen config={launchConfig} onLaunch={() => {
-          setHasLaunched(true);
-          sessionStorage.setItem("launched", "true");
-        }} />
+        !showCurtains ? (
+          <WelcomeScreen config={launchConfig} onStart={() => setShowCurtains(true)} />
+        ) : (
+          <LaunchScreen config={launchConfig} onLaunch={() => {
+            setHasLaunched(true);
+            sessionStorage.setItem("launched", "true");
+          }} />
+        )
       )}
     </div>
   );
