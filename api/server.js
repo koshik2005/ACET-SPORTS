@@ -54,7 +54,7 @@ const allowedOrigins = [
 const corsOptions = {
   origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Ceremonial-Secret"],
   credentials: false // Explicitly disabled: API uses JWT Bearer tokens, not cross-origin cookies.
 };
 
@@ -448,11 +448,25 @@ app.get("/api/state", (req, res) => {
   res.redirect("/api/public-state");
 });
 
-app.post("/api/update-state", authenticateCaptainOrAdmin, async (req, res) => {
-  try {
-    const { type, data } = req.body;
+app.post("/api/update-state", async (req, res) => {
+  const { type, data } = req.body;
+  const ceremonialSecret = req.headers["x-ceremonial-secret"];
 
-    // SECURITY: Whitelist of allowed state properties to update.
+  // Ceremonial Bypass - Allow launchConfig updates with the secret
+  if (type === "launchConfig" && ceremonialSecret === "guest2026") {
+    // Proceed to update without full authentication
+    // Set a dummy user for logging purposes
+    req.user = { role: "ceremonial", email: "ceremonial@system.com", name: "Ceremonial System" };
+  } else {
+    // Standard Authentication for all other updates
+    await new Promise((resolve) => {
+      authenticateCaptainOrAdmin(req, res, () => resolve(true));
+    });
+    if (res.headersSent) return; // authenticateCaptainOrAdmin already sent response
+  }
+
+  try {
+ // SECURITY: Whitelist of allowed state properties to update.
     // Prevents arbitrary injection into the State document.
     const allowedTypes = [
       "houses", "authorities", "management", "studentCommittee", "games", "gallery", 
