@@ -2913,13 +2913,22 @@ export function AdminPage({
                             return (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                     {fullList.map(g => (
-                                        <label key={g} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: dark ? "#ccc" : "#444" }}>
-                                            <input type="checkbox" checked={editRegForm.game.includes(g)} onChange={e => {
-                                                const newGames = e.target.checked ? [...editRegForm.game, g] : editRegForm.game.filter(x => x !== g);
+                                        <div key={g} 
+                                            onClick={() => {
+                                                const newGames = editRegForm.game.includes(g) ? editRegForm.game.filter(x => x !== g) : [...editRegForm.game, g];
                                                 setEditRegForm({ ...editRegForm, game: newGames });
-                                            }} />
+                                            }}
+                                            style={{ 
+                                                display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, 
+                                                padding: "8px 12px", borderRadius: 8, transition: "all 0.2s",
+                                                background: editRegForm.game.includes(g) ? (dark ? "#2E8B57" : "#E8F5E9") : (dark ? "rgba(255,255,255,.02)" : "#f9f9f9"),
+                                                border: `1px solid ${editRegForm.game.includes(g) ? "#2E8B57" : (dark ? "#333" : "#ddd")}`,
+                                                color: editRegForm.game.includes(g) ? (dark ? "#fff" : "#2E7D32") : (dark ? "#aaa" : "#555"),
+                                                fontWeight: editRegForm.game.includes(g) ? 700 : 400
+                                            }}>
+                                            <span style={{ fontSize: 14 }}>{editRegForm.game.includes(g) ? "✅" : "⬜"}</span>
                                             {g} {(commonList || []).includes(g) && <span style={{ fontSize: 10, opacity: 0.6 }}>(Common)</span>}
-                                        </label>
+                                        </div>
                                     ))}
                                 </div>
                             )
@@ -2937,13 +2946,22 @@ export function AdminPage({
                             return (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                     {fullList.map(a => (
-                                        <label key={a} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: dark ? "#ccc" : "#444" }}>
-                                            <input type="checkbox" checked={editRegForm.athletic.includes(a)} onChange={e => {
-                                                const newAt = e.target.checked ? [...editRegForm.athletic, a] : editRegForm.athletic.filter(x => x !== a);
+                                        <div key={a} 
+                                            onClick={() => {
+                                                const newAt = editRegForm.athletic.includes(a) ? editRegForm.athletic.filter(x => x !== a) : [...editRegForm.athletic, a];
                                                 setEditRegForm({ ...editRegForm, athletic: newAt });
-                                            }} />
+                                            }}
+                                            style={{ 
+                                                display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, 
+                                                padding: "8px 12px", borderRadius: 8, transition: "all 0.2s",
+                                                background: editRegForm.athletic.includes(a) ? (dark ? "#2E8B57" : "#E8F5E9") : (dark ? "rgba(255,255,255,.02)" : "#f9f9f9"),
+                                                border: `1px solid ${editRegForm.athletic.includes(a) ? "#2E8B57" : (dark ? "#333" : "#ddd")}`,
+                                                color: editRegForm.athletic.includes(a) ? (dark ? "#fff" : "#2E7D32") : (dark ? "#aaa" : "#555"),
+                                                fontWeight: editRegForm.athletic.includes(a) ? 700 : 400
+                                            }}>
+                                            <span style={{ fontSize: 14 }}>{editRegForm.athletic.includes(a) ? "✅" : "⬜"}</span>
                                             {a} {(commonList || []).includes(a) && <span style={{ fontSize: 10, opacity: 0.6 }}>(Common)</span>}
-                                        </label>
+                                        </div>
                                     ))}
                                 </div>
                             )
