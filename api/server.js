@@ -526,8 +526,19 @@ app.get("/api/secure-state", authenticateCaptainOrAdmin, async (req, res) => {
     } else if (user.role === "captain") {
       // Sanitize state for captain: only show their house's registrations
       const result = { ...state.toObject ? state.toObject() : state };
-      result.studentsDB = (result.studentsDB || []).filter(s => s.house === user.house);
-      result.registrations = (result.registrations || []).filter(r => r.house === user.house);
+      
+      const houseObj = state.houses.find(h => h.id === user.house);
+      const hName = (houseObj?.name || "").toLowerCase();
+      const hDisplay = (houseObj?.displayName || "").toLowerCase();
+
+      result.studentsDB = (result.studentsDB || []).filter(s => {
+        const sH = (s.house || "").toLowerCase();
+        return sH === hName || sH === hDisplay;
+      });
+      result.registrations = (result.registrations || []).filter(r => {
+        const rH = (r.house || "").toLowerCase();
+        return rH === hName || rH === hDisplay;
+      });
       
       // Still hide sensitive admin-only stuff
       delete result.activeAdminToken;
