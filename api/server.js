@@ -281,16 +281,36 @@ const loadAdminToken = async () => {
 
 // ─── Transporter ───────────────────────────────────────────────────────────
 function makeTransporter() {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey && resendKey !== "your_resend_api_key") {
+    return nodemailer.createTransport({
+      host: "smtp.resend.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: "resend",
+        pass: resendKey,
+      },
+    });
+  }
+
   const user = process.env.SMTP_USER || process.env.EMAIL;
   const pass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
+  
+  // Robust SMTP configuration with pooling for performance and reliability
   return nodemailer.createTransport({
     pool: true,
-    maxConnections: 3,
+    maxConnections: 5,
     maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5, // Avoid hammering slower SMTP servers
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
     secure: process.env.SMTP_SECURE === "true",
     auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false // Helps with self-signed certificates in intermediate environments
+    }
   });
 }
 
@@ -1175,8 +1195,30 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
   ];
 
   const results = { success: 0, failed: 0 };
+  const BATCH_SIZE = 50;
 
-  for (const user of allUsers) {
+  // Separate users into those needing individual emails (personalized) vs bulk
+  const individualUsers = [];
+  const bulkRecipients = [];
+
+  allUsers.forEach(user => {
+    if (!user.email || !user.email.includes("@")) return;
+    const roleLower = (user.role || "").toLowerCase();
+    // Higher officials and specific individual cases always get personalized mail
+    const isIndividual = isInauguration || 
+                        roleLower.includes("principal") || 
+                        roleLower.includes("managing director") || 
+                        roleLower.includes("md") || 
+                        roleLower.includes("hod") || 
+                        roleLower.includes("head") ||
+                        roleLower.includes("physical education");
+    
+    if (isIndividual) individualUsers.push(user);
+    else bulkRecipients.push(user.email);
+  });
+
+  // 1. Send Individual Personalized Emails
+  for (const user of individualUsers) {
     if (!user.email || !user.email.includes("@")) continue;
 
     let subject, html;
@@ -1280,8 +1322,80 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
       await transporter.sendMail(mailOptions);
       results.success++;
     } catch (err) {
-      console.error(`❌ Email failed for ${user.email}:`, err.message);
+      console.error(`❌ Individual email failed for ${user.email}:`, err.message);
       results.failed++;
+    }
+  }
+
+  // 2. Send Bulk BCC Emails (for general announcements)
+  if (bulkRecipients.length > 0 && !isInauguration) {
+    console.log(`📡 Sending bulk announcement to ${bulkRecipients.length} recipients in batches of ${BATCH_SIZE}...`);
+    
+    const subject = "🏆 Sports Day Official Announcement - ACET";
+    const displayTimeHtml = time ? `<div style="font-size:20px; color:#fff; margin-top:10px; font-weight:600;">⏰ ${time}</div>` : "";
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#fff1ee;color:#222;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff1ee;padding:32px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(139,0,0,.15);max-width:560px;">
+        <tr><td style="background:linear-gradient(135deg,#8B0000,#C41E3A);padding:40px 36px;text-align:center;">
+          <div style="font-size:48px;margin-bottom:12px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.3));">🏆</div>
+          <h1 style="color:#fff;margin:0 0 10px;font-size:28px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.2);">Official Announcement</h1>
+          <p style="color:rgba(255,255,255,.9);margin:0;font-size:15px;letter-spacing:.5px;">Achariya College of Engineering Technology</p>
+        </td></tr>
+        <tr><td style="padding:40px 36px;">
+          <h2 style="font-size:22px;color:#8B0000;margin:0 0 16px;text-align:center;">Greetings from the Sports Committee! 📅</h2>
+          <p style="font-size:16px;color:#444;margin:0 0 30px;line-height:1.6;text-align:center;">We are excited to announce the official schedule for our upcoming Sports Day events.</p>
+          <div style="background:#0f0f1a;border-radius:14px;padding:30px 24px;text-align:center;box-shadow:inset 0 4px 12px rgba(0,0,0,.3);border:2px solid #FFD700;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:2px;color:#FFD700;text-transform:uppercase;margin-bottom:12px;">Official Date</div>
+            <div style="font-size:24px;color:#fff;font-weight:800;">${displayDate}</div>
+            ${displayTimeHtml}
+          </div>
+          <div style="text-align:center; margin-top:30px;">
+            <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;text-decoration:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:800;box-shadow:0 8px 24px rgba(255,215,0,.4);">Go to Sports Portal 🏃‍♂️</a>
+          </div>
+          <div style="margin-top:24px;text-align:left;border-top:1px solid #eee;padding-top:24px;">
+            <p style="font-size:15px;color:#444;">With regards,<br/><br/><strong>${regardsNames}</strong></p>
+          </div>
+        </td></tr>
+        <tr><td style="background:#f9f9f9;border-top:1px solid #eee;padding:20px 36px;text-align:center;">
+          <p style="font-size:11px;color:#aaa;margin:0;">© 2026 Achariya College of Engineering Technology · Sports Day ERP</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    for (let i = 0; i < bulkRecipients.length; i += BATCH_SIZE) {
+      const batch = bulkRecipients.slice(i, i + BATCH_SIZE);
+      try {
+        const mailOptions = {
+          from: `"Sports Day ACET" <${process.env.SMTP_USER || process.env.EMAIL}>`,
+          to: process.env.SMTP_USER || process.env.EMAIL, // To ourselves to avoid disclosing list
+          bcc: batch,
+          subject: subject,
+          html: html,
+        };
+
+        if (invitationFile && invitationFileName) {
+          mailOptions.attachments = [{
+            filename: invitationFileName,
+            content: invitationFile.split("base64,")[1],
+            encoding: 'base64'
+          }];
+        }
+
+        await transporter.sendMail(mailOptions);
+        results.success += batch.length;
+        console.log(`✅ Batch of ${batch.length} sent successfully.`);
+      } catch (err) {
+        console.error(`❌ Bulk batch failed:`, err.message);
+        results.failed += batch.length;
+      }
     }
   }
 
