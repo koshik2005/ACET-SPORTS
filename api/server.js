@@ -279,74 +279,110 @@ const loadAdminToken = async () => {
 
 
 
-// Rotation state for multi-account SMTP
+// ─── Transporter Registry (Persistent Pool) ──────────────────────────────────
 let smtpRotationCounter = 0;
+const transportersCache = new Map();
 
-function makeTransporter(index = null) {
+function getTransporter(index = null) {
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey && resendKey !== "your_resend_api_key") {
-    return {
-      transporter: nodemailer.createTransport({
-        host: "smtp.resend.com",
-        port: 465,
-        secure: true,
-        auth: {
-          user: "resend",
-          pass: resendKey,
-        },
-      }),
-      user: process.env.SMTP_USER || process.env.EMAIL
-    };
+    if (!transportersCache.has('resend')) {
+      transportersCache.set('resend', {
+        transporter: nodemailer.createTransport({
+          host: "smtp.resend.com",
+          port: 465,
+          secure: true,
+          auth: { user: "resend", pass: resendKey },
+        }),
+        user: process.env.SMTP_USER || process.env.EMAIL
+      });
+    }
+    return transportersCache.get('resend');
   }
 
-  // If index is provided, use that specific account, otherwise rotate
+  // Handle Multi-Account Rotation (1-5)
   const rotationIndex = (index !== null) ? (index % 5) + 1 : (smtpRotationCounter++ % 5) + 1;
   const suffix = rotationIndex === 1 ? "" : `_${rotationIndex}`;
   
-  // Try suffixed vars first (SMTP_USER_2), fallback to base vars (SMTP_USER) for index 1
   const user = process.env[`SMTP_USER${suffix}`] || process.env.SMTP_USER || process.env.EMAIL;
   const pass = process.env[`SMTP_PASS${suffix}`] || process.env.SMTP_PASS || process.env.APP_PASSWORD;
   
-  if (!user || !pass) {
-    // If we tried to rotate to an account that isn't configured, fallback to the primary one
-    const fallbackUser = process.env.SMTP_USER || process.env.EMAIL;
-    const fallbackPass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
-    
-    return {
-      transporter: nodemailer.createTransport({
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
-        rateDelta: 1000,
-        rateLimit: 5,
-        host: process.env.SMTP_HOST || "smtp.gmail.com",
-        port: parseInt(process.env.SMTP_PORT || "587"),
-        secure: process.env.SMTP_SECURE === "true",
-        auth: { user: fallbackUser, pass: fallbackPass },
-        tls: { rejectUnauthorized: false }
-      }),
-      user: fallbackUser
-    };
+  const cacheKey = user || 'primary';
+  
+  if (transportersCache.has(cacheKey)) {
+    return transportersCache.get(cacheKey);
   }
 
-  return {
+  // Create new persistent transporter for this account
+  const configUser = user || process.env.SMTP_USER || process.env.EMAIL;
+  const configPass = pass || process.env.SMTP_PASS || process.env.APP_PASSWORD;
+
+  const t = {
     transporter: nodemailer.createTransport({
       pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
+      maxConnections: 3,
+      maxMessages: 200,
       rateDelta: 1000,
-      rateLimit: 5, // Avoid hammering slower SMTP servers
+      rateLimit: 3, // Slightly slower to keep Gmail happy
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
       secure: process.env.SMTP_SECURE === "true",
-      auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false
-      }
+      auth: { user: configUser, pass: configPass },
+      tls: { rejectUnauthorized: false }
     }),
-    user
+    user: configUser
   };
+
+  transportersCache.set(cacheKey, t);
+  return t;
 }
+
+// Global helper for robust email sending with automatic retry/rotation
+async function robustSendMail(mailOptions, specificIndex = null) {
+  let lastError;
+  const MAX_RETRIES = 2;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const { transporter, user } = getTransporter(specificIndex);
+    try {
+      // Ensure 'from' always matches the authenticated user
+      const options = { ...mailOptions };
+      if (!options.from) {
+        options.from = `"Sports Day ERP" <${user}>`;
+      } else if (options.from.includes("<")) {
+        // preserve the name but replace the email address
+        const namePart = options.from.split("<")[0].trim();
+        options.from = `${namePart} <${user}>`;
+      } else {
+        options.from = user;
+      }
+      
+      await transporter.sendMail(options);
+      return { success: true, user };
+    } catch (err) {
+      lastError = err;
+      console.error(`[SMTP_ATTEMPT_${attempt + 1}_FAILED] User: ${user} | Error: ${err.message}`);
+      
+      // If it's a login error (534/535) or connection error, try NEXT account
+      if (err.message.includes('534') || err.message.includes('535') || err.message.includes('EAI_AGAIN') || err.code === 'ECONNRESET') {
+        if (specificIndex === null) {
+          // Increment counter to ensure NEXT try uses a different account
+          console.log(`[SMTP_ROTATING] Attempting next account due to failure...`);
+        } else {
+          // If we were targeted, we can't easily rotate, but we can retry once
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      } else {
+        // For other errors (like invalid recipient), don't bother retrying
+        throw err;
+      }
+    }
+  }
+  throw lastError;
+}
+
+// For backward compatibility while I refactor usages
+const makeTransporter = getTransporter;
 
 // ─── Middleware ────────────────────────────────────────────────────────────
 const authenticateAdmin = async (req, res, next) => {
@@ -607,9 +643,7 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   try {
-    const { transporter, user: smtpUser } = makeTransporter();
-    await transporter.sendMail({
-      from: `"Sports Day ERP" <${smtpUser}>`,
+    await robustSendMail({
       to: email,
       subject: `🗝️ Your Registration OTP — Achariya Sports`,
       html: `
@@ -822,9 +856,7 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   try {
-    const { transporter, user: smtpUser } = makeTransporter();
-    await transporter.sendMail({
-      from: `"Sports Day Admin" <${smtpUser}>`,
+    await robustSendMail({
       to: email,
       subject: `🗝️ Admin Login OTP — Achariya Sports`,
       html: `
@@ -837,7 +869,7 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
           <p style="font-size: 12px; color: #888; text-align: center;">This code will expire in 5 minutes.</p>
         </div>
       `,
-    });
+    }, 0); // Always use account 1 for Admin OTP for consistency
 
     // Persistent storage (DB-backed, replaces deprecated in-memory store)
     await Otp.findOneAndUpdate({ email, type: "admin" }, { otp, createdAt: new Date() }, { upsert: true });
@@ -1076,7 +1108,7 @@ app.get("/api/email-config", authenticateAdmin, (req, res) => {
 // SECURITY: Protected — triggers live SMTP network call. Admin-only.
 app.get("/api/check-email-connection", authenticateAdmin, async (req, res) => {
   try {
-    const { transporter } = makeTransporter();
+    const { transporter } = getTransporter(); // Use registry to test connection
     await transporter.verify();
     res.json({ success: true });
   } catch (err) {
@@ -1108,7 +1140,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
   const houseColors = { RED: "#FF0000", BLUE: "#0000FF", GREEN: "#008000", YELLOW: "#FFFF00", PURPLE: "#800080" };
   const houseColor = houseColors[house.toUpperCase()] || "#8B0000";
 
-  const { transporter, user: smtpUser } = makeTransporter();
+  // Transporter is now handled inside robustSendMail
 
   // 1. Send Congratulatory Email to Captain
   const captainHtml = `
@@ -1165,9 +1197,8 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
 </html>`;
 
   try {
-    // Send to Captain
-    await transporter.sendMail({
-      from: `"Sports Day ERP" <${smtpUser}>`,
+    // 1. Send to Captain
+    await robustSendMail({
       to: captainEmail,
       subject: `🎉 Congratulations ${captainName}! You are the ${house} House ${role}`,
       html: captainHtml,
@@ -1193,8 +1224,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
 
       for (const auth of authorities) {
         if (auth.email && auth.email.includes("@")) {
-          await transporter.sendMail({
-            from: `"Sports ERP System" <${smtpUser}>`,
+          await robustSendMail({
             to: auth.email,
             subject: authSubject,
             html: authHtml,
@@ -1216,7 +1246,9 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
   const { type, date, time, venue, portalUrl, authorities = [], management = [], studentsDB = [], recipients = [], invitationFile, invitationFileName, regardsNames } = req.body;
 
   const isInauguration = type === "inauguration";
-  const displayDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const displayDate = date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : "Coming Soon";
+  const displayTimeHtml = time ? `<div style="font-size:18px; color:#fff; font-weight:600; margin-bottom:10px;">⏰ ${time}</div>` : "";
+  const venueHtml = venue ? `<div style="font-size:16px; color:rgba(255,255,255,0.9); margin-top:8px;">📍 Venue: ${venue}</div>` : "";
   
   // Use provided recipients chunk if available, otherwise fallback to all
   const allUsers = recipients.length > 0 ? recipients : [
@@ -1248,55 +1280,49 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
     else bulkRecipients.push(user.email);
   });
 
-    for (const [idx, user] of individualUsers.entries()) {
-      if (!user.email || !user.email.includes("@")) continue;
+  // display variables moved to top
 
-      const { transporter, user: smtpUser } = makeTransporter(idx);
-      let subject, html;
-      // ... (template logic omitted for brevity as it's not changed, I'll use multi-replace to keep it clean)
+  for (const [idx, user] of individualUsers.entries()) {
+    if (!user.email || !user.email.includes("@")) continue;
+
+    let subject, html;
+    const name = user.name || "Guest";
+    const dept = user.dept || "Department";
 
     if (isInauguration) {
-      subject = "Invitation for Sports Day Inauguration";
-      const roleLower = (user.role || "").toLowerCase();
-      const name = user.name || "Guest";
-      const dept = user.dept || "Department";
-      const isHigherOfficial = roleLower.includes("principal") || roleLower.includes("managing director") || roleLower.includes("md") || roleLower.includes("hod") || roleLower.includes("head");
-
-      if (isHigherOfficial) {
-        html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif; padding:40px; color:#222; max-width:600px; margin:auto; border:1px solid #eee; line-height:1.6;">
-          <p>Respected ${name},<br/>
-          Head of the Department, ${dept}</p>
-          <p>Greetings from Achariya College of Engineering Technology.</p>
-          <p>On behalf of the Department of Physical Education, I am pleased to invite you to grace the Sports Day Inauguration Ceremony of our institution. Your esteemed presence will be a great honor and will serve as an inspiration to our students participating in the sports events.</p>
-          <div style="background:#f9f9f9; padding:20px; border-left:4px solid #8B0000; margin:20px 0;">
-            <strong>📍 Venue:</strong> ${venue || "Auditorium"}<br/>
-            <strong>🕒 Date:</strong> ${displayDate}<br/>
-            <strong>🕒 Time:</strong> ${time || "3:00 PM – 4:00 PM"}
+      subject = "✨ Official Invitation: Achariya Sports Day Inauguration";
+      html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#fff8f8;color:#222;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff8f8;padding:32px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.1);max-width:560px;">
+        <tr><td style="background:linear-gradient(135deg,#8B0000,#C41E3A);padding:40px 36px;text-align:center;color:#fff;">
+          <h1 style="margin:0 0 10px;font-size:26px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">Grand Inauguration</h1>
+          <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.9);letter-spacing:2px;font-weight:600;">ACET SPORTS FEST 2026</p>
+        </td></tr>
+        <tr><td style="padding:40px 36px;">
+          <p style="font-size:16px;line-height:1.6;color:#444;margin:0 0 24px;">Dear ${name},<br/><br/>You are cordially invited to the <strong>Grand Inaugural Ceremony</strong> of our Sports Day. Your presence will be a great honor and will serve as an inspiration to our students.</p>
+          <div style="background:#8B0000;border-radius:12px;padding:30px 24px;text-align:center;margin-bottom:32px;box-shadow:0 10px 20px rgba(139,0,0,0.2);">
+            <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;margin-bottom:12px;letter-spacing:3px;">Opening Ceremony</div>
+            <div style="font-size:24px;color:#fff;font-weight:800;margin-bottom:10px;">${displayDate}</div>
+            ${displayTimeHtml}
+            ${venueHtml}
           </div>
-          <p>We sincerely hope you will kindly accept our invitation and grace the occasion with your presence.</p>
-          <p>Thank you.</p>
-          <p>Warm regards,<br/><strong>Physical Education Director</strong><br/>Achariya College of Engineering Technology</p>
-        </div>`;
-      } else {
-        html = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif; padding:40px; color:#222; max-width:600px; margin:auto; border:1px solid #eee; line-height:1.6;">
-          <p>Dear ${name},</p>
-          <p>Greetings!</p>
-          <p>You are cordially invited to attend the Sports Day Inauguration Ceremony of Achariya College of Engineering Technology.</p>
-          <div style="background:#f9f9f9; padding:20px; border-left:4px solid #8B0000; margin:20px 0;">
-            <strong>📍 Venue:</strong> ${venue || "Auditorium"}<br/>
-            <strong>🕒 Date:</strong> ${displayDate}<br/>
-            <strong>🕒 Time:</strong> ${time || "3:00 PM – 4:00 PM"}
-          </div>
-          <p>The ceremony will mark the official beginning of the college sports events and will include various programs and announcements. Your presence would be greatly appreciated and will encourage all the participants.</p>
-          <p>We look forward to your presence at the event.</p>
-          <p>Warm regards,<br/><strong>Achariya College of Engineering Technology</strong></p>
-        </div>`;
-      }
+          <p style="font-size:15px;line-height:1.6;color:#444;">With regards,<br/><br/><strong>${regardsNames}</strong></p>
+        </td></tr>
+        <tr><td style="background:#f9f9f9;border-top:1px solid #eee;padding:16px 36px;text-align:center;">
+          <p style="font-size:11px;color:#aaa;margin:0;">© 2026 Achariya College of Engineering Technology · Sports Day ERP</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
     } else {
-      subject = "🏆 Sports Day Official Announcement - ACET";
-      const displayTimeHtml = time ? `<div style="font-size:20px; color:#fff; margin-top:10px; font-weight:600;">⏰ ${time}</div>` : "";
+      subject = "🏆 Official Announcement: Sports Day Event Schedule";
       html = `
 <!DOCTYPE html>
 <html>
@@ -1337,10 +1363,9 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
 
     try {
       const mailOptions = {
-        from: `"Sports Day ACET" <${process.env.SMTP_USER || process.env.EMAIL}>`,
         to: user.email,
-        subject: subject,
-        html: html,
+        subject,
+        html
       };
 
       if (invitationFile && invitationFileName) {
@@ -1351,7 +1376,7 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
         }];
       }
 
-      await transporter.sendMail(mailOptions);
+      await robustSendMail(mailOptions, idx);
       results.success++;
     } catch (err) {
       console.error(`❌ Individual email failed for ${user.email}:`, err.message);
@@ -1405,10 +1430,9 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
     for (let i = 0; i < bulkRecipients.length; i += BATCH_SIZE) {
       const batch = bulkRecipients.slice(i, i + BATCH_SIZE);
       try {
-        const { transporter, user: smtpUser } = makeTransporter(i / BATCH_SIZE);
+        const batchIdx = Math.floor(i / BATCH_SIZE);
         const mailOptions = {
-          from: `"Sports Day ACET" <${smtpUser}>`,
-          to: smtpUser, // To ourselves to avoid disclosing list
+          to: 'me', // placeholder, robustSendMail will fix this
           bcc: batch,
           subject: subject,
           html: html,
@@ -1422,9 +1446,12 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
           }];
         }
 
-        await transporter.sendMail(mailOptions);
+        const res = await robustSendMail(mailOptions, batchIdx);
+        // Ensure 'to' is also the authenticated user to avoid 'sender address rejected'
+        mailOptions.to = res.user; 
+        
         results.success += batch.length;
-        console.log(`✅ Batch of ${batch.length} sent successfully.`);
+        console.log(`✅ Batch of ${batch.length} sent successfully using ${res.user}.`);
       } catch (err) {
         console.error(`❌ Bulk batch failed:`, err.message);
         results.failed += batch.length;
