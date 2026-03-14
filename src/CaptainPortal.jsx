@@ -284,6 +284,41 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                 }} style={{ background: "rgba(255,255,255,.2)", color: "#fff", border: "2px solid rgba(255,255,255,.4)", borderRadius: 50, padding: "8px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>Logout</button>
             </div>
 
+            {/* Syncing Indicator */}
+            <div style={{
+                position: "fixed",
+                top: 0,
+                left: "50%",
+                transform: `translateX(-50%) translateY(${isFetching ? "0" : "-100%"})`,
+                background: "#1E90FF",
+                color: "#fff",
+                padding: "8px 20px",
+                borderBottomLeftRadius: 12,
+                borderBottomRightRadius: 12,
+                fontSize: 13,
+                fontWeight: 700,
+                zIndex: 1000,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                boxShadow: "0 4px 12px rgba(30,144,255,0.3)",
+                transition: "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s",
+                opacity: isFetching ? 1 : 0,
+                pointerEvents: "none"
+            }}>
+                <div style={{ 
+                    width: 14, height: 14, 
+                    border: "2px solid rgba(255,255,255,0.3)", 
+                    borderTopColor: "#fff", 
+                    borderRadius: "50%", 
+                    animation: "spin 1s linear infinite" 
+                }} />
+                <span style={{ letterSpacing: 0.5 }}>Syncing live data...</span>
+                <style>{`
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                `}</style>
+            </div>
+
             {/* Navigation Tabs */}
             <div style={{ display: "flex", borderBottom: `1px solid ${dark ? "#333" : "#eee"}`, gap: 10, overflowX: "auto", scrollbarWidth: "thin", paddingBottom: 2, WebkitOverflowScrolling: "touch" }}>
                 <button onClick={() => setActiveTab("Dashboard")} style={{ ...(activeTab === "Dashboard" ? aTS : tS), whiteSpace: "nowrap", flexShrink: 0 }}>📊 DASHBOARD</button>

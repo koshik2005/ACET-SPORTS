@@ -66,10 +66,12 @@ export default function App() {
   const [commonAthleticsWomen, setCommonAthleticsWomen] = useState([]);
   const [about, setAbout] = useState({ sponsors: [], credits: "" });
   const [syncing, setSyncing] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
   const refreshState = (isInitial = false) => {
+    if (!isInitial) setIsFetching(true);
     const adminToken = localStorage.getItem("adminToken");
     const captainToken = localStorage.getItem("captainToken");
     const token = adminToken || captainToken;
@@ -86,7 +88,11 @@ export default function App() {
         return res.json();
       })
       .then(data => {
-        if (!data) return;
+        if (!data) {
+          if (isInitial) setLoading(false);
+          if (!isInitial) setIsFetching(false);
+          return;
+        }
         const setIfReady = (key, setter) => {
           if (!pendingSyncs.has(key)) setter(data[key]);
         };
@@ -135,10 +141,12 @@ export default function App() {
         if (data.about) setIfReady("about", setAbout);
 
         if (isInitial) setLoading(false);
+        if (!isInitial) setIsFetching(false);
       })
       .catch(err => {
         console.error("Failed to fetch state:", err);
         if (isInitial) setLoading(false);
+        if (!isInitial) setIsFetching(false);
       });
   };
 
@@ -346,7 +354,7 @@ export default function App() {
           commonAthleticsWomen={commonAthleticsWomen} setCommonAthleticsWomen={setCommonAthleticsWomenSync}
         />}
         {active === "Button" && <GuestButtonPage dark={dark} launchConfig={launchConfig} onUpdateConfig={setLaunchConfigSync} syncing={syncing} />}
-        {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} />}
+        {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} isFetching={isFetching} />}
       </main>
 
       <Footer dark={dark} nav={nav.filter(n => n !== "Admin" && n !== "Captain")} houses={houses} />
