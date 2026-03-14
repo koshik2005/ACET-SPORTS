@@ -279,39 +279,73 @@ const loadAdminToken = async () => {
 
 
 
-// ─── Transporter ───────────────────────────────────────────────────────────
-function makeTransporter() {
+// Rotation state for multi-account SMTP
+let smtpRotationCounter = 0;
+
+function makeTransporter(index = null) {
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey && resendKey !== "your_resend_api_key") {
-    return nodemailer.createTransport({
-      host: "smtp.resend.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: "resend",
-        pass: resendKey,
-      },
-    });
+    return {
+      transporter: nodemailer.createTransport({
+        host: "smtp.resend.com",
+        port: 465,
+        secure: true,
+        auth: {
+          user: "resend",
+          pass: resendKey,
+        },
+      }),
+      user: process.env.SMTP_USER || process.env.EMAIL
+    };
   }
 
-  const user = process.env.SMTP_USER || process.env.EMAIL;
-  const pass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
+  // If index is provided, use that specific account, otherwise rotate
+  const rotationIndex = (index !== null) ? (index % 5) + 1 : (smtpRotationCounter++ % 5) + 1;
+  const suffix = rotationIndex === 1 ? "" : `_${rotationIndex}`;
   
-  // Robust SMTP configuration with pooling for performance and reliability
-  return nodemailer.createTransport({
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    rateDelta: 1000,
-    rateLimit: 5, // Avoid hammering slower SMTP servers
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true",
-    auth: { user, pass },
-    tls: {
-      rejectUnauthorized: false // Helps with self-signed certificates in intermediate environments
-    }
-  });
+  // Try suffixed vars first (SMTP_USER_2), fallback to base vars (SMTP_USER) for index 1
+  const user = process.env[`SMTP_USER${suffix}`] || process.env.SMTP_USER || process.env.EMAIL;
+  const pass = process.env[`SMTP_PASS${suffix}`] || process.env.SMTP_PASS || process.env.APP_PASSWORD;
+  
+  if (!user || !pass) {
+    // If we tried to rotate to an account that isn't configured, fallback to the primary one
+    const fallbackUser = process.env.SMTP_USER || process.env.EMAIL;
+    const fallbackPass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
+    
+    return {
+      transporter: nodemailer.createTransport({
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: { user: fallbackUser, pass: fallbackPass },
+        tls: { rejectUnauthorized: false }
+      }),
+      user: fallbackUser
+    };
+  }
+
+  return {
+    transporter: nodemailer.createTransport({
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      rateDelta: 1000,
+      rateLimit: 5, // Avoid hammering slower SMTP servers
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false
+      }
+    }),
+    user
+  };
 }
 
 // ─── Middleware ────────────────────────────────────────────────────────────
@@ -573,9 +607,9 @@ app.post("/api/send-otp", loginLimiter, async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   try {
-    const transporter = makeTransporter();
+    const { transporter, user: smtpUser } = makeTransporter();
     await transporter.sendMail({
-      from: `"Sports Day ERP" <${process.env.SMTP_USER || process.env.EMAIL}>`,
+      from: `"Sports Day ERP" <${smtpUser}>`,
       to: email,
       subject: `🗝️ Your Registration OTP — Achariya Sports`,
       html: `
@@ -788,9 +822,9 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   try {
-    const transporter = makeTransporter();
+    const { transporter, user: smtpUser } = makeTransporter();
     await transporter.sendMail({
-      from: `"Sports Day Admin" <${process.env.SMTP_USER || process.env.EMAIL}>`,
+      from: `"Sports Day Admin" <${smtpUser}>`,
       to: email,
       subject: `🗝️ Admin Login OTP — Achariya Sports`,
       html: `
@@ -1042,7 +1076,7 @@ app.get("/api/email-config", authenticateAdmin, (req, res) => {
 // SECURITY: Protected — triggers live SMTP network call. Admin-only.
 app.get("/api/check-email-connection", authenticateAdmin, async (req, res) => {
   try {
-    const transporter = makeTransporter();
+    const { transporter } = makeTransporter();
     await transporter.verify();
     res.json({ success: true });
   } catch (err) {
@@ -1062,9 +1096,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
   if (password.startsWith("$2b$") || password.startsWith("$2a$") || password.startsWith("$2y$")) {
     return res.status(400).json({ error: "Security Alert: Cannot send a hashed password. Please enter the plain-text password in the Admin Panel." });
   }
-  const smtpUser = process.env.SMTP_USER || process.env.EMAIL;
-  const smtpPass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
-  if (!smtpUser || !smtpPass) {
+  if (!process.env.SMTP_USER && !process.env.EMAIL && !process.env.RESEND_API_KEY) {
     return res.status(400).json({ error: "SMTP not configured. Set SMTP_USER and SMTP_PASS (or EMAIL and APP_PASSWORD) in .env" });
   }
 
@@ -1076,7 +1108,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
   const houseColors = { RED: "#FF0000", BLUE: "#0000FF", GREEN: "#008000", YELLOW: "#FFFF00", PURPLE: "#800080" };
   const houseColor = houseColors[house.toUpperCase()] || "#8B0000";
 
-  const transporter = makeTransporter();
+  const { transporter, user: smtpUser } = makeTransporter();
 
   // 1. Send Congratulatory Email to Captain
   const captainHtml = `
@@ -1135,7 +1167,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
   try {
     // Send to Captain
     await transporter.sendMail({
-      from: `"Sports Day ERP" <${process.env.SMTP_USER || process.env.EMAIL}>`,
+      from: `"Sports Day ERP" <${smtpUser}>`,
       to: captainEmail,
       subject: `🎉 Congratulations ${captainName}! You are the ${house} House ${role}`,
       html: captainHtml,
@@ -1162,7 +1194,7 @@ app.post("/api/send-captain-email", authenticateAdmin, async (req, res) => {
       for (const auth of authorities) {
         if (auth.email && auth.email.includes("@")) {
           await transporter.sendMail({
-            from: `"Sports ERP System" <${process.env.SMTP_USER || process.env.EMAIL}>`,
+            from: `"Sports ERP System" <${smtpUser}>`,
             to: auth.email,
             subject: authSubject,
             html: authHtml,
@@ -1184,7 +1216,6 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
   const { type, date, time, venue, portalUrl, authorities = [], management = [], studentsDB = [], recipients = [], invitationFile, invitationFileName, regardsNames } = req.body;
 
   const isInauguration = type === "inauguration";
-  const transporter = makeTransporter();
   const displayDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   
   // Use provided recipients chunk if available, otherwise fallback to all
@@ -1217,11 +1248,12 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
     else bulkRecipients.push(user.email);
   });
 
-  // 1. Send Individual Personalized Emails
-  for (const user of individualUsers) {
-    if (!user.email || !user.email.includes("@")) continue;
+    for (const [idx, user] of individualUsers.entries()) {
+      if (!user.email || !user.email.includes("@")) continue;
 
-    let subject, html;
+      const { transporter, user: smtpUser } = makeTransporter(idx);
+      let subject, html;
+      // ... (template logic omitted for brevity as it's not changed, I'll use multi-replace to keep it clean)
 
     if (isInauguration) {
       subject = "Invitation for Sports Day Inauguration";
@@ -1373,9 +1405,10 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
     for (let i = 0; i < bulkRecipients.length; i += BATCH_SIZE) {
       const batch = bulkRecipients.slice(i, i + BATCH_SIZE);
       try {
+        const { transporter, user: smtpUser } = makeTransporter(i / BATCH_SIZE);
         const mailOptions = {
-          from: `"Sports Day ACET" <${process.env.SMTP_USER || process.env.EMAIL}>`,
-          to: process.env.SMTP_USER || process.env.EMAIL, // To ourselves to avoid disclosing list
+          from: `"Sports Day ACET" <${smtpUser}>`,
+          to: smtpUser, // To ourselves to avoid disclosing list
           bcc: batch,
           subject: subject,
           html: html,
