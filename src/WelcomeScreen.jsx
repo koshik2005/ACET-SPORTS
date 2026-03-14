@@ -80,39 +80,39 @@ export function WelcomeScreen({ config, onStart }) {
                     {config?.year || "2026"}
                 </h2>
 
-                <button 
-                    onClick={(e) => {
-                        createRipple(e);
-                        setTimeout(onStart, 400);
-                    }}
-                    style={{
-                        position: "relative", overflow: "hidden",
-                        padding: "25px 80px", fontSize: "28px", fontWeight: "950",
-                        color: "#000", background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                        border: "none", borderRadius: "60px", cursor: "pointer",
-                        boxShadow: "0 15px 40px rgba(255, 215, 0, 0.4), 0 0 100px rgba(255,215,0,0.2)",
-                        textTransform: "uppercase", letterSpacing: "5px", transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "scale(1.1) translateY(-5px)";
-                        e.currentTarget.style.boxShadow = "0 25px 60px rgba(255, 215, 0, 0.6), 0 0 120px rgba(255,215,0,0.3)";
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "scale(1) translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 15px 40px rgba(255, 215, 0, 0.4), 0 0 100px rgba(255,215,0,0.2)";
-                    }}
-                >
-                    ENTER EVENT
-                    {ripples.map(r => (
-                        <span key={r.id} style={{
-                            position: "absolute", left: r.x, top: r.y, width: r.size, height: r.size,
-                            background: "rgba(255,255,255,0.4)", borderRadius: "50%",
-                            pointerEvents: "none", animation: "ripple-effect 1s linear forwards"
-                        }} />
-                    ))}
-                </button>
+                <div style={{
+                    marginTop: "50px",
+                    textAlign: "center",
+                    animation: "float 3s ease-in-out infinite"
+                }}>
+                    <div style={{
+                        fontSize: "24px",
+                        fontWeight: "800",
+                        color: "#FFD700",
+                        letterSpacing: "3px",
+                        textTransform: "uppercase",
+                        marginBottom: "15px",
+                        background: "rgba(255,215,0,0.1)",
+                        padding: "15px 40px",
+                        borderRadius: "50px",
+                        border: "1px solid rgba(255,215,0,0.3)",
+                        boxShadow: "0 0 30px rgba(255,215,0,0.2)"
+                    }}>
+                        ⏳ Ceremony Beginning Soon
+                    </div>
+                    <p style={{ 
+                        color: "rgba(255,255,255,0.6)", 
+                        fontSize: "14px", 
+                        fontWeight: "600",
+                        maxWidth: "350px",
+                        margin: "0 auto",
+                        lineHeight: "1.6"
+                    }}>
+                        Please stay tuned. The Chief Guest will trigger the ceremonial reveal shortly.
+                    </p>
+                </div>
 
-                <p style={{ marginTop: "30px", color: "rgba(255,255,255,0.4)", fontSize: "14px", fontWeight: "600", letterSpacing: "2px" }}>
+                <p style={{ marginTop: "40px", color: "rgba(255,255,255,0.3)", fontSize: "14px", fontWeight: "600", letterSpacing: "2px" }}>
                     PREPARE FOR GLORY
                 </p>
             </div>

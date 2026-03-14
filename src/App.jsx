@@ -7,6 +7,7 @@ import { AdminPage } from "./AdminPage.jsx";
 import { CaptainPortal } from "./CaptainPortal.jsx";
 import { LaunchScreen } from "./LaunchScreen.jsx";
 import { WelcomeScreen } from "./WelcomeScreen.jsx";
+import { GuestButtonPage } from "./GuestButtonPage.jsx";
 
 const SYNC_DEBOUNCE_MS = 1000;
 const syncTimeouts = {};
@@ -17,6 +18,7 @@ export default function App() {
     const path = window.location.pathname.toLowerCase();
     if (path.includes("/admin")) return "Admin";
     if (path.includes("/captain")) return "Captain";
+    if (path.includes("/button")) return "Button";
     return "Home";
   });
   const [dark, setDark] = useState(false);
@@ -118,7 +120,12 @@ export default function App() {
         if (data.closedEvents) setIfReady("closedEvents", setClosedEvents);
         if (data.maxGames !== undefined) setIfReady("maxGames", setMaxGames);
         if (data.maxAthletics !== undefined) setIfReady("maxAthletics", setMaxAthletics);
-        if (data.launchConfig) setIfReady("launchConfig", setLaunchConfig);
+        if (data.launchConfig) {
+          setIfReady("launchConfig", setLaunchConfig);
+          if (data.launchConfig.released) {
+            setShowCurtains(true);
+          }
+        }
         if (data.inaugurationDetails) setIfReady("inaugurationDetails", setInaugurationDetails);
         if (data.commonGamesMen) setIfReady("commonGamesMen", setCommonGamesMen);
         if (data.commonAthleticsMen) setIfReady("commonAthleticsMen", setCommonAthleticsMen);
@@ -157,6 +164,7 @@ export default function App() {
           .then(data => {
             if (data?.launchConfig?.released) {
               setLaunchConfig(prev => ({ ...prev, released: true }));
+              setShowCurtains(true); // Automatically transition to curtains reveal
             }
           })
           .catch(() => {});
@@ -331,12 +339,13 @@ export default function App() {
           commonGamesWomen={commonGamesWomen} setCommonGamesWomen={setCommonGamesWomenSync}
           commonAthleticsWomen={commonAthleticsWomen} setCommonAthleticsWomen={setCommonAthleticsWomenSync}
         />}
+        {active === "Button" && <GuestButtonPage dark={dark} launchConfig={launchConfig} onUpdateConfig={setLaunchConfigSync} />}
         {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} />}
       </main>
 
       <Footer dark={dark} nav={nav.filter(n => n !== "Admin" && n !== "Captain")} houses={houses} />
       
-      {launchConfig?.enabled && !hasLaunched && (
+      {launchConfig?.enabled && !hasLaunched && active === "Home" && (
         !showCurtains ? (
           <WelcomeScreen config={launchConfig} onStart={() => setShowCurtains(true)} />
         ) : (
