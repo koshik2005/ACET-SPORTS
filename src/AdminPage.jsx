@@ -223,18 +223,28 @@ export function AdminPage({
             });
             const data = await res.json();
             if (data.success) {
-                // Password OK — now send OTP
-                const otpRes = await fetch(`${API_BASE}/api/admin-send-otp`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: adminEmail.trim() })
-                });
-                const otpData = await otpRes.json();
-                if (otpData.success) {
+                try {
+                    const otpRes = await fetch(`${API_BASE}/api/admin-send-otp`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email: adminEmail.trim() })
+                    });
+                    const otpData = await otpRes.json();
+                    
+                    if (otpData.success) {
+                        setOtp("");
+                        setLoginStep("otp");
+                    } else {
+                        // Even if sending fails, proceed so they can use FALLBACK_OTP
+                        setLoginError("⚠ OTP is not sent. Please try again after some time.");
+                        setOtp("");
+                        setLoginStep("otp");
+                    }
+                } catch (e) {
+                    // Network error sending OTP - still proceed
+                    setLoginError("⚠ OTP is not sent. Please try again after some time.");
                     setOtp("");
                     setLoginStep("otp");
-                } else {
-                    setLoginError(otpData.error || "Failed to send OTP.");
                 }
             } else {
                 setLoginError(data.error || "Incorrect password.");

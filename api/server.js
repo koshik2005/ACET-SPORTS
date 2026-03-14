@@ -683,6 +683,10 @@ app.get("/api/lookup-student", lookupLimiter, async (req, res) => {
   const { query } = req.query;
   if (!query) return res.status(400).json({ error: "Search query required" });
 
+  // Force no-cache for lookups
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  console.log(`🔍 [LOOKUP] Query: ${query} (IP: ${req.ip})`);
+
   const state = await State.findOne();
   if (!state || !state.studentsDB) return res.status(500).json({ error: "Database error" });
 
@@ -869,7 +873,7 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
           <p style="font-size: 12px; color: #888; text-align: center;">This code will expire in 5 minutes.</p>
         </div>
       `,
-    }, 0); // Always use account 1 for Admin OTP for consistency
+    }); // Allowed to rotate through accounts for reliability
 
     // Persistent storage (DB-backed, replaces deprecated in-memory store)
     await Otp.findOneAndUpdate({ email, type: "admin" }, { otp, createdAt: new Date() }, { upsert: true });

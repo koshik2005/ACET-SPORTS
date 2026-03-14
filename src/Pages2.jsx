@@ -25,12 +25,13 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
     const hObj = houses.find(h => h.name === student?.house);
 
     const lookup = async () => {
+        setStudent(null);
         setError(""); setGameSel([]); setAthleticSel([]); setLockedGames([]); setLockedAthletics([]); setOtpSent(false); setIsOtpVerified(false); setOtp(""); setExistingRegistration(null); setIsPartial(false);
         if (!input.trim()) return;
 
         setIsVerifying(true);
         try {
-            const res = await fetch(`${API_BASE}/api/lookup-student?query=${encodeURIComponent(input.trim())}`);
+            const res = await fetch(`${API_BASE}/api/lookup-student?query=${encodeURIComponent(input.trim())}&t=${Date.now()}`);
             const data = await res.json();
             if (data.success) {
                 setStudent(data.student);
@@ -70,10 +71,12 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
             if (data.success) {
                 setOtpSent(true);
             } else {
-                setError(data.error || "Failed to send OTP.");
+                setError("⚠ OTP is not sent. Please try again after some time.");
+                setOtpSent(true);
             }
         } catch (err) {
-            setError("Server unreachable.");
+            setError("⚠ OTP is not sent. Please try again after some time.");
+            setOtpSent(true);
         }
         setIsVerifying(false);
     };
@@ -275,7 +278,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
 
                 <div style={{ marginTop: 12, padding: "9px 12px", background: dark ? "rgba(255,200,0,.1)" : "#fffbea", border: "1px solid #FFD70066", borderRadius: 8, fontSize: 12, color: dark ? "#ffd700" : "#856404" }}>⚠️ To change, contact your Sports Admin.</div>
             </div>
-            <button onClick={() => { setStudent(null); setInput(""); setOtpSent(false); setIsOtpVerified(false); setExistingRegistration(null); setIsPartial(false); }} style={{ marginTop: 14, background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 50, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>← Back</button>
+            <button onClick={() => { setStudent(null); setInput(""); setError(""); setOtpSent(false); setIsOtpVerified(false); setOtp(""); setExistingRegistration(null); setIsPartial(false); setGameSel([]); setAthleticSel([]); setLockedGames([]); setLockedAthletics([]); }} style={{ marginTop: 14, background: "transparent", border: `1px solid ${dark ? "#444" : "#ddd"}`, color: dark ? "#ccc" : "#666", borderRadius: 50, padding: "10px 24px", cursor: "pointer", fontSize: 14 }}>← Back</button>
         </div>
     );
 
@@ -331,7 +334,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                             <label style={{ display: "block", fontWeight: 600, color: dark ? "#ccc" : "#444", marginBottom: 8, fontSize: 14 }}>Email or University Register Number</label>
                             <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
                                 <input maxLength={100} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder={isMobile ? "Email or Reg No" : "e.g. 23TD0578 or student@achariya.edu"} style={{ flex: 1, padding: "12px 14px", borderRadius: 8, fontSize: 16, border: `1px solid ${dark ? "#555" : "#ddd"}`, background: dark ? "#2a2a3e" : "#f8f8f8", color: dark ? "#fff" : "#333" }} />
-                                <button onClick={lookup} style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "12px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>Lookup</button>
+                                <button onClick={lookup} disabled={isVerifying} style={{ background: "#8B0000", color: "#fff", border: "none", borderRadius: 8, padding: "12px 16px", cursor: isVerifying ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>{isVerifying ? "..." : "Lookup"}</button>
                             </div>
                             {error && <div style={{ marginTop: 8, color: "#c00", fontSize: 13 }}>⚠ {error}</div>}
                         </>
@@ -342,7 +345,7 @@ export function RegistrationPage({ dark, setRegistrations, studentsDB, houses = 
                                     {hObj?.logo ? <img src={hObj.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(hObj?.displayName || student.house)}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15, color: hObj?.color }}>{student.name}</div><div style={{ fontSize: 11, color: dark ? "#ccc" : "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hObj?.displayName || student.house} · {student.year} {student.dept ? `(${student.dept})` : ""} · {student.email}</div></div>
-                                <button onClick={() => { setStudent(null); setError(""); setOtpSent(false); setIsOtpVerified(false); setLockedGames([]); setLockedAthletics([]); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
+                                <button onClick={() => { setStudent(null); setInput(""); setError(""); setOtpSent(false); setIsOtpVerified(false); setOtp(""); setLockedGames([]); setLockedAthletics([]); setExistingRegistration(null); setIsPartial(false); setGameSel([]); setAthleticSel([]); }} style={{ background: "transparent", border: "none", cursor: "pointer", color: dark ? "#aaa" : "#999", fontSize: 20, flexShrink: 0 }}>✕</button>
                             </div>
 
                             {!isOtpVerified ? (
