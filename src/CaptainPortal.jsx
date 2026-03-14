@@ -3,7 +3,7 @@ import { useIsMobile, hi } from "./utils.jsx";
 import * as XLSX from "xlsx";
 import { API_BASE } from "./api.js";
 
-export function CaptainPortal({ dark, houses, registrations, studentsDB, setStudentsDB }) {
+export function CaptainPortal({ dark, houses, registrations, studentsDB, setStudentsDB, isFetching }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPwd, setShowPwd] = useState(false);
