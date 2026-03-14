@@ -387,8 +387,15 @@ export function AdminPage({
                     studentsDB
                 }),
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed");
+            const contentType = res.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+                data = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error("Server Error (Vercel Timeout or Generic Error).");
+            }
+            if (!res.ok) throw new Error(data?.error || "Failed");
             setEmailStatus(s => ({ ...s, [statusKey]: "sent" }));
             setTimeout(() => setEmailStatus(s => ({ ...s, [statusKey]: "idle" })), 4000);
         } catch (e) {
@@ -489,7 +496,17 @@ export function AdminPage({
                     }),
                 });
 
-                const data = await res.json();
+                const contentType = res.headers.get("content-type");
+                let data;
+                if (contentType && contentType.includes("application/json")) {
+                    data = await res.json();
+                } else {
+                    const text = await res.text();
+                    throw new Error("Server Error (Vercel Timeout or Generic Error).");
+                }
+                
+                if (!res.ok) throw new Error(data?.error || "Failed");
+
                 if (data.success) {
                     totalSuccess += data.successCount || chunk.length; // Fallback if backend doesn't return count
                     totalFailed += data.failedCount || 0;
