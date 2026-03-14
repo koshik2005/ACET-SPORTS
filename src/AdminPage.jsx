@@ -69,7 +69,7 @@ export function AdminPage({
     const [gameForm, setGameForm] = useState(emptyGame);
     useEffect(() => setAdminGames(games), [games]);
     const [editReg, setEditReg] = useState(null);
-    const [editRegForm, setEditRegForm] = useState({ game: "", athletic: "" });
+    const [editRegForm, setEditRegForm] = useState({ game: [], athletic: [] });
     const galleryInputRef = useRef();
     const [galForm, setGalForm] = useState({ category: "current", label: "" });
     const [galFiles, setGalFiles] = useState([]); // Array of { src, name, id }
@@ -1511,10 +1511,15 @@ export function AdminPage({
                                                 <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{r.name}</td>
                                                 <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.regNo}</td>
                                                 <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{r.house}</span></td>
-                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{editReg === r.regNo ? <select value={editRegForm.game} onChange={e => setEditRegForm({ ...editRegForm, game: e.target.value })} style={{ ...iS, marginBottom: 0, padding: 4 }}><option value="">None</option>{sportGamesList.map(g => <option key={g} value={g}>{g}</option>)}</select> : (r.game || "—")}</td>
-                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{editReg === r.regNo ? <select value={editRegForm.athletic} onChange={e => setEditRegForm({ ...editRegForm, athletic: e.target.value })} style={{ ...iS, marginBottom: 0, padding: 4 }}><option value="">None</option>{athleticsList.map(a => <option key={a} value={a}>{a}</option>)}</select> : (r.athletic || "—")}</td>
+                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.game || "—"}</td>
+                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.athletic || "—"}</td>
                                                 <td style={{ padding: "8px 12px" }}>
-                                                    {editReg === r.regNo ? <button onClick={() => { setRegistrations(rs => rs.map(x => x.regNo === r.regNo ? { ...x, game: editRegForm.game, athletic: editRegForm.athletic } : x)); setEditReg(null); }} style={{ background: "#2E8B57", color: "#fff", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>Save</button> : <button onClick={() => { setEditRegForm({ game: r.game || "", athletic: r.athletic || "" }); setEditReg(r.regNo); }} style={{ background: dark ? "#444" : "#ddd", color: dark ? "#fff" : "#222", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>Edit</button>}
+                                                    <button onClick={() => {
+                                                        const gamesArr = r.game ? r.game.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
+                                                        const athleticsArr = r.athletic ? r.athletic.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
+                                                        setEditRegForm({ game: gamesArr, athletic: athleticsArr });
+                                                        setEditReg(r);
+                                                    }} style={{ background: dark ? "#444" : "#ddd", color: dark ? "#fff" : "#222", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>Edit</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -2886,6 +2891,76 @@ export function AdminPage({
                 <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ccc"}`, background: "transparent", color: dark ? "#ccc" : "#444", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
                     <button onClick={() => { if (confirmDelete?.onConfirm) confirmDelete.onConfirm(); setConfirmDelete(null); }} style={{ flex: 1, padding: 12, borderRadius: 8, border: "none", background: "#c00", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Yes, Remove</button>
+                </div>
+            </Sheet>
+
+            <Sheet open={!!editReg} onClose={() => setEditReg(null)}>
+                <h3 style={{ margin: "0 0 16px", color: dark ? "#fff" : "#222" }}>Edit Selections: {editReg?.name}</h3>
+                <div style={{ fontSize: 13, color: dark ? "#aaa" : "#666", marginBottom: 20 }}>
+                    Roll: {editReg?.regNo} | Gender: {editReg?.gender} | House: {editReg?.house}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20, marginBottom: 20, maxHeight: "60vh", overflowY: "auto", paddingRight: 10 }}>
+                    <div>
+                        <h4 style={{ color: dark ? "#ccc" : "#444", marginBottom: 12, fontSize: 14 }}>Team Games</h4>
+                        {(() => {
+                            const isMens = editReg?.gender === "Male";
+                            const isStaff = registrations.find(r => r.regNo === editReg?.regNo)?.role === "Staff";
+                            const masterList = isStaff ? (isMens ? staffGamesList : staffGamesListWomens) : (isMens ? sportGamesList : sportGamesListWomens);
+                            const commonList = isMens ? commonGamesMen : commonGamesWomen;
+                            const fullList = [...(masterList || []), ...(commonList || [])];
+                            
+                            return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {fullList.map(g => (
+                                        <label key={g} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: dark ? "#ccc" : "#444" }}>
+                                            <input type="checkbox" checked={editRegForm.game.includes(g)} onChange={e => {
+                                                const newGames = e.target.checked ? [...editRegForm.game, g] : editRegForm.game.filter(x => x !== g);
+                                                setEditRegForm({ ...editRegForm, game: newGames });
+                                            }} />
+                                            {g} {(commonList || []).includes(g) && <span style={{ fontSize: 10, opacity: 0.6 }}>(Common)</span>}
+                                        </label>
+                                    ))}
+                                </div>
+                            )
+                        })()}
+                    </div>
+
+                    <div>
+                        <h4 style={{ color: dark ? "#ccc" : "#444", marginBottom: 12, fontSize: 14 }}>Athletic Events</h4>
+                        {(() => {
+                            const isMens = editReg?.gender === "Male";
+                            const masterList = isMens ? athleticsList : athleticsListWomens;
+                            const commonList = isMens ? commonAthleticsMen : commonAthleticsWomen;
+                            const fullList = [...(masterList || []), ...(commonList || [])];
+                            
+                            return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {fullList.map(a => (
+                                        <label key={a} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: dark ? "#ccc" : "#444" }}>
+                                            <input type="checkbox" checked={editRegForm.athletic.includes(a)} onChange={e => {
+                                                const newAt = e.target.checked ? [...editRegForm.athletic, a] : editRegForm.athletic.filter(x => x !== a);
+                                                setEditRegForm({ ...editRegForm, athletic: newAt });
+                                            }} />
+                                            {a} {(commonList || []).includes(a) && <span style={{ fontSize: 10, opacity: 0.6 }}>(Common)</span>}
+                                        </label>
+                                    ))}
+                                </div>
+                            )
+                        })()}
+                    </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => setEditReg(null)} style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ccc"}`, background: "transparent", color: dark ? "#ccc" : "#444", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                    <button onClick={() => {
+                        setRegistrations(rs => rs.map(x => x.regNo === editReg.regNo ? { 
+                            ...x, 
+                            game: editRegForm.game.join(", ") || "—", 
+                            athletic: editRegForm.athletic.join(", ") || "—" 
+                        } : x));
+                        setEditReg(null);
+                    }} style={{ flex: 1, padding: 12, borderRadius: 8, border: "none", background: "#2E8B57", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Update Selections</button>
                 </div>
             </Sheet>
         </div >
