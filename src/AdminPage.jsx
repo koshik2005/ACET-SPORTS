@@ -1934,7 +1934,7 @@ export function AdminPage({
                                                 const start = (studentPage - 1) * rowsPerPage;
                                                 const end = start + rowsPerPage;
                                                 return filtered.slice(start, end).map((s, idx) => (
-                                                    <tr key={s.regNo} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
+                                                    <tr key={`${s.regNo}-${idx}`} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
                                                         <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || start + idx + 1}</td>
                                                         {editingRegNo === s.regNo ? (
                                                             <>
@@ -2103,7 +2103,7 @@ export function AdminPage({
                                         if (tsStatus === "Pending" && s.shirtIssued) return false;
                                         return true;
                                     }).slice(0, 100).map((s, idx) => (
-                                        <tr key={s.regNo} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
+                                        <tr key={`${s.regNo}-${idx}`} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
                                             <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || idx + 1}</td>
                                             <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
                                             <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
