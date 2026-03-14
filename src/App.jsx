@@ -339,7 +339,7 @@ export default function App() {
           commonGamesWomen={commonGamesWomen} setCommonGamesWomen={setCommonGamesWomenSync}
           commonAthleticsWomen={commonAthleticsWomen} setCommonAthleticsWomen={setCommonAthleticsWomenSync}
         />}
-        {active === "Button" && <GuestButtonPage dark={dark} launchConfig={launchConfig} onUpdateConfig={setLaunchConfigSync} />}
+        {active === "Button" && <GuestButtonPage dark={dark} launchConfig={launchConfig} onUpdateConfig={setLaunchConfigSync} syncing={syncing} />}
         {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} />}
       </main>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export function GuestButtonPage({ launchConfig, onUpdateConfig, dark }) {
+export function GuestButtonPage({ launchConfig, onUpdateConfig, dark, syncing }) {
     const [password, setPassword] = useState("");
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [error, setError] = useState("");
@@ -80,7 +80,7 @@ export function GuestButtonPage({ launchConfig, onUpdateConfig, dark }) {
                 <div style={{ position: "absolute", bottom: -20, right: -20, fontSize: "40px", opacity: 0.1 }}>🔥</div>
 
                 <div style={{ fontSize: "80px", marginBottom: "30px", animation: "float 4s ease-in-out infinite" }}>
-                    {isReleased ? "🏟️" : "🎬"}
+                    {syncing ? "⏳" : (isReleased ? "🏟️" : "🎬")}
                 </div>
                 
                 <h1 style={{ 
@@ -97,40 +97,46 @@ export function GuestButtonPage({ launchConfig, onUpdateConfig, dark }) {
                 </p>
 
                 <button
+                    disabled={syncing}
                     onClick={() => {
                         if (!isReleased && !window.confirm("Trigger the ceremonial reveal for ALL users?")) return;
-                        onUpdateConfig({ ...launchConfig, released: !isReleased });
+                        // Use functional update to ensure we use the most recent configuration
+                        onUpdateConfig(prev => ({ ...prev, released: !prev.released }));
                     }}
                     style={{
                         padding: "30px 60px", fontSize: "24px", fontWeight: "900",
-                        color: isReleased ? "#fff" : "#000",
-                        background: isReleased ? "#4B5563" : "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                        border: "none", borderRadius: "100px", cursor: "pointer",
-                        boxShadow: isReleased ? "none" : "0 20px 50px rgba(255, 215, 0, 0.4)",
+                        color: (isReleased || syncing) ? "#fff" : "#000",
+                        background: syncing ? "#444" : (isReleased ? "#4B5563" : "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)"),
+                        border: "none", borderRadius: "100px", cursor: syncing ? "not-allowed" : "pointer",
+                        boxShadow: (isReleased || syncing) ? "none" : "0 20px 50px rgba(255, 215, 0, 0.4)",
                         textTransform: "uppercase", letterSpacing: "4px",
                         transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                        animation: isReleased ? "none" : "pulse-button 2s infinite"
+                        animation: (isReleased || syncing) ? "none" : "pulse-button 2s infinite",
+                        opacity: syncing ? 0.7 : 1
                     }}
                     onMouseEnter={(e) => {
-                        if (!isReleased) {
+                        if (!isReleased && !syncing) {
                             e.currentTarget.style.transform = "scale(1.05) translateY(-5px)";
                             e.currentTarget.style.boxShadow = "0 30px 70px rgba(255, 215, 0, 0.6)";
                         }
                     }}
                     onMouseLeave={(e) => {
-                        if (!isReleased) {
+                        if (!isReleased && !syncing) {
                             e.currentTarget.style.transform = "scale(1) translateY(0)";
                             e.currentTarget.style.boxShadow = "0 20px 50px rgba(255, 215, 0, 0.4)";
                         }
                     }}
                 >
-                    {isReleased ? "RE-LOCK CURTAINS" : "LAUNCH SPORTS DAY"}
+                    {syncing ? "SYNCING..." : (isReleased ? "🔒 LOCK CURTAINS" : "🎬 LAUNCH EVENT")}
                 </button>
 
                 <div style={{ marginTop: "40px", fontSize: "14px", fontWeight: "700", opacity: 0.6 }}>
-                    Status: {isReleased ? 
-                        <span style={{ color: "#2E8B57" }}>● LIVE</span> : 
-                        <span style={{ color: "#8B0000" }}>● READY FOR LAUNCH</span>
+                    Status: {syncing ? 
+                        <span style={{ color: "#DAA520" }}>● UPDATING...</span> :
+                        (isReleased ? 
+                            <span style={{ color: "#2E8B57" }}>● LIVE (OPEN)</span> : 
+                            <span style={{ color: "#8B0000" }}>● READY (CLOSED)</span>
+                        )
                     }
                 </div>
             </div>
