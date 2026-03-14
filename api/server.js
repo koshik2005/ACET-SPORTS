@@ -364,7 +364,7 @@ async function robustSendMail(mailOptions, specificIndex = null) {
       console.error(`[SMTP_ATTEMPT_${attempt + 1}_FAILED] User: ${user} | Error: ${err.message}`);
       
       // If it's a login error (534/535) or connection error, try NEXT account
-      if (err.message.includes('534') || err.message.includes('535') || err.message.includes('454') || err.message.includes('EAI_AGAIN') || err.code === 'ECONNRESET') {
+      if (err.message.includes('534') || err.message.includes('535') || err.message.includes('454') || err.message.includes('550') || err.message.includes('EAI_AGAIN') || err.code === 'ECONNRESET') {
         if (specificIndex === null) {
           // Increment counter to ensure NEXT try uses a different account
           console.log(`[SMTP_ROTATING] Attempting next account due to failure...`);
