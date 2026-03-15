@@ -407,16 +407,21 @@ export function AdminPage({
     const sendAnnouncementEmail = async (inviteType = "event", targetGroup = "all") => {
         const isInauguration = inviteType === "inauguration";
         const isTargeted = targetGroup === "staff_hod";
+        const isCommittee = targetGroup === "committee";
         
         let confirmMsg = "";
         if (isInauguration) {
-            confirmMsg = isTargeted 
-                ? "Are you sure you want to send the Inauguration Invitation to Staff & HODs ONLY?"
-                : "Are you sure you want to send the Sports Day INAUGURATION Invitation to everyone?";
+            confirmMsg = isCommittee
+                ? "Are you sure you want to send the Inauguration Invitation strictly to the Student Committee?"
+                : isTargeted 
+                    ? "Are you sure you want to send the Inauguration Invitation to Staff & HODs ONLY?"
+                    : "Are you sure you want to send the Sports Day INAUGURATION Invitation to everyone?";
         } else {
-            confirmMsg = isTargeted
-                ? "Are you sure you want to broadcast the Official Schedule to Staff & HODs ONLY?"
-                : "Are you sure you want to email EVERY registered student and authority about the Sports Day schedule?";
+            confirmMsg = isCommittee
+                ? "Are you sure you want to broadcast the Official Schedule strictly to the Student Committee?"
+                : isTargeted
+                    ? "Are you sure you want to broadcast the Official Schedule to Staff & HODs ONLY?"
+                    : "Are you sure you want to email EVERY registered student and authority about the Sports Day schedule?";
         }
         
         if (!window.confirm(confirmMsg)) return;
@@ -435,10 +440,13 @@ export function AdminPage({
         let allUsers = [
             ...authorities.map(a => ({ ...a, roleType: "authority" })),
             ...management.map(m => ({ ...m, roleType: "management" })),
+            ...(studentCommittee || []).map(c => ({ ...c, roleType: "committee" })),
             ...studentsDB.map(s => ({ ...s, roleType: s.role === "Staff" ? "staff" : "student" }))
         ].filter(u => u.email && u.email.includes("@"));
 
-        if (isTargeted) {
+        if (isCommittee) {
+            allUsers = allUsers.filter(u => u.roleType === "committee");
+        } else if (isTargeted) {
             allUsers = allUsers.filter(u => 
                 u.roleType === "authority" || 
                 u.roleType === "management" || 
@@ -2853,15 +2861,26 @@ export function AdminPage({
                                                 }}>
                                                 {announcementStatus === "sending" ? "⏳ Sending..." : "🎊 Invitation for Inauguration (All)"}
                                             </button>
-                                            <button
-                                                onClick={() => sendAnnouncementEmail("inauguration", "staff_hod")}
-                                                disabled={announcementStatus === "sending"}
-                                                style={{
-                                                    background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#cc8400" : "#cc8400",
-                                                    color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", alignSelf: "center", width: "100%"
-                                                }}>
-                                                {announcementStatus === "sending" ? "⏳ Sending..." : "👨‍💼 Staff/HODs Only"}
-                                            </button>
+                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%" }}>
+                                                <button
+                                                    onClick={() => sendAnnouncementEmail("inauguration", "staff_hod")}
+                                                    disabled={announcementStatus === "sending"}
+                                                    style={{
+                                                        background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#cc8400" : "#cc8400",
+                                                        color: "#fff", border: "none", borderRadius: 8, padding: "8px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", width: "100%"
+                                                    }}>
+                                                    {announcementStatus === "sending" ? "⏳ Sending..." : "👨‍💼 Staff/HODs Only"}
+                                                </button>
+                                                <button
+                                                    onClick={() => sendAnnouncementEmail("inauguration", "committee")}
+                                                    disabled={announcementStatus === "sending"}
+                                                    style={{
+                                                        background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#6A5ACD" : "#6A5ACD",
+                                                        color: "#fff", border: "none", borderRadius: 8, padding: "8px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", width: "100%"
+                                                    }}>
+                                                    {announcementStatus === "sending" ? "⏳ Sending..." : "🧑‍🤝‍🧑 Committee Only"}
+                                                </button>
+                                            </div>
                                         </div>
                                         
                                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2874,15 +2893,26 @@ export function AdminPage({
                                                 }}>
                                                 {announcementStatus === "sending" ? "⏳ Sending..." : "📢 Broadcast Main Event (All)"}
                                             </button>
-                                            <button
-                                                onClick={() => sendAnnouncementEmail("event", "staff_hod")}
-                                                disabled={announcementStatus === "sending"}
-                                                style={{
-                                                    background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#cc8400" : "#cc8400",
-                                                    color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", alignSelf: "center", width: "100%"
-                                                }}>
-                                                {announcementStatus === "sending" ? "⏳ Sending..." : "👤 Staff/HODs Only"}
-                                            </button>
+                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%" }}>
+                                                <button
+                                                    onClick={() => sendAnnouncementEmail("event", "staff_hod")}
+                                                    disabled={announcementStatus === "sending"}
+                                                    style={{
+                                                        background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#cc8400" : "#cc8400",
+                                                        color: "#fff", border: "none", borderRadius: 8, padding: "8px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", width: "100%"
+                                                    }}>
+                                                    {announcementStatus === "sending" ? "⏳ Sending..." : "👤 Staff/HODs Only"}
+                                                </button>
+                                                <button
+                                                    onClick={() => sendAnnouncementEmail("event", "committee")}
+                                                    disabled={announcementStatus === "sending"}
+                                                    style={{
+                                                        background: announcementStatus === "sent" ? "#2E8B57" : announcementStatus.startsWith("error") ? "#6A5ACD" : "#6A5ACD",
+                                                        color: "#fff", border: "none", borderRadius: 8, padding: "8px", cursor: announcementStatus === "sending" ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", width: "100%"
+                                                    }}>
+                                                    {announcementStatus === "sending" ? "⏳ Sending..." : "🧑‍🤝‍🧑 Committee Only"}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
