@@ -136,6 +136,28 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
         XLSX.writeFile(wb, `${captain.house}_Full_Roster.xlsx`);
     };
 
+    const exportFilteredToExcel = () => {
+        const data = filteredHouseRegs.map((r, i) => {
+            const student = houseStudents.find(s => s.regNo === r.regNo);
+            return {
+                "S.No": i + 1,
+                "Name": r.name,
+                "Register No": r.regNo,
+                "Year": student?.year || "N/A",
+                "Department": student?.dept || "—",
+                "House": r.house,
+                "Game": r.game,
+                "Athletic Event": r.athletic,
+                "Registration Time": r.registeredAt
+            };
+        });
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "FilteredParticipation");
+        const filename = filterVal === "All" ? `${captain.house}_Participation_List.xlsx` : `${captain.house}_${filterVal}_List.xlsx`;
+        XLSX.writeFile(wb, filename);
+    };
+
     const exportShirtList = (type) => { // "Pending" or "Issued"
         const list = type === "Pending"
             ? houseStudents.filter(s => !s.shirtIssued)
@@ -355,23 +377,31 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                         <div style={cS}>
                             <h4 style={{ margin: "0 0 16px", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 20 }}>🎮</span> Game Breakdown</h4>
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                {Array.from(new Set(houseRegs.filter(r => r.game && !["None", "—"].includes(r.game)).map(r => r.game))).map(g => (
-                                    <div key={g} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                                        <span style={{ fontWeight: 600, color: dark ? "#ccc" : "#444" }}>{g}</span>
-                                        <span style={{ fontWeight: 800, color: "#8B0000" }}>{houseRegs.filter(r => r.game === g).length}</span>
-                                    </div>
-                                ))}
+                                {(() => {
+                                    const gamesFound = houseRegs.filter(r => r.game && !["None", "—"].includes(r.game)).flatMap(r => r.game.split(", "));
+                                    const uniqueGames = Array.from(new Set(gamesFound)).sort();
+                                    return uniqueGames.length === 0 ? <div style={{ fontSize: 12, color: "#888", fontStyle: "italic" }}>No games registered</div> : uniqueGames.map(g => (
+                                        <div key={g} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                                            <span style={{ fontWeight: 600, color: dark ? "#ccc" : "#444" }}>{g}</span>
+                                            <span style={{ fontWeight: 800, color: "#8B0000" }}>{gamesFound.filter(x => x === g).length}</span>
+                                        </div>
+                                    ));
+                                })()}
                             </div>
                         </div>
                         <div style={cS}>
                             <h4 style={{ margin: "0 0 16px", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 20 }}>🏃</span> Athletics Breakdown</h4>
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                {Array.from(new Set(houseRegs.filter(r => r.athletic && !["None", "—"].includes(r.athletic)).map(r => r.athletic))).map(a => (
-                                    <div key={a} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                                        <span style={{ fontWeight: 600, color: dark ? "#ccc" : "#444" }}>{a}</span>
-                                        <span style={{ fontWeight: 800, color: "#4B0082" }}>{houseRegs.filter(r => r.athletic === a).length}</span>
-                                    </div>
-                                ))}
+                                {(() => {
+                                    const athFound = houseRegs.filter(r => r.athletic && !["None", "—"].includes(r.athletic)).flatMap(r => r.athletic.split(", "));
+                                    const uniqueAth = Array.from(new Set(athFound)).sort();
+                                    return uniqueAth.length === 0 ? <div style={{ fontSize: 12, color: "#888", fontStyle: "italic" }}>No athletics registered</div> : uniqueAth.map(a => (
+                                        <div key={a} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                                            <span style={{ fontWeight: 600, color: dark ? "#ccc" : "#444" }}>{a}</span>
+                                            <span style={{ fontWeight: 800, color: "#4B0082" }}>{athFound.filter(x => x === a).length}</span>
+                                        </div>
+                                    ));
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -437,7 +467,10 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                                     )}
                                 </select>
                             )}
-                            <button onClick={exportToExcel} disabled={houseStudents.length === 0} style={{ background: "linear-gradient(135deg,#2E8B57,#3CB371)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: houseStudents.length === 0 ? .5 : 1 }}>📥 Export Full Roster</button>
+                            <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={exportFilteredToExcel} disabled={filteredHouseRegs.length === 0} style={{ background: "linear-gradient(135deg,#1E90FF,#4169E1)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: filteredHouseRegs.length === 0 ? .5 : 1 }}>📥 Export Filtered</button>
+                                <button onClick={exportToExcel} disabled={houseStudents.length === 0} style={{ background: "linear-gradient(135deg,#2E8B57,#3CB371)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: houseStudents.length === 0 ? .5 : 1 }}>📥 Full Roster</button>
+                            </div>
                         </div>
                     </div>
                     {houseRegs.length === 0 ? (
@@ -458,18 +491,18 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                                         <div style={{ fontSize: 10, color: dark ? "#555" : "#bbb", fontWeight: 600 }}>{r.registeredAt}</div>
                                     </div>
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                        {r.game && (
-                                            <div style={{ background: "#8B000012", border: "1.5px solid #8B000025", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                                        {r.game && r.game.split(", ").filter(x => x && x !== "None" && x !== "—").map(g => (
+                                            <div key={g} style={{ background: "#8B000012", border: "1.5px solid #8B000025", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
                                                 <span style={{ fontSize: 16 }}>⚽</span>
-                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#8B0000" }}>{r.game}</span>
+                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#8B0000" }}>{g}</span>
                                             </div>
-                                        )}
-                                        {r.athletic && (
-                                            <div style={{ background: "#4B008212", border: "1.5px solid #4B008225", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                                        ))}
+                                        {r.athletic && r.athletic.split(", ").filter(x => x && x !== "None" && x !== "—").map(a => (
+                                            <div key={a} style={{ background: "#4B008212", border: "1.5px solid #4B008225", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
                                                 <span style={{ fontSize: 16 }}>🏃</span>
-                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#4B0082" }}>{r.athletic}</span>
+                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#4B0082" }}>{a}</span>
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
                             ))}
@@ -545,18 +578,18 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                                         <div style={{ fontSize: 10, color: dark ? "#555" : "#bbb", fontWeight: 600 }}>{r.registeredAt}</div>
                                     </div>
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                        {r.game && (
-                                            <div style={{ background: "#8B000012", border: "1.5px solid #8B000025", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                                        {r.game && r.game.split(", ").filter(x => x && x !== "None" && x !== "—").map(g => (
+                                            <div key={g} style={{ background: "#8B000012", border: "1.5px solid #8B000025", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
                                                 <span style={{ fontSize: 16 }}>⚽</span>
-                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#8B0000" }}>{r.game}</span>
+                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#8B0000" }}>{g}</span>
                                             </div>
-                                        )}
-                                        {r.athletic && (
-                                            <div style={{ background: "#4B008212", border: "1.5px solid #4B008225", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                                        ))}
+                                        {r.athletic && r.athletic.split(", ").filter(x => x && x !== "None" && x !== "—").map(a => (
+                                            <div key={a} style={{ background: "#4B008212", border: "1.5px solid #4B008225", padding: "6px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 6 }}>
                                                 <span style={{ fontSize: 16 }}>🏃</span>
-                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#4B0082" }}>{r.athletic}</span>
+                                                <span style={{ fontSize: 13, fontWeight: 700, color: "#4B0082" }}>{a}</span>
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
                             ))}
