@@ -1880,7 +1880,7 @@ export function AdminPage({
                                 >
                                     <div style={{ fontSize: 40, marginBottom: 10 }}>🧑‍🏫</div>
                                     <h4 style={{ margin: "0 0 8px", color: dark ? "#ccc" : "#444" }}>Upload Staff Data</h4>
-                                    <div style={{ fontSize: 12, color: dark ? "#888" : "#999", marginBottom: 20 }}>Drag and drop Staff Excel/CSV file here. <br />Required columns: S.No, Name, Reg.No, Email, Gender, Department</div>
+                                    <div style={{ fontSize: 12, color: dark ? "#888" : "#999", marginBottom: 20 }}>Drag and drop Staff Excel/CSV file here. <br />Required columns: S.No, Name, Reg.No, Email, Gender, House</div>
                                     <input type="file" accept=".xlsx,.xls,.csv" id="staffXlInput" style={{ display: "none" }} onChange={e => { const file = e.target.files[0]; if (file) parseFile(file, true); e.target.value = ""; }} />
                                     <button onClick={() => document.getElementById("staffXlInput").click()} style={{ background: "#fff", color: "#8B0000", border: "1px solid #8B0000", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Browse Staff File</button>
                                 </div>
