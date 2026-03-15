@@ -60,6 +60,7 @@ export function AdminPage({
     const [exportVal, setExportVal] = useState("All");
     const [regFilterType, setRegFilterType] = useState("All");
     const [regFilterVal, setRegFilterVal] = useState("All");
+    const [regPage, setRegPage] = useState(1);
     const isMobile = useIsMobile();
 
     const [winner, setWinner] = useState({ first: "", second: "", third: "", eventType: "game", eventName: "", firstPlayer: "", secondPlayer: "", thirdPlayer: "" });
@@ -1534,13 +1535,13 @@ export function AdminPage({
                                 <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic))).length} active entries ({registrations.length} raw)</div>
                             </div>
                             <div style={{ display: "flex", gap: 8 }}>
-                                <select value={regFilterType} onChange={e => { setRegFilterType(e.target.value); setRegFilterVal("All"); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
+                                <select value={regFilterType} onChange={e => { setRegFilterType(e.target.value); setRegFilterVal("All"); setRegPage(1); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
                                     <option value="All">All Types</option>
                                     <option value="Game">Games</option>
                                     <option value="Athletic">Athletics</option>
                                 </select>
                                 {regFilterType !== "All" && (
-                                    <select value={regFilterVal} onChange={e => setRegFilterVal(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
+                                    <select value={regFilterVal} onChange={e => { setRegFilterVal(e.target.value); setRegPage(1); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
                                         <option value="All">All Events</option>
                                         {regFilterType === "Game" ? (
                                             Array.from(new Set(registrations.filter(r => r.game && !["None", "—", ""].includes(r.game)).flatMap(r => r.game.split(", ")))).sort().map(g => <option key={g} value={g}>{g}</option>)
@@ -1573,27 +1574,50 @@ export function AdminPage({
                                             {["Name", "Reg No", "House", "Game", "Athletic", "Approve"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
-                                            {validRegs.slice(0, 100).map((r, i) => (
-                                            <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
-                                                <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{r.name}</td>
-                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.regNo}</td>
-                                                <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{r.house}</span></td>
-                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.game || "—"}</td>
-                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.athletic || "—"}</td>
-                                                <td style={{ padding: "8px 12px" }}>
-                                                    <button onClick={() => {
-                                                        const gamesArr = r.game ? r.game.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
-                                                        const athleticsArr = r.athletic ? r.athletic.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
-                                                        setEditRegForm({ game: gamesArr, athletic: athleticsArr });
-                                                        setEditReg(r);
-                                                    }} style={{ background: dark ? "#444" : "#ddd", color: dark ? "#fff" : "#222", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>Edit</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {validRegs.length > 100 && <div style={{ textAlign: "center", padding: 12, color: "#888", fontSize: 12 }}>Showing first 100 entries. Export for full list.</div>}
-                            </div>
+                                            {validRegs.slice((regPage - 1) * 100, regPage * 100).map((r, i) => (
+                                                <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
+                                                    <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{r.name}</td>
+                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.regNo}</td>
+                                                    <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{r.house}</span></td>
+                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.game || "—"}</td>
+                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.athletic || "—"}</td>
+                                                    <td style={{ padding: "8px 12px" }}>
+                                                        <button onClick={() => {
+                                                            const gamesArr = r.game ? r.game.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
+                                                            const athleticsArr = r.athletic ? r.athletic.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
+                                                            setEditRegForm({ game: gamesArr, athletic: athleticsArr });
+                                                            setEditReg(r);
+                                                        }} style={{ background: dark ? "#444" : "#ddd", color: dark ? "#fff" : "#222", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>Edit</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, borderTop: `1px solid ${dark ? "#333" : "#eee"}` }}>
+                                        <div style={{ fontSize: 12, color: dark ? "#888" : "#666" }}>
+                                            Showing {(regPage - 1) * 100 + 1} - {Math.min(regPage * 100, validRegs.length)} of {validRegs.length} entries
+                                        </div>
+                                        {validRegs.length > 100 && (
+                                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                                <button 
+                                                    disabled={regPage === 1}
+                                                    onClick={() => setRegPage(p => Math.max(1, p - 1))}
+                                                    style={{ background: dark ? "#333" : "#eee", color: dark ? "#fff" : "#333", border: "none", borderRadius: 6, padding: "6px 12px", cursor: regPage === 1 ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, opacity: regPage === 1 ? 0.5 : 1 }}
+                                                >
+                                                    ← Previous
+                                                </button>
+                                                <span style={{ fontSize: 12, color: dark ? "#ccc" : "#444", fontWeight: 700 }}>Page {regPage} of {Math.ceil(validRegs.length / 100)}</span>
+                                                <button 
+                                                    disabled={regPage >= Math.ceil(validRegs.length / 100)}
+                                                    onClick={() => setRegPage(p => p + 1)}
+                                                    style={{ background: dark ? "#333" : "#eee", color: dark ? "#fff" : "#333", border: "none", borderRadius: 6, padding: "6px 12px", cursor: regPage >= Math.ceil(validRegs.length / 100) ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, opacity: regPage >= Math.ceil(validRegs.length / 100) ? 0.5 : 1 }}
+                                                >
+                                                    Next →
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                         )})()}
                     </div>
                 )
