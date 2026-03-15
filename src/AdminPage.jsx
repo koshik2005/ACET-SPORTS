@@ -61,6 +61,7 @@ export function AdminPage({
     const [regFilterType, setRegFilterType] = useState("All");
     const [regFilterVal, setRegFilterVal] = useState("All");
     const [regPage, setRegPage] = useState(1);
+    const [regSearch, setRegSearch] = useState("");
     const isMobile = useIsMobile();
 
     const [winner, setWinner] = useState({ first: "", second: "", third: "", eventType: "game", eventName: "", firstPlayer: "", secondPlayer: "", thirdPlayer: "" });
@@ -1534,7 +1535,16 @@ export function AdminPage({
                                 <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>📝 Registrations</h3>
                                 <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic))).length} active entries ({registrations.length} raw)</div>
                             </div>
-                            <div style={{ display: "flex", gap: 8 }}>
+                            <div style={{ display: "flex", gap: 8, flex: isMobile ? 1 : "initial" }}>
+                                <div style={{ position: "relative", flex: 1 }}>
+                                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14 }}>🔍</span>
+                                    <input 
+                                        value={regSearch} 
+                                        onChange={e => { setRegSearch(e.target.value); setRegPage(1); }} 
+                                        placeholder="Search by Name or ID..." 
+                                        style={{ padding: "8px 12px 8px 36px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600, width: isMobile ? "100%" : 220, outline: "none" }}
+                                    />
+                                </div>
                                 <select value={regFilterType} onChange={e => { setRegFilterType(e.target.value); setRegFilterVal("All"); setRegPage(1); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
                                     <option value="All">All Types</option>
                                     <option value="Game">Games</option>
@@ -1557,6 +1567,14 @@ export function AdminPage({
                                 const hasG = r.game && !["None", "—", ""].includes(r.game);
                                 const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
                                 if (!hasG && !hasA) return false;
+
+                                // Base Search
+                                if (regSearch) {
+                                    const searchLower = regSearch.toLowerCase();
+                                    const matchesName = r.name && r.name.toLowerCase().includes(searchLower);
+                                    const matchesID = r.regNo && r.regNo.toLowerCase().includes(searchLower);
+                                    if (!matchesName && !matchesID) return false;
+                                }
 
                                 if (regFilterType === "All") return true;
                                 if (regFilterType === "Game") {
