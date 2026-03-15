@@ -122,8 +122,9 @@ export function AdminPage({
     const [starPlayerForm, setStarPlayerForm] = useState({ name: "", dept: "", year: "", game: "", house: "", img: null });
     const [spUploading, setSpUploading] = useState(false);
 
-    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "T-Shirts", "Memorial", "About", "Settings", "Exports", "Config", "Resolver"];
+    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "Staff", "T-Shirts", "Memorial", "About", "Settings", "Exports", "Config", "Resolver"];
     const [studentSearch, setStudentSearch] = useState("");
+    const [staffSearch, setStaffSearch] = useState("");
     const [editingRegNo, setEditingRegNo] = useState(null);
     const [editStudentForm, setEditStudentForm] = useState({});
     const [showAddStudent, setShowAddStudent] = useState(false);
@@ -196,7 +197,7 @@ export function AdminPage({
                         role: isStaffUpload ? "Staff" : (n.role || "Student")
                     };
                 }).filter(r => r.name || r.email || r.regNo);
-                if (rows.length === 0) { setXlError(`Could not find required columns. Ensure headers match: s.no, name, reg.no, email, ${isStaffUpload ? 'gender, department' : 'year/department, house, gender, t-shirt size'}.`); return; }
+                if (rows.length === 0) { setXlError(`Could not find required columns. Ensure headers match: s.no, name, reg.no, email, ${isStaffUpload ? 'gender, house' : 'year/department, house, gender, t-shirt size'}.`); return; }
                 setXlPreview(rows);
             } catch (e) { setXlError("Failed to read file: " + e.message); }
         };
@@ -2023,7 +2024,7 @@ export function AdminPage({
                                         </tr></thead>
                                         <tbody>
                                             {(() => {
-                                                const filtered = studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()));
+                                                const filtered = studentsDB.filter(s => s.role !== "Staff" && ((s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())));
                                                 const start = (studentPage - 1) * rowsPerPage;
                                                 const end = start + rowsPerPage;
                                                 return filtered.slice(start, end).map((s, idx) => (
@@ -2122,6 +2123,75 @@ export function AdminPage({
                         {studentsDB.length > 0 && (
                             <button onClick={() => { if (window.confirm(`Clear all ${studentsDB.length} students?`)) setStudentsDB([]); }} style={{ marginTop: 10, background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13 }}>🗑 Clear Database</button>
                         )}
+                    </div>
+                )
+            }
+
+            {
+                tab === "Staff" && (
+                    <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+                            <div>
+                                <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: 18 }}>🧑🏫 Staff Management</h3>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>Manage and view staff members grouped by house</div>
+                            </div>
+                            <div style={{ flex: 1, position: "relative", maxWidth: 300 }}>
+                                <input
+                                    value={staffSearch}
+                                    onChange={e => setStaffSearch(e.target.value)}
+                                    placeholder="🔍 Search Staff Name or ID..."
+                                    style={{ ...iS, marginBottom: 0, paddingLeft: 40 }}
+                                />
+                                <div style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>🔍</div>
+                            </div>
+                        </div>
+
+                        {(() => {
+                            const filteredStaff = studentsDB.filter(s => s.role === "Staff" && ((s.name || "").toLowerCase().includes(staffSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(staffSearch.toLowerCase())));
+                            const grouped = {};
+                            houses.forEach(h => grouped[h.name] = []);
+                            filteredStaff.forEach(s => {
+                                if (grouped[s.house]) grouped[s.house].push(s);
+                                else {
+                                    if (!grouped["Other"]) grouped["Other"] = [];
+                                    grouped["Other"].push(s);
+                                }
+                            });
+
+                            return (
+                                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
+                                    {(Object.entries(grouped)).map(([house, members]) => (
+                                        <div key={house} style={{ ...cS, padding: 0, overflow: "hidden" }}>
+                                            <div style={{ background: dark ? "#1e1e2e" : "#8B0000", color: "#fff", padding: "12px 16px", fontWeight: 800, fontSize: 14, display: "flex", justifyContent: "space-between" }}>
+                                                <span>🏠 {house} Staff</span>
+                                                <span style={{ opacity: 0.8 }}>{members.length}</span>
+                                            </div>
+                                            <div style={{ padding: 12 }}>
+                                                {members.length === 0 ? (
+                                                    <div style={{ padding: 20, textAlign: "center", color: "#888", fontSize: 12 }}>No staff registered in this house</div>
+                                                ) : (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                        {members.map(m => (
+                                                            <div key={m.regNo} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: dark ? "rgba(255,255,255,0.03)" : "#f9f9f9", borderRadius: 8, border: `1px solid ${dark ? "#333" : "#eee"}` }}>
+                                                                <div>
+                                                                    <div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{m.name}</div>
+                                                                    <div style={{ fontSize: 11, color: dark ? "#888" : "#666" }}>{m.regNo} • {m.email || "No Email"}</div>
+                                                                </div>
+                                                                <button onClick={() => {
+                                                                    if (window.confirm(`Remove ${m.name} from staff database?`)) {
+                                                                        setStudentsDB(db => db.filter(x => x.regNo !== m.regNo));
+                                                                    }
+                                                                }} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 14 }}>🗑</button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )
             }
