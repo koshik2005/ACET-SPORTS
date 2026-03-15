@@ -102,8 +102,12 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
 
     const filteredHouseRegs = houseRegs.filter(r => {
         if (filterType === "All") return true;
-        if (filterType === "Game") return r.game === filterVal || filterVal === "All";
-        if (filterType === "Athletic") return r.athletic === filterVal || filterVal === "All";
+        if (filterType === "Game") {
+            return filterVal === "All" || (r.game && r.game.split(", ").includes(filterVal));
+        }
+        if (filterType === "Athletic") {
+            return filterVal === "All" || (r.athletic && r.athletic.split(", ").includes(filterVal));
+        }
         return true;
     });
 
@@ -427,9 +431,9 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                                 <select value={filterVal} onChange={e => setFilterVal(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
                                     <option value="All">All Events</option>
                                     {filterType === "Game" ? (
-                                        Array.from(new Set(houseRegs.filter(r => r.game).map(r => r.game))).map(g => <option key={g} value={g}>{g}</option>)
+                                        Array.from(new Set(houseRegs.filter(r => r.game).flatMap(r => r.game.split(", ").filter(x => x && x !== "None" && x !== "—")))).sort().map(g => <option key={g} value={g}>{g}</option>)
                                     ) : (
-                                        Array.from(new Set(houseRegs.filter(r => r.athletic).map(r => r.athletic))).map(a => <option key={a} value={a}>{a}</option>)
+                                        Array.from(new Set(houseRegs.filter(r => r.athletic).flatMap(r => r.athletic.split(", ").filter(x => x && x !== "None" && x !== "—")))).sort().map(a => <option key={a} value={a}>{a}</option>)
                                     )}
                                 </select>
                             )}

@@ -58,6 +58,8 @@ export function AdminPage({
     const [tab, setTab] = useState("Gallery");
     const [exportType, setExportType] = useState("All");
     const [exportVal, setExportVal] = useState("All");
+    const [regFilterType, setRegFilterType] = useState("All");
+    const [regFilterVal, setRegFilterVal] = useState("All");
     const isMobile = useIsMobile();
 
     const [winner, setWinner] = useState({ first: "", second: "", third: "", eventType: "game", eventName: "", firstPlayer: "", secondPlayer: "", thirdPlayer: "" });
@@ -550,18 +552,17 @@ export function AdminPage({
     const exportAdminExcel = () => {
         const filtered = registrations.filter(r => {
             if (exportType === "All") {
-                // For "All" we might want to skip cleared ones too if they have NO events
                 const hasG = r.game && !["None", "—", ""].includes(r.game);
                 const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
                 return hasG || hasA;
             }
             if (exportType === "Game") {
                 if (!r.game || ["None", "—", ""].includes(r.game)) return false; 
-                return exportVal === "All" || r.game === exportVal;
+                return exportVal === "All" || (r.game.split(", ").includes(exportVal));
             }
             if (exportType === "Athletic") {
                 if (!r.athletic || ["None", "—", ""].includes(r.athletic)) return false;
-                return exportVal === "All" || r.athletic === exportVal;
+                return exportVal === "All" || (r.athletic.split(", ").includes(exportVal));
             }
             return true;
         });
@@ -1528,19 +1529,44 @@ export function AdminPage({
                 tab === "Registrations" && (
                     <div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-                            {(() => {
-                                const validRegs = registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic)));
-                                return (
-                                    <div>
-                                        <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>📝 Registrations</h3>
-                                        <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{validRegs.length} active entries ({registrations.length} raw)</div>
-                                    </div>
-                                );
-                            })()}
+                            <div style={{ flex: 1 }}>
+                                <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>📝 Registrations</h3>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic))).length} active entries ({registrations.length} raw)</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                                <select value={regFilterType} onChange={e => { setRegFilterType(e.target.value); setRegFilterVal("All"); }} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
+                                    <option value="All">All Types</option>
+                                    <option value="Game">Games</option>
+                                    <option value="Athletic">Athletics</option>
+                                </select>
+                                {regFilterType !== "All" && (
+                                    <select value={regFilterVal} onChange={e => setRegFilterVal(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13, fontWeight: 600 }}>
+                                        <option value="All">All Events</option>
+                                        {regFilterType === "Game" ? (
+                                            Array.from(new Set(registrations.filter(r => r.game && !["None", "—", ""].includes(r.game)).flatMap(r => r.game.split(", ")))).sort().map(g => <option key={g} value={g}>{g}</option>)
+                                        ) : (
+                                            Array.from(new Set(registrations.filter(r => r.athletic && !["None", "—", ""].includes(r.athletic)).flatMap(r => r.athletic.split(", ")))).sort().map(a => <option key={a} value={a}>{a}</option>)
+                                        )}
+                                    </select>
+                                )}
+                            </div>
                         </div>
                         {(() => {
-                            const validRegs = registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic)));
-                            return validRegs.length === 0 ? <div style={{ padding: 20, color: dark ? "#666" : "#aaa", textAlign: "center", background: dark ? "rgba(255,255,255,.02)" : "#f9f9f9", borderRadius: 12, border: `1px solid ${dark ? "#333" : "#eee"}`, fontSize: 13 }}>No active registrations found.</div> : (
+                            const validRegs = registrations.filter(r => {
+                                const hasG = r.game && !["None", "—", ""].includes(r.game);
+                                const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
+                                if (!hasG && !hasA) return false;
+
+                                if (regFilterType === "All") return true;
+                                if (regFilterType === "Game") {
+                                    return regFilterVal === "All" || (r.game && r.game.split(", ").includes(regFilterVal));
+                                }
+                                if (regFilterType === "Athletic") {
+                                    return regFilterVal === "All" || (r.athletic && r.athletic.split(", ").includes(regFilterVal));
+                                }
+                                return true;
+                            });
+                            return validRegs.length === 0 ? <div style={{ padding: 20, color: dark ? "#666" : "#aaa", textAlign: "center", background: dark ? "rgba(255,255,255,.02)" : "#f9f9f9", borderRadius: 12, border: `1px solid ${dark ? "#333" : "#eee"}`, fontSize: 13 }}>No registrations matching filter found.</div> : (
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                                         <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
