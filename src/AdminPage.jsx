@@ -185,9 +185,9 @@ export function AdminPage({
 
                     return {
                         sno: n["s.no"] || n.sno || n.sn || "",
-                        name: n.name || n["student name"] || n["full name"] || "",
+                        name: n.name || n["student name"] || n["full name"] || n.staffname || "",
                         email: n.email || n["email id"] || n["mail"] || "",
-                        regNo: n.regno || n["reg.no"] || n["register number"] || n["id"] || n.mobile || "",
+                        regNo: n.regno || n["reg.no"] || n["register number"] || n["id"] || n.mobile || n.staffid || "",
                         house: n.house || n["house name"] || "",
                         year: rawYear,
                         dept: rawDept,
@@ -197,7 +197,7 @@ export function AdminPage({
                         role: isStaffUpload ? "Staff" : (n.role || "Student")
                     };
                 }).filter(r => r.name || r.email || r.regNo);
-                if (rows.length === 0) { setXlError(`Could not find required columns. Ensure headers match: s.no, name, reg.no, email, ${isStaffUpload ? 'gender, house' : 'year/department, house, gender, t-shirt size'}.`); return; }
+                if (rows.length === 0) { setXlError(`Could not find required columns. Ensure headers match: s.no, name, reg.no, email, gender, house.`); return; }
                 setXlPreview(rows);
             } catch (e) { setXlError("Failed to read file: " + e.message); }
         };

@@ -93,11 +93,18 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
         })
         : [];
 
-    const staffRegs = registrations.filter(r => {
+    const houseStaffRegs = registrations.filter(r => {
+        if ((r.house || "").toLowerCase() !== (captain?.house || "").toLowerCase()) return false;
+        const student = studentsDB.find(s => s.regNo === r.regNo);
+        if (!student || student.role !== "Staff") return false;
+        
         const hasGame = r.game && !["None", "—", ""].includes(r.game);
         const hasAthletic = r.athletic && !["None", "—", ""].includes(r.athletic);
         if (!hasGame && !hasAthletic) return false;
-        return studentsDB.find(s => s.regNo === r.regNo)?.role === "Staff";
+
+        // Gender filter for staff as well if captain's role is gender-specific
+        const g = (student.gender || "").toLowerCase();
+        return captainIsMale ? (g === "male" || g === "m") : (g === "female" || g === "f");
     });
 
     const filteredHouseRegs = houseRegs.filter(r => {
@@ -362,8 +369,8 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: isMobile ? 10 : 20, marginBottom: 28 }}>
                         {[
                             { label: `${captainIsMale ? "♂ Men's" : "♀ Women's"} House Strength`, value: houseStudents.length, emoji: captainIsMale ? "👨" : "👩", color: captain.houseColor },
+                            { label: "House Staff Registrations", value: houseStaffRegs.length, emoji: "👨‍🏫", color: "#cc8400" },
                             { label: "Total Registrations", value: houseRegs.length, emoji: "📋", color: "#8B0000" },
-                            { label: "Participation Rate", value: houseStudents.length ? Math.round((houseRegs.length / houseStudents.length) * 100) + "%" : "0%", emoji: "📈", color: "#2E8B57" },
                         ].map(s => (
                             <div key={s.label} style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 16, padding: isMobile ? "16px 14px" : "24px 20px", textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,.03)" }}>
                                 <div style={{ fontSize: 32, marginBottom: 8 }}>{s.emoji}</div>
@@ -559,8 +566,8 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
             )}
             {activeTab === "Staff" && (
                 <div>
-                    <h3 style={{ color: dark ? "#fff" : "#222", marginBottom: 16, fontSize: 18, fontWeight: 800 }}>👨‍🏫 Staff Registrations ({staffRegs.length})</h3>
-                    {staffRegs.length === 0 ? (
+                    <h3 style={{ color: dark ? "#fff" : "#222", marginBottom: 16, fontSize: 18, fontWeight: 800 }}>👨‍🏫 Staff Registrations ({houseStaffRegs.length})</h3>
+                    {houseStaffRegs.length === 0 ? (
                         <div style={{ ...cS, textAlign: "center", padding: 60 }}>
                             <div style={{ fontSize: 60, marginBottom: 15 }}>👨‍🏫</div>
                             <div style={{ fontWeight: 700, fontSize: 18, color: dark ? "#aaa" : "#666" }}>No staff have registered yet</div>
@@ -568,7 +575,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                         </div>
                     ) : (
                         <div style={{ display: "grid", gap: 10 }}>
-                            {staffRegs.map((r, idx) => (
+                            {houseStaffRegs.map((r, idx) => (
                                 <div key={r.regNo || r.email} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderLeft: `5px solid #8B0000`, borderRadius: 14, padding: "16px 20px" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                                         <div>
