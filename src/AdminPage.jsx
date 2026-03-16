@@ -1604,8 +1604,21 @@ export function AdminPage({
                                                         <button onClick={() => {
                                                             const gamesArr = r.game ? r.game.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
                                                             const athleticsArr = r.athletic ? r.athletic.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
+                                                            
+                                                            // Robust lookup for missing gender/role (backwards compatibility)
+                                                            let gender = r.gender;
+                                                            let role = r.role;
+                                                            
+                                                            if (!gender || !role) {
+                                                                const student = studentsDB.find(s => s.regNo === r.regNo);
+                                                                if (student) {
+                                                                    gender = gender || student.gender;
+                                                                    role = role || student.role;
+                                                                }
+                                                            }
+
                                                             setEditRegForm({ game: gamesArr, athletic: athleticsArr });
-                                                            setEditReg(r);
+                                                            setEditReg({ ...r, gender, role });
                                                         }} style={{ background: dark ? "#444" : "#ddd", color: dark ? "#fff" : "#222", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>Edit</button>
                                                     </td>
                                                 </tr>
@@ -3344,7 +3357,7 @@ export function AdminPage({
                         {(() => {
                             const gender = editReg?.gender?.toLowerCase() || "";
                             const isMens = gender === "male" || gender === "m" || gender === "boys";
-                            const isStaff = registrations.find(r => r.regNo === editReg?.regNo)?.role === "Staff";
+                            const isStaff = editReg?.role === "Staff";
                             const masterList = isStaff ? (isMens ? staffGamesList : staffGamesListWomens) : (isMens ? sportGamesList : sportGamesListWomens);
                             const commonList = isMens ? commonGamesMen : commonGamesWomen;
                             const fullList = [...(masterList || []), ...(commonList || [])];

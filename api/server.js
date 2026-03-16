@@ -839,6 +839,8 @@ app.post("/api/register-event", otpVerifyLimiter, async (req, res) => {
         email: student.email,
         regNo: student.regNo,
         house: student.house,
+        gender: student.gender || "", 
+        role: student.role || "Student",
         game: game || "",
         athletic: athletic || "",
         registeredAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
