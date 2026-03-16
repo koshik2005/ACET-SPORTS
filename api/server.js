@@ -1623,6 +1623,12 @@ app.post("/api/admin-sync-registrations", authenticateAdmin, async (req, res) =>
     let updatedCount = 0;
     let dedupedCount = 0;
 
+    const studentMap = new Map();
+    students.forEach(s => {
+      if (s.email) studentMap.set(s.email.toLowerCase(), s);
+      if (s.regNo) studentMap.set(s.regNo.toLowerCase(), s);
+    });
+
     const newRegs = [];
     const seenEmails = new Set();
     const seenRegNos = new Set();
@@ -1630,10 +1636,8 @@ app.post("/api/admin-sync-registrations", authenticateAdmin, async (req, res) =>
     // Process registrations: deduplicate and sync metadata
     registrations.forEach(reg => {
       // Find matching student
-      const student = students.find(s => 
-        (s.email && s.email.toLowerCase() === reg.email?.toLowerCase()) || 
-        (s.regNo && s.regNo.toLowerCase() === reg.regNo?.toLowerCase())
-      );
+      const student = (reg.email && studentMap.get(reg.email.toLowerCase())) || 
+                      (reg.regNo && studentMap.get(reg.regNo.toLowerCase()));
 
       if (student) {
         // Sync metadata

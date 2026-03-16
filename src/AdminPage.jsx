@@ -1545,6 +1545,10 @@ export function AdminPage({
                                                     method: "POST",
                                                     headers: { "Authorization": `Bearer ${token}` }
                                                 });
+                                                if (!res.ok) {
+                                                    const errText = await res.text();
+                                                    throw new Error(`Server returned ${res.status}: ${errText.slice(0, 100)}`);
+                                                }
                                                 const data = await res.json();
                                                 if (data.success) {
                                                     alert(`✅ Sync Complete!\nUpdated: ${data.updated}\nDuplicates Removed: ${data.deduped}`);
@@ -1556,7 +1560,8 @@ export function AdminPage({
                                                     alert("❌ Sync failed: " + data.error);
                                                 }
                                             } catch (e) {
-                                                alert("❌ Network error during sync");
+                                                console.error("Sync Error:", e);
+                                                alert("❌ Sync error: " + e.message);
                                             }
                                         }}
                                         style={{ background: "#4B5563", color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", cursor: "pointer", fontSize: 10, fontWeight: 700 }}
