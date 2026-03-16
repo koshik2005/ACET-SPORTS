@@ -210,7 +210,7 @@ const requireValidOrigin = (req, res, next) => {
 
 // ─── Public Health Check ───────────────────────────────────────────────────
 // This does NOT use withDb or requireValidOrigin so it works even if DB is down.
-app.get("/api-health", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
     status: "OK",
     timestamp: new Date().toISOString(),
