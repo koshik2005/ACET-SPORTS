@@ -1541,19 +1541,33 @@ export function AdminPage({
                                             if (!window.confirm("This will synchronize all registrations with the master student database to fix missing roll numbers or metadata. Continue?")) return;
                                             try {
                                                 const token = localStorage.getItem("adminToken");
+                                                const headers = { 
+                                                    "Authorization": `Bearer ${token}`,
+                                                    "Accept": "application/json"
+                                                };
                                                 const res = await fetch(`${API_BASE}/api/admin-sync-registrations`, {
                                                     method: "POST",
-                                                    headers: { "Authorization": `Bearer ${token}` }
+                                                    headers
                                                 });
+                                                
                                                 if (!res.ok) {
                                                     const errText = await res.text();
                                                     throw new Error(`Server returned ${res.status}: ${errText.slice(0, 100)}`);
                                                 }
-                                                const data = await res.json();
+
+                                                let data;
+                                                const text = await res.text();
+                                                try {
+                                                    data = JSON.parse(text);
+                                                } catch (e) {
+                                                    console.error("Malformed JSON response:", text);
+                                                    throw new Error(`Invalid JSON response from server. Check console.`);
+                                                }
+
                                                 if (data.success) {
                                                     alert(`✅ Sync Complete!\nUpdated: ${data.updated}\nDuplicates Removed: ${data.deduped}`);
                                                     // Refresh data
-                                                    const regRes = await fetch(`${API_BASE}/api/admin-data`, { headers: { "Authorization": `Bearer ${token}` } });
+                                                    const regRes = await fetch(`${API_BASE}/api/admin-data`, { headers });
                                                     const regData = await regRes.json();
                                                     if (regData.registrations) setRegistrations(regData.registrations);
                                                 } else {

@@ -594,6 +594,16 @@ app.get("/api/secure-state", authenticateCaptainOrAdmin, async (req, res) => {
   }
 });
 
+// Alias for Admin compatibility
+app.get("/api/admin-data", authenticateAdmin, async (req, res) => {
+  try {
+    const state = await loadDb();
+    res.json(state);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load state" });
+  }
+});
+
 
 app.get("/api/state", (req, res) => {
   // Redirect old /api/state to public-state for backwards compatibility momentarily
@@ -1689,6 +1699,11 @@ app.post("/api/admin-sync-registrations", authenticateAdmin, async (req, res) =>
     console.error("SYNC_ERROR:", err);
     res.status(500).json({ error: "Sync failed: " + err.message });
   }
+});
+
+// JSON 404 for all other /api routes to prevent HTML fallbacks
+app.use("/api/*", (req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
 });
 
 const PORT = process.env.PORT || 3001;
