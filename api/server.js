@@ -208,6 +208,18 @@ const requireValidOrigin = (req, res, next) => {
   next();
 };
 
+// ─── Public Health Check ───────────────────────────────────────────────────
+// This does NOT use withDb or requireValidOrigin so it works even if DB is down.
+app.get("/api-health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || "development",
+    hasMongo: !!process.env.MONGODB_URI,
+    mongoPrefix: process.env.MONGODB_URI ? process.env.MONGODB_URI.slice(0, 15) + "..." : "missing"
+  });
+});
+
 app.use("/api/", requireValidOrigin);
 
 // ─── In-Memory State Cache ─────────────────────────────────────────────────────

@@ -90,25 +90,25 @@ export default function App() {
               localStorage.removeItem("captainToken");
               return fetch(`${API_BASE}/api/public-state?t=${Date.now()}`).then(r => r.json());
            }
-           // For public state failure, try to get JSON details
-           return res.json().then(errData => {
-             const errMsg = errData.error || errData.message || res.statusText;
-             const details = errData.details ? `: ${errData.details}` : "";
-             setFetchError(`Server Error (${res.status}): ${errMsg}${details}`);
-             throw new Error(errMsg);
-           }).catch(() => {
-             setFetchError(`Network Error (${res.status})`);
+           // For public state failure, try to get JSON details or text
+           return res.text().then(text => {
+             try {
+               const errData = JSON.parse(text);
+               const errMsg = errData.error || errData.message || res.statusText;
+               const details = errData.details ? `: ${errData.details}` : "";
+               setFetchError(`Server Error (${res.status}): ${errMsg}${details}`);
+             } catch (e) {
+               // Not JSON - likely a hard crash or Vercel error page
+               const snippet = text.slice(0, 50).replace(/<[^>]*>?/gm, '');
+               setFetchError(`Crash (${res.status}): ${snippet}...`);
+             }
              throw new Error("Generic failure");
            });
         }
         return res.json();
       })
       .then(data => {
-        if (!data) {
-          if (isInitial) setLoading(false);
-          if (!isInitial) setIsFetching(false);
-          return;
-        }
+        if (!data) return;
         console.log("[DEBUG] Data received keys:", Object.keys(data));
         setFetchError(null);
         const setIfReady = (key, setter) => {
