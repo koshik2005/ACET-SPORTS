@@ -45,6 +45,8 @@ app.use(helmet({
 }));
 // Explicitly loaded exact allowlist (no dynamic reflection unless matched)
 const allowedOrigins = [
+  "https://acet-sports.vercel.app",
+  "https://acet-sports-main.vercel.app",
   "https://acet-sports-seven.vercel.app",
   "https://acetsports.favoflex.com",
   "http://localhost:5173",
