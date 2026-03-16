@@ -528,6 +528,8 @@ app.get("/api/public-state", async (req, res) => {
     }
 
     const state = await loadDb();
+    console.log(`[DEBUG] Found state doc. Houses count: ${state.houses?.length || 0}`);
+    
     // Strip passwords from houses before sending
     const sanitizedHouses = state.houses.map(h => {
       const hSafe = h.toObject ? h.toObject() : { ...h };
@@ -538,6 +540,7 @@ app.get("/api/public-state", async (req, res) => {
     });
 
     const result = { ...state.toObject ? state.toObject() : state, houses: sanitizedHouses };
+    console.log(`[DEBUG] Result houses count: ${result.houses?.length || 0}`);
     
     // SECURITY: Strip out sensitive database fields from public state.
     // These should only be queried via /api/secure-state by authenticated admins.

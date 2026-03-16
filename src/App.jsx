@@ -68,6 +68,7 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
+  const [fetchError, setFetchError] = useState(null);
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
   const refreshState = (isInitial = false) => {
@@ -78,12 +79,26 @@ export default function App() {
     const fetchPath = `${token ? "/api/secure-state" : "/api/public-state"}?t=${Date.now()}`;
     const headers = token ? { "Authorization": `Bearer ${token}` } : {};
 
+    console.log(`[DEBUG] Fetching from: ${API_BASE}${fetchPath}`);
+
     fetch(`${API_BASE}${fetchPath}`, { headers })
       .then(res => {
-        if (!res.ok && token) {
-          localStorage.removeItem("adminToken");
-          localStorage.removeItem("captainToken");
-          return fetch(`${API_BASE}/api/public-state?t=${Date.now()}`).then(r => r.json());
+        console.log(`[DEBUG] Response status: ${res.status} ${res.ok ? 'OK' : 'FAIL'}`);
+        if (!res.ok) {
+           if (token) {
+              localStorage.removeItem("adminToken");
+              localStorage.removeItem("captainToken");
+              return fetch(`${API_BASE}/api/public-state?t=${Date.now()}`).then(r => r.json());
+           }
+           // For public state failure, try to get JSON details
+           return res.json().then(errData => {
+             const errMsg = errData.error || errData.message || res.statusText;
+             setFetchError(`Server Error (${res.status}): ${errMsg}`);
+             throw new Error(errMsg);
+           }).catch(() => {
+             setFetchError(`Network Error (${res.status})`);
+             throw new Error("Generic failure");
+           });
         }
         return res.json();
       })
@@ -93,6 +108,8 @@ export default function App() {
           if (!isInitial) setIsFetching(false);
           return;
         }
+        console.log("[DEBUG] Data received keys:", Object.keys(data));
+        setFetchError(null);
         const setIfReady = (key, setter) => {
           if (!pendingSyncs.has(key)) setter(data[key]);
         };
@@ -306,6 +323,15 @@ export default function App() {
       )}
 
       <main>
+        {fetchError && (
+          <div style={{
+            background: "#ff4444", color: "#fff", padding: "12px 20px", textAlign: "center",
+            fontSize: 14, fontWeight: 700, boxShadow: "0 4px 12px rgba(255,0,0,0.2)",
+            position: "relative", zIndex: 1000, margin: "10px", borderRadius: 8
+          }}>
+            ⚠️ CONNECTION ISSUE: {fetchError} | Please try refreshing the page.
+          </div>
+        )}
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} memorial={memorial} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
         {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
