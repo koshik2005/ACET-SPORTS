@@ -21,8 +21,29 @@ import bcrypt from "bcryptjs";
 import { State, Otp, Query, InvalidatedToken } from "./models.js";
 
 const app = express();
-app.set("trust proxy", 1); // Trust first proxy (required for Vercel/Render rate limiting)
-app.set("query parser", "simple"); // Use simple parser to avoid immutable getters in Express 5
+app.set("trust proxy", 1); 
+
+// Global Error Catchers for serverless monitoring
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("🌊 UNHANDLED REJECTION:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("🔥 UNCAUGHT EXCEPTION:", err);
+});
+
+// ─── Direct Health Check (Top Level) ────────────────────────────────────────
+// This works even if everything else crashes
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || "production",
+    hasMongo: !!process.env.MONGODB_URI,
+    health: "direct"
+  });
+});
+
+app.set("query parser", "simple"); 
 // app.use(compression()); // DEACTIVATED: Vercel handles compression natively at the production edge.
 
 app.use(helmet({
@@ -207,18 +228,6 @@ const requireValidOrigin = (req, res, next) => {
 
   next();
 };
-
-// ─── Public Health Check ───────────────────────────────────────────────────
-// This does NOT use withDb or requireValidOrigin so it works even if DB is down.
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || "development",
-    hasMongo: !!process.env.MONGODB_URI,
-    mongoPrefix: process.env.MONGODB_URI ? process.env.MONGODB_URI.slice(0, 15) + "..." : "missing"
-  });
-});
 
 app.use("/api/", requireValidOrigin);
 
