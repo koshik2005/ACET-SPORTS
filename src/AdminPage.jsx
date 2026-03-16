@@ -131,6 +131,8 @@ export function AdminPage({
     const [addStudentForm, setAddStudentForm] = useState({ name: "", regNo: "", email: "", gender: "Male", house: "", year: "", dept: "", shirtSize: "" });
     const [showBulkImport, setShowBulkImport] = useState(studentsDB.length === 0);
     const [studentPage, setStudentPage] = useState(1);
+    const [tsPage, setTsPage] = useState(1);
+    const [winnersPage, setWinnersPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(50);
 
     // Helper: parse a combined "year dept" value like "II AI&DS", "I(cse a)", "III MECH A"
@@ -1842,11 +1844,11 @@ export function AdminPage({
 
                             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 10, marginBottom: 16, background: dark ? "rgba(255,255,255,.02)" : "#f5f5f5", padding: 12, borderRadius: 10 }}>
                                 <div><label style={{ fontSize: 11, fontWeight: 700, color: dark ? "#888" : "#999" }}>Event Name</label>
-                                    <select value={wfEvent} onChange={e => setWfEvent(e.target.value)} style={{ ...iS, marginBottom: 0, padding: 6, fontSize: 12 }}><option value="All">All Events</option>{[...new Set(results.map(r => r.eventName))].map(e => <option key={e} value={e}>{e}</option>)}</select></div>
+                                    <select value={wfEvent} onChange={e => { setWfEvent(e.target.value); setWinnersPage(1); }} style={{ ...iS, marginBottom: 0, padding: 6, fontSize: 12 }}><option value="All">All Events</option>{[...new Set(results.map(r => r.eventName))].map(e => <option key={e} value={e}>{e}</option>)}</select></div>
                                 <div><label style={{ fontSize: 11, fontWeight: 700, color: dark ? "#888" : "#999" }}>House Filter (Any Prize)</label>
-                                    <select value={wfHouse} onChange={e => setWfHouse(e.target.value)} style={{ ...iS, marginBottom: 0, padding: 6, fontSize: 12 }}><option value="All">All Houses</option>{houses.map(h => <option key={h.name} value={h.name}>{h.name}</option>)}</select></div>
+                                    <select value={wfHouse} onChange={e => { setWfHouse(e.target.value); setWinnersPage(1); }} style={{ ...iS, marginBottom: 0, padding: 6, fontSize: 12 }}><option value="All">All Houses</option>{houses.map(h => <option key={h.name} value={h.name}>{h.name}</option>)}</select></div>
                                 <div><label style={{ fontSize: 11, fontWeight: 700, color: dark ? "#888" : "#999" }}>Prize Place</label>
-                                    <select value={wfPrize} onChange={e => setWfPrize(e.target.value)} style={{ ...iS, marginBottom: 0, padding: 6, fontSize: 12 }}><option value="All">All Placements</option><option value="1st">🥇 1st Place Only</option><option value="2nd">🥈 2nd Place Only</option><option value="3rd">🥉 3rd Place Only</option></select></div>
+                                    <select value={wfPrize} onChange={e => { setWfPrize(e.target.value); setWinnersPage(1); }} style={{ ...iS, marginBottom: 0, padding: 6, fontSize: 12 }}><option value="All">All Placements</option><option value="1st">🥇 1st Place Only</option><option value="2nd">🥈 2nd Place Only</option><option value="3rd">🥉 3rd Place Only</option></select></div>
                             </div>
 
                             {results.length === 0 ? <div style={{ padding: 20, color: dark ? "#666" : "#aaa", textAlign: "center", fontSize: 13, background: dark ? "rgba(255,255,255,.02)" : "#fafafa", borderRadius: 10 }}>No results logged yet.</div> : (
@@ -1862,31 +1864,55 @@ export function AdminPage({
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {results.filter(r => {
-                                                if (wfEvent !== "All" && r.eventName !== wfEvent) return false;
-                                                if (wfHouse !== "All") {
-                                                    const matchesH = r.placements?.first?.house === wfHouse || r.placements?.second?.house === wfHouse || r.placements?.third?.house === wfHouse;
-                                                    if (!matchesH) return false;
-                                                }
-                                                if (wfPrize !== "All") {
-                                                    if (wfPrize === "1st" && r.placements?.first?.house !== wfHouse && wfHouse !== "All") return false;
-                                                    if (wfPrize === "2nd" && r.placements?.second?.house !== wfHouse && wfHouse !== "All") return false;
-                                                    if (wfPrize === "3rd" && r.placements?.third?.house !== wfHouse && wfHouse !== "All") return false;
-                                                }
-                                                return true;
-                                            }).map((res, i) => (
-                                                <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#252525" : "#f0f0f0"}`, background: i % 2 === 0 ? "transparent" : dark ? "rgba(255,255,255,.01)" : "#fafafa", opacity: 0.9 }}>
-                                                    <td style={{ padding: "10px 14px", color: dark ? "#666" : "#aaa" }}>{i + 1}</td>
-                                                     <td style={{ padding: "10px 14px", color: dark ? "#e0e0e0" : "#222", fontWeight: 700 }}><div style={{ fontSize: 13 }}>{res.eventName}</div><div style={{ fontSize: 10, color: dark ? "#666" : "#aaa", fontWeight: 600, textTransform: "uppercase" }}>{res.eventType}</div></td>
-                                                    <td style={{ padding: "10px 14px" }}><div style={{ color: "#D4AF37", fontWeight: 800 }}>{res.placements?.first?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.first?.player}</div></td>
-                                                    <td style={{ padding: "10px 14px" }}><div style={{ color: "#C0C0C0", fontWeight: 800 }}>{res.placements?.second?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.second?.player}</div></td>
-                                                    <td style={{ padding: "10px 14px" }}><div style={{ color: "#CD7F32", fontWeight: 800 }}>{res.placements?.third?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.third?.player}</div></td>
-                                                    <td style={{ padding: "10px 14px", fontSize: 11, color: dark ? "#666" : "#999" }}>{res.time}</td>
-                                                    <td style={{ padding: "10px 14px" }}><button onClick={() => { if (window.confirm("Remove this result? Points will NOT be automatically deducted. You must manually deduct them via the Points tab.")) setResults(results.filter((_, idx) => idx !== i)); }} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 16 }}>✕</button></td>
-                                                </tr>
-                                            ))}
+                                            {(() => {
+                                                const filtered = results.filter(r => {
+                                                    if (wfEvent !== "All" && r.eventName !== wfEvent) return false;
+                                                    if (wfHouse !== "All") {
+                                                        const matchesH = r.placements?.first?.house === wfHouse || r.placements?.second?.house === wfHouse || r.placements?.third?.house === wfHouse;
+                                                        if (!matchesH) return false;
+                                                    }
+                                                    if (wfPrize !== "All") {
+                                                        if (wfPrize === "1st" && r.placements?.first?.house !== wfHouse && wfHouse !== "All") return false;
+                                                        if (wfPrize === "2nd" && r.placements?.second?.house !== wfHouse && wfHouse !== "All") return false;
+                                                        if (wfPrize === "3rd" && r.placements?.third?.house !== wfHouse && wfHouse !== "All") return false;
+                                                    }
+                                                    return true;
+                                                });
+                                                const start = (winnersPage - 1) * 100;
+                                                return filtered.slice(start, start + 100).map((res, i) => (
+                                                    <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#252525" : "#f0f0f0"}`, background: i % 2 === 0 ? "transparent" : dark ? "rgba(255,255,255,.01)" : "#fafafa", opacity: 0.9 }}>
+                                                        <td style={{ padding: "10px 14px", color: dark ? "#666" : "#aaa" }}>{start + i + 1}</td>
+                                                        <td style={{ padding: "10px 14px", color: dark ? "#e0e0e0" : "#222", fontWeight: 700 }}><div style={{ fontSize: 13 }}>{res.eventName}</div><div style={{ fontSize: 10, color: dark ? "#666" : "#aaa", fontWeight: 600, textTransform: "uppercase" }}>{res.eventType}</div></td>
+                                                        <td style={{ padding: "10px 14px" }}><div style={{ color: "#D4AF37", fontWeight: 800 }}>{res.placements?.first?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.first?.player}</div></td>
+                                                        <td style={{ padding: "10px 14px" }}><div style={{ color: "#C0C0C0", fontWeight: 800 }}>{res.placements?.second?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.second?.player}</div></td>
+                                                        <td style={{ padding: "10px 14px" }}><div style={{ color: "#CD7F32", fontWeight: 800 }}>{res.placements?.third?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.third?.player}</div></td>
+                                                        <td style={{ padding: "10px 14px", fontSize: 11, color: dark ? "#666" : "#999" }}>{res.time}</td>
+                                                        <td style={{ padding: "10px 14px" }}><button onClick={() => { if (window.confirm("Remove this result? Points will NOT be automatically deducted. You must manually deduct them via the Points tab.")) setResults(results.filter((_, idx) => idx !== (start + i))); }} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 16 }}>✕</button></td>
+                                                    </tr>
+                                                ));
+                                            })()}
                                         </tbody>
                                     </table>
+                                </div>
+                            )}
+
+                            {results.length > 100 && (
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                                    <div style={{ fontSize: 12, color: dark ? "#888" : "#666" }}>
+                                        Page {winnersPage} of {Math.ceil(results.length / 100)}
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                        <button 
+                                            disabled={winnersPage === 1}
+                                            onClick={() => setWinnersPage(p => Math.max(1, p - 1))}
+                                            style={{ background: dark ? "#333" : "#eee", color: dark ? "#fff" : "#333", border: "none", borderRadius: 6, padding: "6px 12px", cursor: winnersPage === 1 ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
+                                        >Prev</button>
+                                        <button 
+                                            disabled={winnersPage >= Math.ceil(results.length / 100)}
+                                            onClick={() => setWinnersPage(p => p + 1)}
+                                            style={{ background: dark ? "#333" : "#eee", color: dark ? "#fff" : "#333", border: "none", borderRadius: 6, padding: "6px 12px", cursor: winnersPage >= Math.ceil(results.length / 100) ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
+                                        >Next</button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -2337,14 +2363,14 @@ export function AdminPage({
                             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
                                 <div>
                                     <label style={lS}>Filter by House</label>
-                                    <select value={tsHouse} onChange={e => setTsHouse(e.target.value)} style={{ ...iS, marginBottom: 0 }}>
+                                    <select value={tsHouse} onChange={e => { setTsHouse(e.target.value); setTsPage(1); }} style={{ ...iS, marginBottom: 0 }}>
                                         <option value="All">All Houses</option>
                                         {houses.map(h => <option key={h.name} value={h.name}>{h.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label style={lS}>Filter by Gender</label>
-                                    <select value={tsGender} onChange={e => setTsGender(e.target.value)} style={{ ...iS, marginBottom: 0 }}>
+                                    <select value={tsGender} onChange={e => { setTsGender(e.target.value); setTsPage(1); }} style={{ ...iS, marginBottom: 0 }}>
                                         <option value="All">All Genders</option>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
@@ -2352,7 +2378,7 @@ export function AdminPage({
                                 </div>
                                 <div>
                                     <label style={lS}>Filter by Status</label>
-                                    <select value={tsStatus} onChange={e => setTsStatus(e.target.value)} style={{ ...iS, marginBottom: 0 }}>
+                                    <select value={tsStatus} onChange={e => { setTsStatus(e.target.value); setTsPage(1); }} style={{ ...iS, marginBottom: 0 }}>
                                         <option value="All">All Statuses</option>
                                         <option value="Issued">Issued ✅</option>
                                         <option value="Pending">Pending ❌</option>
@@ -2381,61 +2407,85 @@ export function AdminPage({
                                     {["S.No", "Name", "Reg No", "Year", "Dept", "Gender", "House", "Size", "Status"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                 </tr></thead>
                                 <tbody>
-                                    {studentsDB.filter(s => {
-                                        if (tsHouse !== "All" && s.house !== tsHouse) return false;
-                                        if (tsGender !== "All") {
-                                            const g = (s.gender || "").trim().toLowerCase();
-                                            if (tsGender === "Male" && g !== "male" && g !== "m") return false;
-                                            if (tsGender === "Female" && g !== "female" && g !== "f") return false;
-                                        }
-                                        if (tsStatus === "Issued" && !s.shirtIssued) return false;
-                                        if (tsStatus === "Pending" && s.shirtIssued) return false;
-                                        return true;
-                                    }).slice(0, 100).map((s, idx) => (
-                                        <tr key={`${s.regNo}-${idx}`} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
-                                            <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{idx + 1}</td>
-                                            <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
-                                            <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
-                                            <td style={{ padding: "8px 12px" }}>
-                                                <input
-                                                    value={s.year || ""}
-                                                    onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, year: e.target.value } : x))}
-                                                    style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
-                                                />
-                                            </td>
-                                            <td style={{ padding: "8px 12px" }}>
-                                                <input
-                                                    value={s.dept || ""}
-                                                    onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, dept: e.target.value } : x))}
-                                                    style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
-                                                />
-                                            </td>
-                                            <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender}</td>
-                                            <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
-                                            <td style={{ padding: "8px 12px", fontWeight: 800, color: "#8B0000" }}>{s.shirtSize}</td>
-                                            <td style={{ padding: "8px 12px" }}>
-                                                <button onClick={async () => {
-                                                     try {
-                                                         const res = await fetch(`${API_BASE}/api/admin-toggle-tshirt`, {
-                                                             method: "POST",
-                                                             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("adminToken")}` },
-                                                             body: JSON.stringify({ regNo: s.regNo })
-                                                         });
-                                                         const data = await res.json();
-                                                         if (data.success) {
-                                                             setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, shirtIssued: data.shirtIssued } : x));
-                                                         }
-                                                     } catch (e) { alert("Failed to toggle shirt"); }
-                                                 }} style={{ padding: "3px 8px", borderRadius: 4, background: s.shirtIssued ? "#2E8B5722" : "#cc000011", color: s.shirtIssued ? "#2E8B57" : "#c00", fontWeight: 700, fontSize: 10, border: "none", cursor: "pointer" }}>
-                                                     {s.shirtIssued ? "✅ ISSUED" : "❌ PENDING"}
-                                                 </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {(() => {
+                                        const filtered = studentsDB.filter(s => {
+                                            if (tsHouse !== "All" && s.house !== tsHouse) return false;
+                                            if (tsGender !== "All") {
+                                                const g = (s.gender || "").trim().toLowerCase();
+                                                if (tsGender === "Male" && g !== "male" && g !== "m") return false;
+                                                if (tsGender === "Female" && g !== "female" && g !== "f") return false;
+                                            }
+                                            if (tsStatus === "Issued" && !s.shirtIssued) return false;
+                                            if (tsStatus === "Pending" && s.shirtIssued) return false;
+                                            return true;
+                                        });
+                                        const start = (tsPage - 1) * 100;
+                                        return filtered.slice(start, start + 100).map((s, idx) => (
+                                            <tr key={`${s.regNo}-${idx}`} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
+                                                <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{start + idx + 1}</td>
+                                                <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
+                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
+                                                <td style={{ padding: "8px 12px" }}>
+                                                    <input
+                                                        value={s.year || ""}
+                                                        onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, year: e.target.value } : x))}
+                                                        style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: "8px 12px" }}>
+                                                    <input
+                                                        value={s.dept || ""}
+                                                        onChange={e => setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, dept: e.target.value } : x))}
+                                                        style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 13, border: `1px solid ${dark ? "#333" : "#eee"}`, background: "transparent" }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender}</td>
+                                                <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
+                                                <td style={{ padding: "8px 12px", fontWeight: 800, color: "#8B0000" }}>{s.shirtSize}</td>
+                                                <td style={{ padding: "8px 12px" }}>
+                                                    <button onClick={async () => {
+                                                         try {
+                                                             const res = await fetch(`${API_BASE}/api/admin-toggle-tshirt`, {
+                                                                 method: "POST",
+                                                                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("adminToken")}` },
+                                                                 body: JSON.stringify({ regNo: s.regNo })
+                                                             });
+                                                             const data = await res.json();
+                                                             if (data.success) {
+                                                                 setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, shirtIssued: data.shirtIssued } : x));
+                                                             }
+                                                         } catch (e) { alert("Failed to toggle shirt"); }
+                                                     }} style={{ padding: "3px 8px", borderRadius: 4, background: s.shirtIssued ? "#2E8B5722" : "#cc000011", color: s.shirtIssued ? "#2E8B57" : "#c00", fontWeight: 700, fontSize: 10, border: "none", cursor: "pointer" }}>
+                                                         {s.shirtIssued ? "✅ ISSUED" : "❌ PENDING"}
+                                                     </button>
+                                                </td>
+                                            </tr>
+                                        ));
+                                    })()}
                                 </tbody>
                             </table>
                             {studentsDB.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#888" }}>No students in database</div>}
                         </div>
+
+                        {studentsDB.length > 100 && (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+                                <div style={{ fontSize: 12, color: dark ? "#888" : "#666" }}>
+                                    Page {tsPage} of {Math.ceil(studentsDB.length / 100)}
+                                </div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button 
+                                        disabled={tsPage === 1}
+                                        onClick={() => setTsPage(p => Math.max(1, p - 1))}
+                                        style={{ background: dark ? "#333" : "#eee", color: dark ? "#fff" : "#333", border: "none", borderRadius: 6, padding: "6px 12px", cursor: tsPage === 1 ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
+                                    >Prev</button>
+                                    <button 
+                                        disabled={tsPage >= Math.ceil(studentsDB.length / 100)}
+                                        onClick={() => setTsPage(p => p + 1)}
+                                        style={{ background: dark ? "#333" : "#eee", color: dark ? "#fff" : "#333", border: "none", borderRadius: 6, padding: "6px 12px", cursor: tsPage >= Math.ceil(studentsDB.length / 100) ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
+                                    >Next</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )
             }
@@ -2821,7 +2871,9 @@ export function AdminPage({
                                 <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0", fontSize: 14 }}>Email Server Status</h4>
                                 <button onClick={async () => {
                                     try {
-                                        const res = await fetch(`${API_BASE}/api/check-email-connection`);
+                                        const res = await fetch(`${API_BASE}/api/check-email-connection`, {
+                                            headers: { "Authorization": `Bearer ${localStorage.getItem("adminToken")}` }
+                                        });
                                         const d = await res.json();
                                         alert(d.success ? "✅ Email connected successfully!" : `❌ Email Error: ${d.error}`);
                                     } catch (e) { alert("❌ Could not reach server. Is node running?"); }

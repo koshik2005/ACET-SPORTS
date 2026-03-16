@@ -1713,21 +1713,27 @@ app.post("/api/admin-toggle-tshirt", authenticateAdmin, async (req, res) => {
   if (!regNo) return res.status(400).json({ error: "Register number is required" });
 
   try {
-    const state = await loadDb();
-    const students = state.studentsDB || [];
-    const studentIdx = students.findIndex(s => s.regNo === regNo);
+    // 1. Find the current status using projection to keep it light
+    const state = await State.findOne({ "studentsDB.regNo": regNo }, { "studentsDB.$": 1 });
+    if (!state || !state.studentsDB || state.studentsDB.length === 0) {
+        return res.status(404).json({ error: "Student not found" });
+    }
 
-    if (studentIdx === -1) return res.status(404).json({ error: "Student not found" });
+    const currentStatus = !!state.studentsDB[0].shirtIssued;
+    const newStatus = !currentStatus;
 
-    const currentStatus = !!students[studentIdx].shirtIssued;
-    students[studentIdx].shirtIssued = !currentStatus;
+    // 2. Atomic update using positional operator ($)
+    await State.updateOne(
+      { "studentsDB.regNo": regNo },
+      { $set: { "studentsDB.$.shirtIssued": newStatus } }
+    );
 
-    await State.findOneAndUpdate({}, { $set: { studentsDB: students } });
     invalidateCache();
 
-    SecurityLogger.log("ADMIN_TSHIRT_TOGGLE", { regNo, newStatus: !currentStatus, admin: req.user.email });
-    res.json({ success: true, shirtIssued: !currentStatus });
+    SecurityLogger.log("ADMIN_TSHIRT_TOGGLE", { regNo, newStatus, admin: req.user.email });
+    res.json({ success: true, shirtIssued: newStatus });
   } catch (err) {
+    console.error("TOGGLE_ERROR:", err);
     res.status(500).json({ error: "Failed to toggle T-shirt status" });
   }
 });
