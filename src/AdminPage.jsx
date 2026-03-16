@@ -3342,7 +3342,8 @@ export function AdminPage({
                     <div>
                         <h4 style={{ color: dark ? "#ccc" : "#444", marginBottom: 12, fontSize: 14 }}>Team Games</h4>
                         {(() => {
-                            const isMens = editReg?.gender === "Male";
+                            const gender = editReg?.gender?.toLowerCase() || "";
+                            const isMens = gender === "male" || gender === "m" || gender === "boys";
                             const isStaff = registrations.find(r => r.regNo === editReg?.regNo)?.role === "Staff";
                             const masterList = isStaff ? (isMens ? staffGamesList : staffGamesListWomens) : (isMens ? sportGamesList : sportGamesListWomens);
                             const commonList = isMens ? commonGamesMen : commonGamesWomen;
@@ -3376,7 +3377,8 @@ export function AdminPage({
                     <div>
                         <h4 style={{ color: dark ? "#ccc" : "#444", marginBottom: 12, fontSize: 14 }}>Athletic Events</h4>
                         {(() => {
-                            const isMens = editReg?.gender === "Male";
+                            const gender = editReg?.gender?.toLowerCase() || "";
+                            const isMens = gender === "male" || gender === "m" || gender === "boys";
                             const masterList = isMens ? athleticsList : athleticsListWomens;
                             const commonList = isMens ? commonAthleticsMen : commonAthleticsWomen;
                             const fullList = [...(masterList || []), ...(commonList || [])];

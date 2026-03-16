@@ -282,6 +282,32 @@ const loadAdminToken = async () => {
 // ─── Transporter Registry (Persistent Pool) ──────────────────────────────────
 let smtpRotationCounter = 0;
 const transportersCache = new Map();
+let smtpAccountsConfig = null;
+
+function getAvailableSmtpAccounts() {
+  if (smtpAccountsConfig) return smtpAccountsConfig;
+  
+  const accounts = [];
+  // Potential suffixes: "", "_1", "_2", "_3", "_4", "_5"
+  // Note: We treat SMTP_USER and SMTP_USER_1 as the same if both are somehow set, 
+  // but usually it's one or the other.
+  const suffixes = ["", "_1", "_2", "_3", "_4", "_5"];
+  const seenUsers = new Set();
+
+  suffixes.forEach(s => {
+    const user = process.env[`SMTP_USER${s}`] || (s === "" ? (process.env.SMTP_USER || process.env.EMAIL) : null);
+    const pass = process.env[`SMTP_PASS${s}`] || (s === "" ? (process.env.SMTP_PASS || process.env.APP_PASSWORD) : null);
+    
+    if (user && pass && !seenUsers.has(user)) {
+      accounts.push({ user, pass });
+      seenUsers.add(user);
+    }
+  });
+
+  smtpAccountsConfig = accounts;
+  console.log(`📧 Found ${accounts.length} SMTP accounts for rotation.`);
+  return accounts;
+}
 
 function getTransporter(index = null) {
   const resendKey = process.env.RESEND_API_KEY;
@@ -300,22 +326,27 @@ function getTransporter(index = null) {
     return transportersCache.get('resend');
   }
 
-  // Handle Multi-Account Rotation (1-5)
-  const rotationIndex = (index !== null) ? (index % 5) + 1 : (smtpRotationCounter++ % 5) + 1;
-  const suffix = rotationIndex === 1 ? "" : `_${rotationIndex}`;
-  
-  const user = process.env[`SMTP_USER${suffix}`] || process.env.SMTP_USER || process.env.EMAIL;
-  const pass = process.env[`SMTP_PASS${suffix}`] || process.env.SMTP_PASS || process.env.APP_PASSWORD;
-  
-  const cacheKey = user || 'primary';
-  
-  if (transportersCache.has(cacheKey)) {
-    return transportersCache.get(cacheKey);
+  const accounts = getAvailableSmtpAccounts();
+  if (accounts.length === 0) {
+    // Fallback to basic env if discovery failed (shouldn't happen with logic above)
+    const user = process.env.SMTP_USER || process.env.EMAIL;
+    const pass = process.env.SMTP_PASS || process.env.APP_PASSWORD;
+    return {
+      transporter: nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        auth: { user, pass }
+      }),
+      user
+    };
   }
 
-  // Create new persistent transporter for this account
-  const configUser = user || process.env.SMTP_USER || process.env.EMAIL;
-  const configPass = pass || process.env.SMTP_PASS || process.env.APP_PASSWORD;
+  const accountIndex = (index !== null) ? (index % accounts.length) : (smtpRotationCounter++ % accounts.length);
+  const { user, pass } = accounts[accountIndex];
+  
+  if (transportersCache.has(user)) {
+    return transportersCache.get(user);
+  }
 
   const t = {
     transporter: nodemailer.createTransport({
@@ -323,61 +354,71 @@ function getTransporter(index = null) {
       maxConnections: 3,
       maxMessages: 200,
       rateDelta: 1000,
-      rateLimit: 3, // Slightly slower to keep Gmail happy
-      connectionTimeout: 2000, // 2000ms timeout for faster rotation on dead connections
-      greetingTimeout: 2000,
+      rateLimit: 3,
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
       secure: process.env.SMTP_SECURE === "true",
-      auth: { user: configUser, pass: configPass },
+      auth: { user, pass },
       tls: { rejectUnauthorized: false }
     }),
-    user: configUser
+    user
   };
 
-  transportersCache.set(cacheKey, t);
+  transportersCache.set(user, t);
   return t;
 }
 
-// Global helper for robust email sending with automatic retry/rotation
 async function robustSendMail(mailOptions, specificIndex = null) {
   let lastError;
-  const MAX_RETRIES = 5;
+  const accounts = getAvailableSmtpAccounts();
+  const maxAttempts = Math.max(accounts.length, 3); // Try each account at least once, or 3 times if only 1 account
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const { transporter, user } = getTransporter(specificIndex);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // If we have a specific index, use it on the first attempt, then rotate for retries
+    const rotationIndex = (attempt === 0 && specificIndex !== null) ? specificIndex : null;
+    const { transporter, user } = getTransporter(rotationIndex); 
     try {
-      // Ensure 'from' always matches the authenticated user
       const options = { ...mailOptions };
-      if (!options.from) {
-        options.from = `"Sports Day ERP" <${user}>`;
-      } else if (options.from.includes("<")) {
-        // preserve the name but replace the email address
-        const namePart = options.from.split("<")[0].trim();
-        options.from = `${namePart} <${user}>`;
-      } else {
-        options.from = user;
+      
+      // Ensure 'from' always matches the authenticated user to prevent 'Sender Rejected'
+      const fromName = "Achariya Sports";
+      options.from = `"${fromName}" <${user}>`;
+      
+      // If 'to' is 'me' or placeholder, set it to the current authenticated user
+      if (!options.to || options.to === 'me' || options.to === 'self') {
+        options.to = user;
       }
       
+      console.log(`[SMTP_SEND] Attempt ${attempt + 1} using ${user} (To: ${options.to})`);
       await transporter.sendMail(options);
+      console.log(`[SMTP_SUCCESS] Sent via ${user}`);
       return { success: true, user };
     } catch (err) {
       lastError = err;
-      console.error(`[SMTP_ATTEMPT_${attempt + 1}_FAILED] User: ${user} | Error: ${err.message}`);
+      const errorMsg = err.message.toLowerCase();
+      console.error(`[SMTP_ERROR] User: ${user} | Error: ${err.message}`);
       
-      // If it's a login error (534/535) or connection error, try NEXT account
-      if (err.message.includes('534') || err.message.includes('535') || err.message.includes('454') || err.message.includes('550') || err.message.includes('EAI_AGAIN') || err.code === 'ECONNRESET') {
-        if (specificIndex === null) {
-          // Increment counter to ensure NEXT try uses a different account
-          console.log(`[SMTP_ROTATING] Attempting next account due to failure...`);
-          // Fast delay to break IP flag but avoid Vercel 10s serverless timeout
-          await new Promise(r => setTimeout(r, 300));
-        } else {
-          // If we were targeted, we can't easily rotate, but we can retry once
-          await new Promise(r => setTimeout(r, 1000));
-        }
+      // Detection of quota/limit/auth issues that warrant immediate rotation
+      const shouldRotate = 
+        errorMsg.includes('limit') || 
+        errorMsg.includes('quota') || 
+        errorMsg.includes('max') ||
+        errorMsg.includes('daily') ||
+        errorMsg.includes('534') || 
+        errorMsg.includes('535') || 
+        errorMsg.includes('454') || 
+        errorMsg.includes('550') || 
+        errorMsg.includes('eai_again') || 
+        err.code === 'ECONNRESET';
+
+      if (shouldRotate) {
+        console.log(`[SMTP_ROTATING] Limit or auth error detected. Moving to next account...`);
+        // The next loop iteration will naturally call getTransporter() which increments the counter
+        continue;
       } else {
-        // For other errors (like invalid recipient), don't bother retrying
+        // For other errors (invalid email, etc.), don't bother retrying
         throw err;
       }
     }
@@ -1472,8 +1513,6 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
         }
 
         const res = await robustSendMail(mailOptions, batchIdx);
-        // Ensure 'to' is also the authenticated user to avoid 'sender address rejected'
-        mailOptions.to = res.user; 
         
         results.success += batch.length;
         console.log(`✅ Batch of ${batch.length} sent successfully using ${res.user}.`);
