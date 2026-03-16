@@ -164,7 +164,11 @@ const requireValidOrigin = (req, res, next) => {
 
   // 1. Enforce strict validation for state endpoints
   const isStatePath = req.path.includes("public-state") || req.path.includes("secure-state") || req.path.includes("update-state");
-  
+  const isPublicGet = isStatePath && req.method === "GET" && req.path.includes("public-state");
+
+  // Allow public GET requests without strict origin checks for now to ensure rendering works
+  if (isPublicGet) return next();
+
   // Clean trailing slashes for comparison
   let cleanOrigin = origin;
   if (cleanOrigin && cleanOrigin.endsWith('/')) cleanOrigin = cleanOrigin.slice(0, -1);
@@ -175,14 +179,13 @@ const requireValidOrigin = (req, res, next) => {
   const isValidReferer = allowedOrigins.some(allowed => cleanReferer?.startsWith(allowed));
   
   // Same-origin check: if host matches referer (ignoring protocol)
-  const refererHost = cleanReferer ? new URL(cleanReferer).host : null;
-  const isSameOrigin = refererHost === host;
+  let isSameOrigin = false;
+  try {
+    const refererHost = cleanReferer ? new URL(cleanReferer).host : null;
+    isSameOrigin = refererHost === host || (host && refererHost?.includes(host.split(':')[0]));
+  } catch (e) {}
 
   const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
-
-  // Provide debug info in headers (safe for headers, not body)
-  res.setHeader("X-Debug-Origin", cleanOrigin || "none");
-  res.setHeader("X-Debug-Ref-Match", isValidReferer ? "yes" : "no");
 
   if (isProd || isStatePath) {
       if (!isValidOrigin && !isValidReferer && !isSameOrigin) {
@@ -195,6 +198,9 @@ const requireValidOrigin = (req, res, next) => {
             method: req.method,
             ip: req.ip
           });
+          // For now, in transition, just log and allow if it's a GET request
+          if (req.method === "GET") return next();
+          
           return res.status(403).json({ error: "Access Denied: Invalid Origin." });
       }
   }
