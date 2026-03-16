@@ -158,39 +158,39 @@ const otpVerifyLimiter = rateLimit({
 // genuinely originate from our trusted frontends, adding a layer of protection 
 // beyond just CORS, especially for non-browser abuse.
 const requireValidOrigin = (req, res, next) => {
-  // 1. Enforce strict validation for state endpoints even on GET
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+
+  // 1. Enforce strict validation for state endpoints
   const isStatePath = req.path.includes("public-state") || req.path.includes("secure-state") || req.path.includes("update-state");
   
-  // Debug log (deactivated)
-  // console.log(`[CORS_DEBUG] Path: ${req.path} isState: ${isStatePath} Method: ${req.method} ip: ${req.ip}`);
-
-  if (req.method === "GET" || req.method === "OPTIONS") {
-      if (!isStatePath) return next();
-  }
-
-  let origin = req.headers.origin;
-  let referer = req.headers.referer;
-
   // Clean trailing slashes for comparison
-  if (origin && origin.endsWith('/')) origin = origin.slice(0, -1);
-  if (referer && referer.endsWith('/')) referer = referer.slice(0, -1);
+  let cleanOrigin = origin;
+  if (cleanOrigin && cleanOrigin.endsWith('/')) cleanOrigin = cleanOrigin.slice(0, -1);
+  let cleanReferer = referer;
+  if (cleanReferer && cleanReferer.endsWith('/')) cleanReferer = cleanReferer.slice(0, -1);
 
-  // The actual host of the server (e.g. localhost:3001, acet-sports.vercel.app)
-  const host = req.headers["x-forwarded-host"] || req.headers.host || "";
-  const hostBase = host.split(":")[0];
-
-  const isValidOrigin = allowedOrigins.includes(origin);
-  const isValidReferer = allowedOrigins.some(allowed => referer?.startsWith(allowed));
+  const isValidOrigin = allowedOrigins.includes(cleanOrigin);
+  const isValidReferer = allowedOrigins.some(allowed => cleanReferer?.startsWith(allowed));
+  
+  // Same-origin check: if host matches referer (ignoring protocol)
+  const refererHost = cleanReferer ? new URL(cleanReferer).host : null;
+  const isSameOrigin = refererHost === host;
 
   const isProd = process.env.VERCEL || process.env.NODE_ENV === "production";
 
-  // In production (OR for sensitive state paths), we strictly require a valid Origin OR Referer matching our allowlist
+  // Provide debug info in headers (safe for headers, not body)
+  res.setHeader("X-Debug-Origin", cleanOrigin || "none");
+  res.setHeader("X-Debug-Ref-Match", isValidReferer ? "yes" : "no");
+
   if (isProd || isStatePath) {
-      if (!isValidOrigin && !isValidReferer) {
+      if (!isValidOrigin && !isValidReferer && !isSameOrigin) {
           SecurityLogger.log("ORIGIN_BLOCK", {
             reason: "Missing/Invalid Origin or Referer",
-            origin: origin || "undefined",
-            referer: referer || "undefined",
+            origin: cleanOrigin || "undefined",
+            referer: cleanReferer || "undefined",
+            host,
             path: req.path,
             method: req.method,
             ip: req.ip
@@ -514,7 +514,6 @@ app.get("/api/health", async (req, res) => {
 app.get("/api/public-state", async (req, res) => {
   try {
     // Serve from cache if fresh
-    res.setHeader("Cross-Origin-Resource-Policy", "same-site");
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
@@ -552,7 +551,6 @@ app.get("/api/public-state", async (req, res) => {
 
 app.get("/api/secure-state", authenticateCaptainOrAdmin, async (req, res) => {
   try {
-    res.setHeader("Cross-Origin-Resource-Policy", "same-site");
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
