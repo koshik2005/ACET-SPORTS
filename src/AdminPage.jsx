@@ -257,7 +257,8 @@ export function AdminPage({
                         setOtp("");
                         setLoginStep("otp");
                     } else {
-                        setLoginError("⚠ OTP is not sent: " + (otpData.error || "Unknown error"));
+                        const otpErr = typeof otpData.error === 'object' ? JSON.stringify(otpData.error) : otpData.error;
+                        setLoginError("⚠ OTP is not sent: " + (otpErr || "Unknown error"));
                         // Still allow fallback
                         setOtp("");
                         setLoginStep("otp");
@@ -268,7 +269,8 @@ export function AdminPage({
                     setLoginStep("otp");
                 }
             } else {
-                setLoginError("❌ " + (data.error || "Incorrect password."));
+                const errDisplay = typeof data.error === 'object' ? JSON.stringify(data.error) : data.error;
+                setLoginError("❌ " + (errDisplay || "Incorrect password."));
             }
         } catch (err) {
             console.error("PASSWORD VERIFY ERROR:", err);
@@ -380,7 +382,8 @@ export function AdminPage({
                 setLoggedIn(true);
                 fetchQueries();
             } else {
-                setLoginError(data.error || "Incorrect OTP");
+                const otpErr = typeof data.error === 'object' ? JSON.stringify(data.error) : data.error;
+                setLoginError("❌ " + (otpErr || "Incorrect OTP"));
             }
         } catch (err) {
             console.error("ADMIN LOGIN ERROR:", err);
