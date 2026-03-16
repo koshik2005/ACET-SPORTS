@@ -226,12 +226,22 @@ let cachedDb = null;
 async function connectToDatabase() {
   if (cachedDb && mongoose.connection.readyState === 1) return cachedDb;
 
-  console.log("📡 Connecting to MongoDB...");
-  cachedDb = await mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
-  });
-  console.log("🍃 Connected to MongoDB");
-  return cachedDb;
+  console.log("📡 Connecting to MongoDB Atlas...");
+  try {
+    cachedDb = await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    console.log("🍃 MongoDB Connected Successfully");
+    return cachedDb;
+  } catch (err) {
+    console.error("❌ MongoDB Connection Error DETAILS:", {
+      message: err.message,
+      code: err.code,
+      name: err.name
+    });
+    throw err;
+  }
 }
 
 // Middleware to ensure DB is connected before any request
@@ -528,22 +538,25 @@ app.get("/api/public-state", async (req, res) => {
     }
 
     const state = await loadDb();
-    console.log(`[DEBUG] Found state doc. Houses count: ${state.houses?.length || 0}`);
+    if (!state) throw new Error("Database LOAD failed: State document missing.");
     
     // Strip passwords from houses before sending
-    const sanitizedHouses = state.houses.map(h => {
-      const hSafe = h.toObject ? h.toObject() : { ...h };
+    const rawHouses = Array.isArray(state.houses) ? state.houses : [];
+    const sanitizedHouses = rawHouses.map(h => {
+      // Create a plain object copy
+      const hSafe = (h && typeof h.toObject === 'function') ? h.toObject() : 
+                    (h ? JSON.parse(JSON.stringify(h)) : {});
+                    
       ["boysCaptain", "girlsCaptain", "viceCaptainBoys", "viceCaptainGirls", "staffCaptainMale", "staffCaptainFemale"].forEach(role => {
         if (hSafe[role]) delete hSafe[role].password;
       });
       return hSafe;
     });
 
-    const result = { ...state.toObject ? state.toObject() : state, houses: sanitizedHouses };
-    console.log(`[DEBUG] Result houses count: ${result.houses?.length || 0}`);
+    const stateObj = (state && typeof state.toObject === 'function') ? state.toObject() : state;
+    const result = { ...stateObj, houses: sanitizedHouses };
     
     // SECURITY: Strip out sensitive database fields from public state.
-    // These should only be queried via /api/secure-state by authenticated admins.
     delete result.activeAdminToken;
     delete result.studentsDB;
     delete result.registrations;
@@ -553,8 +566,9 @@ app.get("/api/public-state", async (req, res) => {
     stateCache = { data: result, ts: Date.now() }; // update cache
     res.json(result);
   } catch (err) {
-    console.error("STATE ERROR:", err);
-    res.status(500).json({ error: "Failed to load state", details: err.message });
+    console.error("🔥 PUBLIC_STATE_ERROR:", err.message);
+    // Return structured JSON error for App.jsx to parse
+    res.status(500).json({ error: "Configuration Error", details: err.message });
   }
 });
 

@@ -38,38 +38,34 @@ const stateSchema = new mongoose.Schema({
     about: { type: Object, default: { sponsors: [], credits: "" } },
 }, {
     timestamps: true,
-    // This ensures that Mongoose doesn't strip out fields not explicitly defined in the schema if we decide to add more later
     strict: false
 });
-
-const State = mongoose.model("State", stateSchema);
 
 const otpSchema = new mongoose.Schema({
     email: { type: String, required: true },
     otp: { type: String, required: true },
     type: { type: String, default: "student" }, // student or admin
-    createdAt: { type: Date, default: Date.now, expires: 300 } // Auto-delete after 5 mins
+    createdAt: { type: Date, default: Date.now, expires: 300 }
 });
-
-const Otp = mongoose.model("Otp", otpSchema);
 
 const querySchema = new mongoose.Schema({
     regNo: { type: String, required: true },
     studentName: { type: String, required: true },
-    issueType: { type: String, required: true }, // e.g., "Name Spelling", "Email Change"
+    issueType: { type: String, required: true },
     details: { type: String, required: true },
-    status: { type: String, default: "Pending" }, // Pending, Resolved
+    status: { type: String, default: "Pending" },
     createdAt: { type: Date, default: Date.now }
 });
 
-const Query = mongoose.model("Query", querySchema);
-
 const invalidatedTokenSchema = new mongoose.Schema({
     token: { type: String, required: true, index: true },
-    expiresAt: { type: Date, required: true, expires: 0 } // Auto-delete when current time >= expiresAt
+    expiresAt: { type: Date, required: true, expires: 0 }
 });
 
-const InvalidatedToken = mongoose.model("InvalidatedToken", invalidatedTokenSchema);
+const State = mongoose.models.State || mongoose.model("State", stateSchema);
+const Otp = mongoose.models.Otp || mongoose.model("Otp", otpSchema);
+const Query = mongoose.models.Query || mongoose.model("Query", querySchema);
+const InvalidatedToken = mongoose.models.InvalidatedToken || mongoose.model("InvalidatedToken", invalidatedTokenSchema);
 
 export { State, Otp, Query, InvalidatedToken };
 export default State;

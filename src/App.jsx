@@ -93,7 +93,8 @@ export default function App() {
            // For public state failure, try to get JSON details
            return res.json().then(errData => {
              const errMsg = errData.error || errData.message || res.statusText;
-             setFetchError(`Server Error (${res.status}): ${errMsg}`);
+             const details = errData.details ? `: ${errData.details}` : "";
+             setFetchError(`Server Error (${res.status}): ${errMsg}${details}`);
              throw new Error(errMsg);
            }).catch(() => {
              setFetchError(`Network Error (${res.status})`);
