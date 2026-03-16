@@ -814,24 +814,30 @@ app.post("/api/register-event", otpVerifyLimiter, async (req, res) => {
 
     // 3. Create/Merge registration object
     const existingIndex = (state.registrations || []).findIndex(r => 
-      r.email?.toLowerCase() === student.email?.toLowerCase() || 
-      r.regNo?.toLowerCase() === student.regNo?.toLowerCase()
+      (r.email && r.email.toLowerCase() === student.email?.toLowerCase()) || 
+      (r.regNo && r.regNo.toLowerCase() === student.regNo?.toLowerCase())
     );
 
     let finalReg;
     if (existingIndex > -1) {
-      // Merge: keep old events if not being overwritten by new ones
+      // Merge: keep old events if not being overwritten by new ones, but ALWAYS REFRESH profile data
       const old = state.registrations[existingIndex];
       finalReg = {
         ...old,
+        name: student.name,         // Refresh from profile
+        email: student.email,       // Refresh from profile
+        regNo: student.regNo,       // Refresh from profile
+        house: student.house,       // Refresh from profile
+        gender: student.gender || old.gender || "", // Prefer profile if available
+        role: student.role || old.role || "Student",
         game: game || old.game || "",
         athletic: athletic || old.athletic || "",
         registeredAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) // Update timestamp on merge
       };
       
-      // Atomic Update: Remove old, add new
+      // Atomic Update: Remove old (by both email and regNo to be sure), add new
       await State.findOneAndUpdate({}, {
-        $pull: { registrations: { regNo: student.regNo } }
+        $pull: { registrations: { $or: [{ regNo: student.regNo }, { email: student.email }] } }
       });
     } else {
       finalReg = {
@@ -1605,6 +1611,79 @@ app.get("/api/download-admin-logs", authenticateAdmin, async (req, res) => {
     res.send(csvContent);
   } catch (err) {
     res.status(500).json({ error: "Failed to generate logs" });
+  }
+});
+
+// ─── Admin Sync Registrations ────────────────────────────────────────────────
+app.post("/api/admin-sync-registrations", authenticateAdmin, async (req, res) => {
+  try {
+    const state = await loadDb();
+    const students = state.studentsDB || [];
+    const registrations = state.registrations || [];
+    let updatedCount = 0;
+    let dedupedCount = 0;
+
+    const newRegs = [];
+    const seenEmails = new Set();
+    const seenRegNos = new Set();
+
+    // Process registrations: deduplicate and sync metadata
+    registrations.forEach(reg => {
+      // Find matching student
+      const student = students.find(s => 
+        (s.email && s.email.toLowerCase() === reg.email?.toLowerCase()) || 
+        (s.regNo && s.regNo.toLowerCase() === reg.regNo?.toLowerCase())
+      );
+
+      if (student) {
+        // Sync metadata
+        const updated = {
+          ...reg,
+          name: student.name,
+          email: student.email,
+          regNo: student.regNo,
+          house: student.house,
+          gender: student.gender || reg.gender || "",
+          role: student.role || reg.role || "Student"
+        };
+
+        // Check for duplicates
+        const emailKey = updated.email?.toLowerCase();
+        const regNoKey = updated.regNo?.toLowerCase();
+
+        if (emailKey && seenEmails.has(emailKey)) {
+          dedupedCount++;
+          return;
+        }
+        if (regNoKey && seenRegNos.has(regNoKey)) {
+          dedupedCount++;
+          return;
+        }
+
+        if (emailKey) seenEmails.add(emailKey);
+        if (regNoKey) seenRegNos.add(regNoKey);
+        
+        newRegs.push(updated);
+        updatedCount++;
+      } else {
+        // Keep as is if no student found (might be manual entry or error)
+        newRegs.push(reg);
+      }
+    });
+
+    await State.findOneAndUpdate({}, { $set: { registrations: newRegs } });
+    invalidateCache();
+    
+    SecurityLogger.log("REGISTRATIONS_SYNCED", { 
+      updated: updatedCount, 
+      deduped: dedupedCount, 
+      user: req.user.email 
+    });
+
+    res.json({ success: true, updated: updatedCount, deduped: dedupedCount });
+  } catch (err) {
+    console.error("SYNC_ERROR:", err);
+    res.status(500).json({ error: "Sync failed: " + err.message });
   }
 });
 
