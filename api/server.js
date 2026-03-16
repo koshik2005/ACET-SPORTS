@@ -968,18 +968,23 @@ app.post("/api/admin-send-otp", loginLimiter, async (req, res) => {
 // ─── Admin Password Verification (Step 2 of 3) ──────────────────────────────
 app.post("/api/admin-verify-password", loginLimiter, async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ success: false, error: "Email and password are required" });
+  try {
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      SecurityLogger.log("CONFIG_ERROR", { reason: "ADMIN_PASSWORD not set", user: email });
+      return res.status(500).json({ success: false, error: "Server Configuration Error: ADMIN_PASSWORD not set in environment." });
+    }
 
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) {
-    return res.status(500).json({ success: false, error: "Server Configuration Error: ADMIN_PASSWORD not set in environment." });
+    if (password !== adminPassword) {
+      SecurityLogger.log("AUTH_FAILURE", { role: "admin", reason: "Incorrect password", email, ip: req.ip });
+      return res.status(401).json({ success: false, error: "Incorrect admin password." });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("VERIFY_PW_ERROR:", err);
+    res.status(500).json({ error: "Password verification failed: " + err.message });
   }
-
-  if (password !== adminPassword) {
-    return res.status(401).json({ success: false, error: "Incorrect admin password." });
-  }
-
-  res.json({ success: true });
 });
 
 app.post("/api/admin-login", loginLimiter, async (req, res) => {
@@ -1704,6 +1709,15 @@ app.post("/api/admin-sync-registrations", authenticateAdmin, async (req, res) =>
 // JSON 404 for all other /api routes to prevent HTML fallbacks
 app.use("/api/*", (req, res) => {
   res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
+});
+
+// Final error handler to catch unhandled errors and return JSON
+app.use((err, req, res, next) => {
+  console.error("🔥 UNHANDLED ERROR:", err);
+  res.status(500).json({ 
+    error: "A server error occurred. Please try again later.",
+    details: process.env.NODE_ENV === "development" ? err.message : undefined
+  });
 });
 
 const PORT = process.env.PORT || 3001;

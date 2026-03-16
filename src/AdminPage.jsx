@@ -223,42 +223,59 @@ export function AdminPage({
         try {
             const res = await fetch(`${API_BASE}/api/admin-verify-password`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
                 body: JSON.stringify({ email: adminEmail.trim(), password: adminPassword })
             });
-            const data = await res.json();
+
+            const contentType = res.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+                data = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error(`Server error: ${text.slice(0, 100)}`);
+            }
+
             if (data.success) {
                 try {
                     const otpRes = await fetch(`${API_BASE}/api/admin-send-otp`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
                         body: JSON.stringify({ email: adminEmail.trim() })
                     });
-                    const otpData = await otpRes.json();
+
+                    const otpContentType = otpRes.headers.get("content-type");
+                    let otpData;
+                    if (otpContentType && otpContentType.includes("application/json")) {
+                        otpData = await otpRes.json();
+                    } else {
+                        const otpText = await otpRes.text();
+                        throw new Error(`OTP Server error: ${otpText.slice(0, 100)}`);
+                    }
                     
                     if (otpData.success) {
                         setOtp("");
                         setLoginStep("otp");
                     } else {
-                        // Even if sending fails, proceed so they can use FALLBACK_OTP
-                        setLoginError("⚠ OTP is not sent. Please try again after some time.");
+                        setLoginError("⚠ OTP is not sent: " + (otpData.error || "Unknown error"));
+                        // Still allow fallback
                         setOtp("");
                         setLoginStep("otp");
                     }
                 } catch (e) {
-                    // Network error sending OTP - still proceed
-                    setLoginError("⚠ OTP is not sent. Please try again after some time.");
+                    setLoginError("⚠ Error sending OTP: " + e.message);
                     setOtp("");
                     setLoginStep("otp");
                 }
             } else {
-                setLoginError(data.error || "Incorrect password.");
+                setLoginError("❌ " + (data.error || "Incorrect password."));
             }
         } catch (err) {
             console.error("PASSWORD VERIFY ERROR:", err);
             setLoginError(`Failed to reach server: ${err.message}`);
+        } finally {
+            setIsVerifying(false);
         }
-        setIsVerifying(false);
     };
 
     const fetchQueries = async () => {
@@ -302,18 +319,35 @@ export function AdminPage({
         try {
             const res = await fetch(`${API_BASE}/api/admin-login`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
                 body: JSON.stringify({ email: adminEmail.trim(), otp })
             });
-            const data = await res.json();
+
+            const contentType = res.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+                data = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error(`Server error: ${text.slice(0, 100)}`);
+            }
+
             if (data.success) {
                 localStorage.setItem("adminToken", data.token);
 
                 // Fetch the secure state that includes everything
                 const secureRes = await fetch(`${API_BASE}/api/secure-state`, {
-                    headers: { "Authorization": `Bearer ${data.token}` }
+                    headers: { "Authorization": `Bearer ${data.token}`, "Accept": "application/json" }
                 });
-                const secureData = await secureRes.json();
+                
+                const sContentType = secureRes.headers.get("content-type");
+                let secureData;
+                if (sContentType && sContentType.includes("application/json")) {
+                    secureData = await secureRes.json();
+                } else {
+                    const sText = await secureRes.text();
+                    throw new Error(`State load error: ${sText.slice(0, 100)}`);
+                }
 
                 if (secureData.houses) setHouses(secureData.houses);
                 if (secureData.studentsDB) setStudentsDB(secureData.studentsDB);
