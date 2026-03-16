@@ -1714,7 +1714,7 @@ export function AdminPage({
                                                         }} style={{ background: dark ? "#444" : "#ddd", color: dark ? "#fff" : "#222", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>Edit</button>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                            )})}
                                         </tbody>
                                     </table>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, borderTop: `1px solid ${dark ? "#333" : "#eee"}` }}>
