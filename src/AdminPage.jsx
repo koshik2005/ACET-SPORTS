@@ -1534,7 +1534,36 @@ export function AdminPage({
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                             <div style={{ flex: 1 }}>
                                 <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>📝 Registrations</h3>
-                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic))).length} active entries ({registrations.length} raw)</div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>{registrations.filter(r => (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic))).length} active entries ({registrations.length} raw)</div>
+                                    <button 
+                                        onClick={async () => {
+                                            if (!window.confirm("This will synchronize all registrations with the master student database to fix missing roll numbers or metadata. Continue?")) return;
+                                            try {
+                                                const token = localStorage.getItem("adminToken");
+                                                const res = await fetch(`${API_BASE}/api/admin-sync-registrations`, {
+                                                    method: "POST",
+                                                    headers: { "Authorization": `Bearer ${token}` }
+                                                });
+                                                const data = await res.json();
+                                                if (data.success) {
+                                                    alert(`✅ Sync Complete!\nUpdated: ${data.updated}\nDuplicates Removed: ${data.deduped}`);
+                                                    // Refresh data
+                                                    const regRes = await fetch(`${API_BASE}/api/admin-data`, { headers: { "Authorization": `Bearer ${token}` } });
+                                                    const regData = await regRes.json();
+                                                    if (regData.registrations) setRegistrations(regData.registrations);
+                                                } else {
+                                                    alert("❌ Sync failed: " + data.error);
+                                                }
+                                            } catch (e) {
+                                                alert("❌ Network error during sync");
+                                            }
+                                        }}
+                                        style={{ background: "#4B5563", color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", cursor: "pointer", fontSize: 10, fontWeight: 700 }}
+                                    >
+                                        🔄 Sync & Repair
+                                    </button>
+                                </div>
                             </div>
                             <div style={{ display: "flex", gap: 8, flex: isMobile ? 1 : "initial" }}>
                                 <div style={{ position: "relative", flex: 1 }}>
@@ -2042,7 +2071,7 @@ export function AdminPage({
                                                 const end = start + rowsPerPage;
                                                 return filtered.slice(start, end).map((s, idx) => (
                                                     <tr key={`${s.regNo}-${idx}`} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
-                                                        <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || start + idx + 1}</td>
+                                                        <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{start + idx + 1}</td>
                                                         {editingRegNo === s.regNo ? (
                                                             <>
                                                                 <td style={{ padding: "4px 8px" }}><input value={editStudentForm.name} onChange={e => setEditStudentForm({ ...editStudentForm, name: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
@@ -2280,7 +2309,7 @@ export function AdminPage({
                                         return true;
                                     }).slice(0, 100).map((s, idx) => (
                                         <tr key={`${s.regNo}-${idx}`} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
-                                            <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{s.sno || idx + 1}</td>
+                                            <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{idx + 1}</td>
                                             <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
                                             <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
                                             <td style={{ padding: "8px 12px" }}>
