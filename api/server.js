@@ -834,18 +834,19 @@ app.post("/api/register-event", otpVerifyLimiter, async (req, res) => {
       const old = state.registrations[existingIndex];
       finalReg = {
         ...old,
-        name: student.name,         // Refresh from profile
-        email: student.email,       // Refresh from profile
-        regNo: student.regNo,       // Refresh from profile
-        house: student.house,       // Refresh from profile
-        gender: student.gender || old.gender || "", // Prefer profile if available
+        name: student.name,         
+        email: student.email,       
+        regNo: student.regNo,       
+        house: student.house,       
+        gender: student.gender || old.gender || "", 
         role: student.role || old.role || "Student",
         game: game || old.game || "",
         athletic: athletic || old.athletic || "",
-        registeredAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) // Update timestamp on merge
+        registeredAt: old.registeredAt || new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        updatedAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
       };
       
-      // Atomic Update: Remove old (by both email and regNo to be sure), add new
+      // Atomic Update: Remove old and push new
       await State.findOneAndUpdate({}, {
         $pull: { registrations: { $or: [{ regNo: student.regNo }, { email: student.email }] } }
       });
@@ -1703,6 +1704,31 @@ app.post("/api/admin-sync-registrations", authenticateAdmin, async (req, res) =>
   } catch (err) {
     console.error("SYNC_ERROR:", err);
     res.status(500).json({ error: "Sync failed: " + err.message });
+  }
+});
+
+// ─── Admin Toggle T-Shirt ───────────────────────────────────────────────────
+app.post("/api/admin-toggle-tshirt", authenticateAdmin, async (req, res) => {
+  const { regNo } = req.body;
+  if (!regNo) return res.status(400).json({ error: "Register number is required" });
+
+  try {
+    const state = await loadDb();
+    const students = state.studentsDB || [];
+    const studentIdx = students.findIndex(s => s.regNo === regNo);
+
+    if (studentIdx === -1) return res.status(404).json({ error: "Student not found" });
+
+    const currentStatus = !!students[studentIdx].shirtIssued;
+    students[studentIdx].shirtIssued = !currentStatus;
+
+    await State.findOneAndUpdate({}, { $set: { studentsDB: students } });
+    invalidateCache();
+
+    SecurityLogger.log("ADMIN_TSHIRT_TOGGLE", { regNo, newStatus: !currentStatus, admin: req.user.email });
+    res.json({ success: true, shirtIssued: !currentStatus });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to toggle T-shirt status" });
   }
 });
 

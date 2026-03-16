@@ -1650,10 +1650,6 @@ export function AdminPage({
                         </div>
                         {(() => {
                             const validRegs = registrations.filter(r => {
-                                const hasG = r.game && !["None", "—", ""].includes(r.game);
-                                const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
-                                if (!hasG && !hasA) return false;
-
                                 // Base Search
                                 if (regSearch) {
                                     const searchLower = regSearch.toLowerCase();
@@ -1662,12 +1658,20 @@ export function AdminPage({
                                     if (!matchesName && !matchesID) return false;
                                 }
 
-                                if (regFilterType === "All") return true;
+                                const hasG = r.game && !["None", "—", ""].includes(r.game);
+                                const hasA = r.athletic && !["None", "—", ""].includes(r.athletic);
+                                
+                                if (regFilterType === "All") {
+                                    // Optional: Don't show staff who haven't picked anything if you want to keep list clean, 
+                                    // but for students we want to see even pending ones.
+                                    return true; 
+                                }
+                                
                                 if (regFilterType === "Game") {
-                                    return regFilterVal === "All" || (r.game && r.game.split(", ").includes(regFilterVal));
+                                    return hasG && (regFilterVal === "All" || (r.game && r.game.split(", ").includes(regFilterVal)));
                                 }
                                 if (regFilterType === "Athletic") {
-                                    return regFilterVal === "All" || (r.athletic && r.athletic.split(", ").includes(regFilterVal));
+                                    return hasA && (regFilterVal === "All" || (r.athletic && r.athletic.split(", ").includes(regFilterVal)));
                                 }
                                 return true;
                             });
@@ -1675,16 +1679,19 @@ export function AdminPage({
                                 <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                                         <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
-                                            {["Name", "Reg No", "House", "Game", "Athletic", "Approve"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                            {["S.No", "Name", "Reg No", "House", "Game", "Athletic", "Approve"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
                                         </tr></thead>
                                         <tbody>
-                                            {validRegs.slice((regPage - 1) * 100, regPage * 100).map((r, i) => (
-                                                <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}` }}>
+                                            {validRegs.slice((regPage - 1) * 100, regPage * 100).map((r, i) => {
+                                                const hasEvents = (r.game && !["None", "—", ""].includes(r.game)) || (r.athletic && !["None", "—", ""].includes(r.athletic));
+                                                return (
+                                                <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}`, opacity: hasEvents ? 1 : 0.6 }}>
+                                                    <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{(regPage - 1) * 100 + i + 1}</td>
                                                     <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{r.name}</td>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.regNo}</td>
+                                                     <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.regNo}</td>
                                                     <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{r.house}</span></td>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.game || "—"}</td>
-                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.athletic || "—"}</td>
+                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.game || (hasEvents ? "—" : <span style={{ color: "#c00" }}>Pending...</span>)}</td>
+                                                    <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{r.athletic || (hasEvents ? "—" : <span style={{ color: "#c00" }}>Pending...</span>)}</td>
                                                     <td style={{ padding: "8px 12px" }}>
                                                         <button onClick={() => {
                                                             const gamesArr = r.game ? r.game.split(", ").filter(x => x && x !== "None" && x !== "—") : [];
@@ -1847,6 +1854,7 @@ export function AdminPage({
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, textAlign: "left" }}>
                                         <thead style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
                                             <tr>
+                                                <th style={{ padding: "10px 14px", fontWeight: 800, color: dark ? "#aaa" : "#555", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>S.No</th>
                                                 {["Event", "🥇 1st Place", "🥈 2nd Place", "🥉 3rd Place", "Time"].map(h => (
                                                     <th key={h} style={{ padding: "10px 14px", fontWeight: 800, color: dark ? "#aaa" : "#555", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}`, whiteSpace: "nowrap" }}>{h}</th>
                                                 ))}
@@ -1868,7 +1876,8 @@ export function AdminPage({
                                                 return true;
                                             }).map((res, i) => (
                                                 <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#252525" : "#f0f0f0"}`, background: i % 2 === 0 ? "transparent" : dark ? "rgba(255,255,255,.01)" : "#fafafa", opacity: 0.9 }}>
-                                                    <td style={{ padding: "10px 14px", color: dark ? "#e0e0e0" : "#222", fontWeight: 700 }}><div style={{ fontSize: 13 }}>{res.eventName}</div><div style={{ fontSize: 10, color: dark ? "#666" : "#aaa", fontWeight: 600, textTransform: "uppercase" }}>{res.eventType}</div></td>
+                                                    <td style={{ padding: "10px 14px", color: dark ? "#666" : "#aaa" }}>{i + 1}</td>
+                                                     <td style={{ padding: "10px 14px", color: dark ? "#e0e0e0" : "#222", fontWeight: 700 }}><div style={{ fontSize: 13 }}>{res.eventName}</div><div style={{ fontSize: 10, color: dark ? "#666" : "#aaa", fontWeight: 600, textTransform: "uppercase" }}>{res.eventType}</div></td>
                                                     <td style={{ padding: "10px 14px" }}><div style={{ color: "#D4AF37", fontWeight: 800 }}>{res.placements?.first?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.first?.player}</div></td>
                                                     <td style={{ padding: "10px 14px" }}><div style={{ color: "#C0C0C0", fontWeight: 800 }}>{res.placements?.second?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.second?.player}</div></td>
                                                     <td style={{ padding: "10px 14px" }}><div style={{ color: "#CD7F32", fontWeight: 800 }}>{res.placements?.third?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.third?.player}</div></td>
@@ -2166,7 +2175,26 @@ export function AdminPage({
                                                                 <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
                                                                 <td style={{ padding: "8px 12px" }}>{s.year}</td>
                                                                 <td style={{ padding: "8px 12px" }}>{s.dept}</td>
-                                                                <td style={{ padding: "8px 12px", fontWeight: 700, color: "#8B0000" }}>{s.shirtSize}</td>
+                                                                <td style={{ padding: "8px 12px" }}>
+                                                                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                                        <span style={{ fontWeight: 700, color: "#8B0000" }}>{s.shirtSize || "—"}</span>
+                                                                        <button onClick={async () => {
+                                                                            try {
+                                                                                const res = await fetch(`${API_BASE}/api/admin-toggle-tshirt`, {
+                                                                                    method: "POST",
+                                                                                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("adminToken")}` },
+                                                                                    body: JSON.stringify({ regNo: s.regNo })
+                                                                                });
+                                                                                const data = await res.json();
+                                                                                if (data.success) {
+                                                                                    setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, shirtIssued: data.shirtIssued } : x));
+                                                                                }
+                                                                            } catch (e) { alert("Failed to toggle shirt"); }
+                                                                        }} style={{ fontSize: 9, background: s.shirtIssued ? "#2E8B5722" : "#cc000011", color: s.shirtIssued ? "#2E8B57" : "#c00", border: "none", borderRadius: 4, padding: "2px 4px", cursor: "pointer", fontWeight: 700 }}>
+                                                                            {s.shirtIssued ? "ISSUED ✅" : "PENDING ❌"}
+                                                                        </button>
+                                                                    </div>
+                                                                 </td>
                                                                 <td style={{ padding: "8px 12px" }}>
                                                                     <div style={{ display: "flex", gap: 6 }}>
                                                                         <button onClick={() => {
@@ -2386,9 +2414,21 @@ export function AdminPage({
                                             <td style={{ padding: "8px 12px" }}><span style={{ color: dark ? "#ccc" : "#333", fontWeight: 600 }}>{s.house}</span></td>
                                             <td style={{ padding: "8px 12px", fontWeight: 800, color: "#8B0000" }}>{s.shirtSize}</td>
                                             <td style={{ padding: "8px 12px" }}>
-                                                <span style={{ padding: "3px 8px", borderRadius: 4, background: s.shirtIssued ? "#2E8B5722" : "#cc000011", color: s.shirtIssued ? "#2E8B57" : "#c00", fontWeight: 700, fontSize: 10 }}>
-                                                    {s.shirtIssued ? "✅ ISSUED" : "❌ PENDING"}
-                                                </span>
+                                                <button onClick={async () => {
+                                                     try {
+                                                         const res = await fetch(`${API_BASE}/api/admin-toggle-tshirt`, {
+                                                             method: "POST",
+                                                             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("adminToken")}` },
+                                                             body: JSON.stringify({ regNo: s.regNo })
+                                                         });
+                                                         const data = await res.json();
+                                                         if (data.success) {
+                                                             setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...x, shirtIssued: data.shirtIssued } : x));
+                                                         }
+                                                     } catch (e) { alert("Failed to toggle shirt"); }
+                                                 }} style={{ padding: "3px 8px", borderRadius: 4, background: s.shirtIssued ? "#2E8B5722" : "#cc000011", color: s.shirtIssued ? "#2E8B57" : "#c00", fontWeight: 700, fontSize: 10, border: "none", cursor: "pointer" }}>
+                                                     {s.shirtIssued ? "✅ ISSUED" : "❌ PENDING"}
+                                                 </button>
                                             </td>
                                         </tr>
                                     ))}
