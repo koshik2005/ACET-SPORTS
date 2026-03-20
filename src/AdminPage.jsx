@@ -1861,7 +1861,9 @@ export function AdminPage({
                                 // Point Log
                                 const d = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                 const logs = [];
-                                const genderTxt = winner.eventGender && winner.eventGender !== "Open" ? ` (${winner.eventGender})` : "";
+                                const gRole = winner.participantType === "staff" ? "Staff" : winner.participantType === "student" ? "Student" : "";
+                                const gSex = winner.eventGender ? (winner.eventGender.toLowerCase() === "women" ? "Women" : winner.eventGender.toLowerCase() === "men" ? "Men" : winner.eventGender) : "";
+                                const genderTxt = (gRole || gSex) ? ` (${[gRole, gSex].filter(Boolean).join(" ")})` : "";
                                 if (winner.first) logs.push({ type: "win", house: winner.first, reason: `1st Place - ${winner.eventName}${genderTxt}`, pts: ptsFirst, time: d });
                                 if (winner.second) logs.push({ type: "win", house: winner.second, reason: `2nd Place - ${winner.eventName}${genderTxt}`, pts: ptsSecond, time: d });
                                 if (winner.third) logs.push({ type: "win", house: winner.third, reason: `3rd Place - ${winner.eventName}${genderTxt}`, pts: ptsThird, time: d });
