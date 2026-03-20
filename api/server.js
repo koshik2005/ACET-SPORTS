@@ -582,7 +582,7 @@ app.get("/api/public-state", async (req, res) => {
     delete result.studentsDB;
     delete result.registrations;
     delete result.adminLogs;
-    delete result.pointLog;
+    // pointLog is intentionally kept — it powers the public Scoreboard points log.
 
     stateCache = { data: result, ts: Date.now() }; // update cache
     res.json(result);
