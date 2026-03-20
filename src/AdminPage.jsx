@@ -192,7 +192,12 @@ export function AdminPage({
                         name: n.name || n["student name"] || n["full name"] || n.staffname || "",
                         email: n.email || n["email id"] || n["mail"] || "",
                         regNo: n.regno || n["reg.no"] || n["register number"] || n["id"] || n.mobile || n.staffid || "",
-                        house: n.house || n["house name"] || "",
+                        house: (() => {
+                            const rawHouse = String(n.house || n["house name"] || "").trim();
+                            // Case-insensitively find the exact house name matched in config (e.g. 'red' -> 'RED')
+                            const matchedHouse = houses.find(h => (h.name || "").toLowerCase() === rawHouse.toLowerCase());
+                            return matchedHouse ? matchedHouse.name : rawHouse;
+                        })(),
                         year: rawYear,
                         dept: rawDept,
                         shirtSize: n["t-shirt size"] || n["tshirt size"] || n["tshirt"] || n.size || "",
@@ -3438,9 +3443,11 @@ export function AdminPage({
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
                     <div>
                         <label style={lS}>Event Gender</label>
-                        <select value={gameForm.gender || "Men"} onChange={e => setGameForm({ ...gameForm, gender: e.target.value })} style={iS}>
-                            <option value="Men">Men's / Boys</option>
-                            <option value="Women">Women's / Girls</option>
+                        <select value={gameForm.gender || "Men"} onChange={e => setGameForm({ ...gameForm, gender: e.target.value, name: "" })} style={iS}>
+                            <option value="Men">Student (Men/Boys)</option>
+                            <option value="Women">Student (Women/Girls)</option>
+                            <option value="Staff Men">Staff (Men)</option>
+                            <option value="Staff Women">Staff (Women)</option>
                         </select>
                     </div>
                     <div>
@@ -3455,12 +3462,22 @@ export function AdminPage({
                     <label style={lS}>Event Name</label>
                     <select value={gameForm.name} onChange={e => setGameForm({ ...gameForm, name: e.target.value })} style={iS}>
                         <option value="">Select an Event</option>
-                        {(gameForm.type === "game" ? (gameForm.gender === "Women" ? sportGamesListWomens : sportGamesList) : (gameForm.gender === "Women" ? athleticsListWomens : athleticsList)).map(e => <option key={e} value={e}>{e}</option>)}
+                        {(() => {
+                            let list = [];
+                            if (gameForm.type === "game") {
+                                if (gameForm.gender === "Women") list = sportGamesListWomens;
+                                else if (gameForm.gender === "Staff Men") list = staffGamesList;
+                                else if (gameForm.gender === "Staff Women") list = staffGamesListWomens;
+                                else list = sportGamesList;
+                            } else {
+                                if (gameForm.gender === "Women") list = athleticsListWomens;
+                                else if (gameForm.gender === "Staff Men") list = staffAthleticsList;
+                                else if (gameForm.gender === "Staff Women") list = staffAthleticsListWomens;
+                                else list = athleticsList;
+                            }
+                            return list.map(e => <option key={e} value={e}>{e}</option>);
+                        })()}
                     </select>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                    <div><label style={lS}>Type</label><select value={gameForm.type} onChange={e => setGameForm({ ...gameForm, type: e.target.value, name: "" })} style={iS}><option value="game">Team Game</option><option value="athletic">Athletic</option></select></div>
-                    <div><label style={lS}>Category</label><select value={gameForm.gender} onChange={e => setGameForm({ ...gameForm, gender: e.target.value })} style={iS}><option value="Boys">Boys</option><option value="Girls">Girls</option><option value="Mixed">Mixed</option></select></div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
                     <div><label style={lS}>Date</label><input type="date" value={gameForm.date} onChange={e => setGameForm({ ...gameForm, date: e.target.value })} style={iS} /></div>
