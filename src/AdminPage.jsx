@@ -3022,6 +3022,65 @@ export function AdminPage({
                                 <button onClick={exportMasterRoster} style={{ background: "linear-gradient(135deg,#1E3A8A,#2563EB)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 18px", cursor: "pointer", fontWeight: 700, fontSize: 14, width: "100%", marginTop: "auto" }}>📥 Export Master Database</button>
                             </div>
 
+                            <div style={{ ...cS, border: "2px solid #8A2BE2" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                                    <h4 style={{ color: dark ? "#fff" : "#8A2BE2", margin: "0", fontSize: 14 }}>Game-Wise Winners</h4>
+                                    <div style={{ background: "#8A2BE222", color: "#8A2BE2", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 800 }}>Event Results</div>
+                                </div>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 20 }}>
+                                    Export a complete list of 1st, 2nd, and 3rd place winners grouped by each completed event.
+                                </div>
+                                <button onClick={() => {
+                                    if (results.length === 0) return alert("No results logged yet!");
+                                    const wbook = XLSX.utils.book_new();
+                                    
+                                    const categories = [
+                                        { id: "Men", label: "Student Men" },
+                                        { id: "Women", label: "Student Women" },
+                                        { id: "Staff Men", label: "Staff Men" },
+                                        { id: "Staff Women", label: "Staff Women" },
+                                        { id: "Open", label: "Other - Open" }
+                                    ];
+
+                                    let sheetsAdded = 0;
+
+                                    categories.forEach(cat => {
+                                        const catResults = results.filter(r => {
+                                            const g = r.eventGender || "Open";
+                                            if (cat.id === "Open") return !["Men", "Women", "Staff Men", "Staff Women"].includes(g);
+                                            return g === cat.id;
+                                        });
+
+                                        if (catResults.length === 0) return;
+
+                                        const sorted = [...catResults].sort((a, b) => (a.eventName || "").localeCompare(b.eventName || ""));
+                                        const data = sorted.map(res => ({
+                                            "Event Name": res.eventName || "Unnamed",
+                                            "Type": res.eventType === "game" ? "Team Game" : "Athletic",
+                                            "🥇 1st Place House": res.placements?.first?.house || "—",
+                                            "🥇 1st Place Winner(s)": res.placements?.first?.player || "—",
+                                            "🥈 2nd Place House": res.placements?.second?.house || "—",
+                                            "🥈 2nd Place Winner": res.placements?.second?.player || "—",
+                                            "🥉 3rd Place House": res.placements?.third?.house || "—",
+                                            "🥉 3rd Place Winner": res.placements?.third?.player || "—"
+                                        }));
+
+                                        const ws = XLSX.utils.json_to_sheet(data);
+                                        ws['!cols'] = Object.keys(data[0]).map(() => ({ wch: 25 }));
+                                        XLSX.utils.book_append_sheet(wbook, ws, cat.label);
+                                        sheetsAdded++;
+                                    });
+
+                                    if (sheetsAdded === 0) {
+                                        // Fallback if all logic somehow missed:
+                                        const ws = XLSX.utils.json_to_sheet([{ "Message": "No categorized results found." }]);
+                                        XLSX.utils.book_append_sheet(wbook, ws, "Empty");
+                                    }
+
+                                    XLSX.writeFile(wbook, `Game_Wise_Winners_Categorized_${new Date().toLocaleDateString().replace(/\//g,'-')}.xlsx`);
+                                }} style={{ background: "linear-gradient(135deg,#8A2BE2,#9370DB)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 18px", cursor: "pointer", fontWeight: 700, fontSize: 14, width: "100%", marginTop: "auto" }}>📥 Export Event Winners (Categorized)</button>
+                            </div>
+
                             <div style={{ ...cS, border: "2px solid #2E8B57", gridColumn: isMobile ? "span 1" : "span 2" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                                     <h4 style={{ color: dark ? "#fff" : "#2E8B57", margin: "0", fontSize: 15 }}>🏁 Sports Day Final Report</h4>
