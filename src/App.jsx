@@ -49,6 +49,8 @@ export default function App() {
   const [staffGamesListWomens, setStaffGamesListWomens] = useState([]);
   const [athleticsList, setAthleticsList] = useState([]);
   const [athleticsListWomens, setAthleticsListWomens] = useState([]);
+  const [staffAthleticsList, setStaffAthleticsList] = useState([]);
+  const [staffAthleticsListWomens, setStaffAthleticsListWomens] = useState([]);
   const [authorityRoles, setAuthorityRoles] = useState([]);
   const [managementRoles, setManagementRoles] = useState([]);
   const [registrationOpen, setRegistrationOpen] = useState(true);
@@ -136,6 +138,8 @@ export default function App() {
         if (data.staffGamesListWomens) setIfReady("staffGamesListWomens", setStaffGamesListWomens);
         if (data.athleticsList) setIfReady("athleticsList", setAthleticsList);
         if (data.athleticsListWomens) setIfReady("athleticsListWomens", setAthleticsListWomens);
+        if (data.staffAthleticsList) setIfReady("staffAthleticsList", setStaffAthleticsList);
+        if (data.staffAthleticsListWomens) setIfReady("staffAthleticsListWomens", setStaffAthleticsListWomens);
         if (data.authorityRoles) setIfReady("authorityRoles", setAuthorityRoles);
         if (data.managementRoles) setIfReady("managementRoles", setManagementRoles);
         if (typeof data.registrationOpen === 'boolean') setIfReady("registrationOpen", setRegistrationOpen);
@@ -264,6 +268,8 @@ export default function App() {
   const setStaffGamesListWomensSync = wrap(setStaffGamesListWomens, "staffGamesListWomens");
   const setAthleticsListSync = wrap(setAthleticsList, "athleticsList");
   const setAthleticsListWomensSync = wrap(setAthleticsListWomens, "athleticsListWomens");
+  const setStaffAthleticsListSync = wrap(setStaffAthleticsList, "staffAthleticsList");
+  const setStaffAthleticsListWomensSync = wrap(setStaffAthleticsListWomens, "staffAthleticsListWomens");
   const setCommonGamesMenSync = wrap(setCommonGamesMen, "commonGamesMen");
   const setCommonAthleticsMenSync = wrap(setCommonAthleticsMen, "commonAthleticsMen");
   const setCommonGamesWomenSync = wrap(setCommonGamesWomen, "commonGamesWomen");
@@ -335,7 +341,7 @@ export default function App() {
         )}
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} memorial={memorial} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
-        {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} />}
+        {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} staffAthleticsList={staffAthleticsList} staffAthleticsListWomens={staffAthleticsListWomens} />}
         {active === "Registration" && <RegistrationPage dark={dark} setRegistrations={setRegistrationsSync} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} closedEvents={closedEvents} maxGames={maxGames} maxAthletics={maxAthletics} commonGamesMen={commonGamesMen} commonAthleticsMen={commonAthleticsMen} commonGamesWomen={commonGamesWomen} commonAthleticsWomen={commonAthleticsWomen} />}
         {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
         {active === "Star Players" && <StarPlayersPage dark={dark} starPlayers={starPlayers} houses={houses} />}
@@ -360,6 +366,8 @@ export default function App() {
           sportGamesListWomens={sportGamesListWomens} setSportGamesListWomens={setSportGamesListWomensSync}
           staffGamesList={staffGamesList} setStaffGamesList={setStaffGamesListSync}
           staffGamesListWomens={staffGamesListWomens} setStaffGamesListWomens={setStaffGamesListWomensSync}
+          staffAthleticsList={staffAthleticsList} setStaffAthleticsList={setStaffAthleticsListSync}
+          staffAthleticsListWomens={staffAthleticsListWomens} setStaffAthleticsListWomens={setStaffAthleticsListWomensSync}
            athleticsList={athleticsList} setAthleticsList={setAthleticsListSync}
           memorial={memorial} setMemorial={setMemorialSync}
           about={about} setAbout={setAboutSync}

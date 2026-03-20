@@ -678,7 +678,7 @@ app.post("/api/update-state", async (req, res) => {
       "houses", "authorities", "management", "studentCommittee", "games", "gallery", 
       "registrations", "pointLog", "studentsDB", "results", "sportGamesList", 
       "sportGamesListWomens", "staffGamesList", "staffGamesListWomens", "athleticsList", 
-      "athleticsListWomens", "authorityRoles", "managementRoles", "nav", 
+      "athleticsListWomens", "staffAthleticsList", "staffAthleticsListWomens", "authorityRoles", "managementRoles", "nav", 
       "registrationOpen", "eventDate", "emptyGame", "starPlayers", "closedEvents",
       "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails", "memorial", "about",
       "commonGamesMen", "commonAthleticsMen", "commonGamesWomen", "commonAthleticsWomen"

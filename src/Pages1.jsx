@@ -6,8 +6,19 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
     const isMobile = useIsMobile();
     const sortedH = [...houses].sort((a, b) => b.points - a.points);
     const isInitial = sortedH.every(h => h.points === 0);
-    const live = games.find(g => g.status === "Live");
-    const next = games.find(g => g.status === "Upcoming");
+    const processedGames = games.map(g => {
+        let cStatus = g.status || "Upcoming";
+        if (g.date && g.start && g.end) {
+            const now = new Date();
+            const eStart = new Date(`${g.date}T${g.start}`);
+            const eEnd = new Date(`${g.date}T${g.end}`);
+            if (now >= eStart && now <= eEnd) cStatus = "Live";
+            else if (now > eEnd) cStatus = "Completed";
+        }
+        return { ...g, cStatus };
+    });
+    const live = processedGames.find(g => g.cStatus === "Live");
+    const next = processedGames.find(g => g.cStatus === "Upcoming");
     const p = isMobile ? "20px 12px" : "40px 20px";
 
     return (
@@ -45,14 +56,14 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 10, fontWeight: 700, color: "#FF4500", letterSpacing: 2, textTransform: "uppercase" }}>NOW PLAYING</div>
                             <div style={{ fontSize: isMobile ? 17 : 24, fontWeight: 800, color: dark ? "#fff" : "#222", marginTop: 2 }}>{live.name}</div>
-                            <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666" }}>📍 {live.venue} · {live.participants}</div>
+                            <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666" }}>📍 {live.venue} · {live.gender || live.participants || "Open"}</div>
                             {live.delay && <div style={{ marginTop: 8 }}><span style={{ background: "#FF000022", color: "#FF4500", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 800, border: "1px solid #FF450033" }}>⚠️ {live.delay}</span></div>}
                         </div>
                         {next && (
                             <div style={{ textAlign: "right", flexShrink: 0 }}>
                                 <div style={{ fontSize: 10, color: dark ? "#aaa" : "#666" }}>Next Up</div>
                                 <div style={{ fontWeight: 700, color: dark ? "#ccc" : "#333", fontSize: isMobile ? 13 : 15 }}>{next.name}</div>
-                                <div style={{ fontSize: 12, color: "#1E90FF" }}>⏰ {next.start} {next.delay && <span style={{ color: "#FF4500", fontSize: 10 }}>(+{next.delay})</span>}</div>
+                                <div style={{ fontSize: 12, color: "#1E90FF" }}>⏰ {next.time || "TBA"} {next.delay && <span style={{ color: "#FF4500", fontSize: 10 }}>(+{next.delay})</span>}</div>
                             </div>
                         )}
                     </div>
@@ -281,25 +292,35 @@ export function EventsPage({ dark, games }) {
             <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 6, fontSize: isMobile ? 21 : 28 }}>📅 Events & Schedule</h1>
             <p style={{ color: dark ? "#aaa" : "#666", marginBottom: isMobile ? 14 : 32, fontSize: isMobile ? 13 : 15 }}>Live schedule with real-time updates</p>
             <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 8 : 16 }}>
-                {games.map(g => (
-                    <div key={g.id} style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `2px solid ${sc[g.status]}22`, borderLeft: `5px solid ${sc[g.status]}`, borderRadius: 12, padding: isMobile ? 12 : 20, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, justifyContent: "space-between" }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                                    <span style={{ background: sc[g.status] + "22", color: sc[g.status], fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>{g.status === "Live" ? "🔴 LIVE" : g.status}</span>
-                                    {g.delay && <span style={{ fontSize: 10, color: "#FF4500", background: "#FF450015", padding: "2px 7px", borderRadius: 20, fontWeight: 700 }}>⚠️ {g.delay}</span>}
+                {games.map(g => {
+                    let cStatus = g.status || "Upcoming";
+                    if (g.date && g.start && g.end) {
+                        const now = new Date();
+                        const eStart = new Date(`${g.date}T${g.start}`);
+                        const eEnd = new Date(`${g.date}T${g.end}`);
+                        if (now >= eStart && now <= eEnd) cStatus = "Live";
+                        else if (now > eEnd) cStatus = "Completed";
+                    }
+                    return (
+                        <div key={g.id} style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `2px solid ${sc[cStatus]}22`, borderLeft: `5px solid ${sc[cStatus]}`, borderRadius: 12, padding: isMobile ? 12 : 20, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, justifyContent: "space-between" }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                                        <span style={{ background: sc[cStatus] + "22", color: sc[cStatus], fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>{cStatus === "Live" ? "🔴 LIVE" : cStatus.toUpperCase()}</span>
+                                        {g.delay && <span style={{ fontSize: 10, color: "#FF4500", background: "#FF450015", padding: "2px 7px", borderRadius: 20, fontWeight: 700 }}>⚠️ {g.delay}</span>}
+                                    </div>
+                                    <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, color: dark ? "#fff" : "#222" }}>{g.name}</div>
+                                    <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginTop: 2 }}>📍 {g.venue} · {g.gender || g.participants || "Open"}</div>
                                 </div>
-                                <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, color: dark ? "#fff" : "#222" }}>{g.name}</div>
-                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginTop: 2 }}>📍 {g.venue} · {g.participants}</div>
-                            </div>
-                            <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                <div style={{ fontSize: 10, color: dark ? "#aaa" : "#888" }}>Start</div>
-                                <div style={{ fontSize: isMobile ? 17 : 22, fontWeight: 800, color: dark ? "#fff" : "#222", fontFamily: "'Georgia',serif" }}>{g.start}</div>
-                                <div style={{ fontSize: 10, color: dark ? "#aaa" : "#888" }}>–{g.end}</div>
+                                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                    <div style={{ fontSize: 10, color: dark ? "#aaa" : "#888" }}>Date</div>
+                                    <div style={{ fontSize: isMobile ? 15 : 18, fontWeight: 800, color: dark ? "#fff" : "#222" }}>{g.date ? new Date(g.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : "TBA"}</div>
+                                    <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginTop: 2 }}>{g.start ? `${g.start} - ${g.end}` : "TBA"}</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
                 {games.length === 0 && <div style={{ textAlign: "center", padding: 48, color: dark ? "#666" : "#aaa" }}>No events scheduled yet.</div>}
             </div>
         </div>

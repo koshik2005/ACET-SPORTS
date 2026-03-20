@@ -17,6 +17,8 @@ const stateSchema = new mongoose.Schema({
     staffGamesListWomens: { type: Array, default: [] },
     athleticsList: { type: Array, default: [] },
     athleticsListWomens: { type: Array, default: [] },
+    staffAthleticsList: { type: Array, default: [] },
+    staffAthleticsListWomens: { type: Array, default: [] },
     authorityRoles: { type: Array, default: [] },
     managementRoles: { type: Array, default: [] },
     nav: { type: Array, default: [] },

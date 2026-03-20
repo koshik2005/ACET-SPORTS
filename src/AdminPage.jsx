@@ -26,6 +26,8 @@ export function AdminPage({
     sportGamesListWomens, setSportGamesListWomens,
     staffGamesList, setStaffGamesList,
     staffGamesListWomens, setStaffGamesListWomens,
+    staffAthleticsList, setStaffAthleticsList,
+    staffAthleticsListWomens, setStaffAthleticsListWomens,
     athleticsList, setAthleticsList,
     athleticsListWomens, setAthleticsListWomens,
     authorityRoles, setAuthorityRoles,
@@ -64,7 +66,7 @@ export function AdminPage({
     const [regSearch, setRegSearch] = useState("");
     const isMobile = useIsMobile();
 
-    const [winner, setWinner] = useState({ first: "", second: "", third: "", eventType: "game", eventName: "", firstPlayer: "", secondPlayer: "", thirdPlayer: "" });
+    const [winner, setWinner] = useState({ first: "", second: "", third: "", eventType: "game", eventGender: "men", participantType: "student", eventName: "", firstPlayer: "", secondPlayer: "", thirdPlayer: "" });
     const [winnerSet, setWinnerSet] = useState(false);
     const [manualPts, setManualPts] = useState({ house: houses[0]?.name || "", pts: "", reason: "" });
     const [ptMsg, setPtMsg] = useState("");
@@ -1553,7 +1555,25 @@ export function AdminPage({
                                             <div style={{ fontSize: 10, background: g.type === "game" ? "#8B0000" : "#4B0082", color: "#fff", padding: "3px 8px", borderRadius: 12, fontWeight: 700 }}>{g.type === "game" ? "Team Game" : "Athletic Event"}</div>
                                         </div>
                                         <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 4 }}>👥 <strong style={{ color: dark ? "#ccc" : "#444" }}>{g.gender}</strong> • {g.maxPerTeam ? `${g.maxPerTeam} ${g.type === "game" ? "Players/Team" : "Entries/House"}` : 'Unlimited'}</div>
-                                        <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 4 }}>🕒 {g.date} @ {g.time}</div>
+                                        <div style={{ fontSize: 12, display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                            <span style={{ color: dark ? "#aaa" : "#666" }}>🕒 {g.date} • {g.start || "TBA"} - {g.end || "TBA"}</span>
+                                            {(() => {
+                                                let calcStatus = "Upcoming";
+                                                if (g.date && g.start && g.end) {
+                                                    const now = new Date();
+                                                    const eStart = new Date(`${g.date}T${g.start}`);
+                                                    const eEnd = new Date(`${g.date}T${g.end}`);
+                                                    if (now >= eStart && now <= eEnd) calcStatus = "Live";
+                                                    else if (now > eEnd) calcStatus = "Completed";
+                                                }
+                                                return (
+                                                    <span style={{ 
+                                                        background: calcStatus === "Live" ? "#FF4500" : (calcStatus === "Completed" ? "#228B22" : "#1E90FF"), 
+                                                        color: "#fff", padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700 
+                                                    }}>{calcStatus}</span>
+                                                )
+                                            })()}
+                                        </div>
                                         <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>📍 <span style={{ background: dark ? "#333" : "#eee", padding: "2px 6px", borderRadius: 4, color: dark ? "#ccc" : "#444" }}>{g.venue}</span></div>
                                         <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginBottom: 12 }}>👔 Official: <strong style={{ color: dark ? "#ccc" : "#444" }}>{g.official || "Unassigned"}</strong></div>
                                         <div style={{ display: "flex", gap: 8, borderTop: `1px solid ${dark ? "#333" : "#eee"}`, paddingTop: 12 }}>
@@ -1759,7 +1779,7 @@ export function AdminPage({
 
                         <div style={{ ...cS, marginBottom: 20 }}>
                             <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>Log Event Outcome</h4>
-                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
                                 <div>
                                     <label style={lS}>Event Type</label>
                                     <select value={winner.eventType} onChange={e => setWinner({ ...winner, eventType: e.target.value, eventName: "" })} style={iS}>
@@ -1769,13 +1789,27 @@ export function AdminPage({
                                     </select>
                                 </div>
                                 <div>
+                                    <label style={lS}>Participant</label>
+                                    <select value={winner.participantType} onChange={e => setWinner({ ...winner, participantType: e.target.value, eventName: "" })} style={iS} disabled={winner.eventType === "custom"}>
+                                        <option value="student">Student</option>
+                                        <option value="staff">Staff</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={lS}>Gender</label>
+                                    <select value={winner.eventGender} onChange={e => setWinner({ ...winner, eventGender: e.target.value, eventName: "" })} style={iS} disabled={winner.eventType === "custom"}>
+                                        <option value="men">Men's / Boys</option>
+                                        <option value="women">Women's / Girls</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label style={lS}>Event Name</label>
                                     {winner.eventType === "custom" ? (
                                         <input value={winner.eventName} onChange={e => setWinner({ ...winner, eventName: e.target.value })} placeholder="e.g. Tug of War" style={iS} />
                                     ) : (
                                         <select value={winner.eventName} onChange={e => setWinner({ ...winner, eventName: e.target.value })} style={iS}>
                                             <option value="">-- Select Event --</option>
-                                            {(winner.eventType === "game" ? sportGamesList : athleticsList).map(e => <option key={e} value={e}>{e}</option>)}
+                                            {(winner.eventType === "game" ? (winner.participantType === "staff" ? (winner.eventGender === "women" ? staffGamesListWomens : staffGamesList) : (winner.eventGender === "women" ? sportGamesListWomens : sportGamesList)) : (winner.participantType === "staff" ? (winner.eventGender === "women" ? staffAthleticsListWomens : staffAthleticsList) : (winner.eventGender === "women" ? athleticsListWomens : athleticsList))).map(e => <option key={e} value={e}>{e}</option>)}
                                         </select>
                                     )}
                                 </div>
@@ -1797,7 +1831,7 @@ export function AdminPage({
                             <button onClick={() => {
                                 if (!winner.eventName || !winner.first || !winner.second || !winner.third) { alert("Fill all required fields"); return; }
                                 const resObj = {
-                                    eventName: winner.eventName, eventType: winner.eventType, time: new Date().toLocaleString(),
+                                    eventName: winner.eventName, eventType: winner.eventType, eventGender: winner.eventGender, participantType: winner.participantType, time: new Date().toLocaleString(),
                                     placements: {
                                         first: { house: winner.first, player: winner.firstPlayer },
                                         second: { house: winner.second, player: winner.secondPlayer },
@@ -1828,7 +1862,7 @@ export function AdminPage({
                                 setPointLog([...logs, ...pointLog]);
 
                                 setWinnerSet(true); setTimeout(() => setWinnerSet(false), 3000);
-                                setWinner({ first: "", second: "", third: "", eventType: winner.eventType, eventName: "", firstPlayer: "", secondPlayer: "", thirdPlayer: "" });
+                                setWinner({ first: "", second: "", third: "", eventType: winner.eventType, eventGender: winner.eventGender, participantType: winner.participantType, eventName: "", firstPlayer: "", secondPlayer: "", thirdPlayer: "" });
                             }} style={{ background: "linear-gradient(135deg,#D4AF37,#B8860B)", color: "#fff", border: "none", borderRadius: 8, padding: "12px 20px", cursor: "pointer", fontWeight: 700, fontSize: 15, width: "100%", marginTop: 10 }}>Submit Result & Award Points</button>
                             {winnerSet && <div style={{ color: "#2E8B57", fontWeight: 700, marginTop: 10, textAlign: "center", fontSize: 13 }}>✅ Saved & Points Awarded!</div>}
                         </div>
@@ -1882,7 +1916,7 @@ export function AdminPage({
                                                 return filtered.slice(start, start + 100).map((res, i) => (
                                                     <tr key={i} style={{ borderBottom: `1px solid ${dark ? "#252525" : "#f0f0f0"}`, background: i % 2 === 0 ? "transparent" : dark ? "rgba(255,255,255,.01)" : "#fafafa", opacity: 0.9 }}>
                                                         <td style={{ padding: "10px 14px", color: dark ? "#666" : "#aaa" }}>{start + i + 1}</td>
-                                                        <td style={{ padding: "10px 14px", color: dark ? "#e0e0e0" : "#222", fontWeight: 700 }}><div style={{ fontSize: 13 }}>{res.eventName}</div><div style={{ fontSize: 10, color: dark ? "#666" : "#aaa", fontWeight: 600, textTransform: "uppercase" }}>{res.eventType}</div></td>
+                                                        <td style={{ padding: "10px 14px", color: dark ? "#e0e0e0" : "#222", fontWeight: 700 }}><div style={{ fontSize: 13 }}>{res.eventName}</div><div style={{ fontSize: 10, color: dark ? "#666" : "#aaa", fontWeight: 600, textTransform: "uppercase" }}>{res.eventType !== 'custom' ? (res.participantType === 'staff' ? "Staff " : (res.participantType === 'student' ? "" : "")) : ""}{res.eventType !== 'custom' ? (res.eventGender === 'women' ? "Women's " : "Men's ") : ""}{res.eventType}</div></td>
                                                         <td style={{ padding: "10px 14px" }}><div style={{ color: "#D4AF37", fontWeight: 800 }}>{res.placements?.first?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.first?.player}</div></td>
                                                         <td style={{ padding: "10px 14px" }}><div style={{ color: "#C0C0C0", fontWeight: 800 }}>{res.placements?.second?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.second?.player}</div></td>
                                                         <td style={{ padding: "10px 14px" }}><div style={{ color: "#CD7F32", fontWeight: 800 }}>{res.placements?.third?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.third?.player}</div></td>
@@ -3335,6 +3369,8 @@ export function AdminPage({
                             <ListManager dark={dark} title="🏆 Sport Games (Women)" list={sportGamesListWomens} setList={setSportGamesListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏆 Staff Games (Men)" list={staffGamesList || []} setList={setStaffGamesList} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏆 Staff Games (Women)" list={staffGamesListWomens || []} setList={setStaffGamesListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏃 Staff Athletics (Men)" list={staffAthleticsList || []} setList={setStaffAthleticsList} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
+                            <ListManager dark={dark} title="🏃 Staff Athletics (Women)" list={staffAthleticsListWomens || []} setList={setStaffAthleticsListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏃 Athletics (Men)" list={athleticsList} setList={setAthleticsList} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="🏃 Athletics (Women)" list={athleticsListWomens} setList={setAthleticsListWomens} closedEvents={closedEvents} setClosedEvents={setClosedEvents} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
                             <ListManager dark={dark} title="👔 Sports Official Roles" list={authorityRoles} setList={setAuthorityRoles} isMobile={isMobile} lS={lS} iS={iS} cS={cS} />
@@ -3399,20 +3435,37 @@ export function AdminPage({
 
             <Sheet open={!!gameModal} onClose={() => { setGameModal(null); setGameForm(emptyGame); }}>
                 <h3 style={{ margin: "0 0 16px", color: dark ? "#fff" : "#222" }}>{gameForm.id ? "Edit Event" : "Create Event"}</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                    <div>
+                        <label style={lS}>Event Gender</label>
+                        <select value={gameForm.gender || "Men"} onChange={e => setGameForm({ ...gameForm, gender: e.target.value })} style={iS}>
+                            <option value="Men">Men's / Boys</option>
+                            <option value="Women">Women's / Girls</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style={lS}>Event Category</label>
+                        <select value={gameForm.type || "game"} onChange={e => setGameForm({ ...gameForm, type: e.target.value, name: "" })} style={iS}>
+                            <option value="game">Team Game</option>
+                            <option value="athletic">Athletic Event</option>
+                        </select>
+                    </div>
+                </div>
                 <div style={{ marginBottom: 12 }}>
                     <label style={lS}>Event Name</label>
                     <select value={gameForm.name} onChange={e => setGameForm({ ...gameForm, name: e.target.value })} style={iS}>
                         <option value="">Select an Event</option>
-                        {(gameForm.type === "game" ? sportGamesList : athleticsList).map(e => <option key={e} value={e}>{e}</option>)}
+                        {(gameForm.type === "game" ? (gameForm.gender === "Women" ? sportGamesListWomens : sportGamesList) : (gameForm.gender === "Women" ? athleticsListWomens : athleticsList)).map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
                     <div><label style={lS}>Type</label><select value={gameForm.type} onChange={e => setGameForm({ ...gameForm, type: e.target.value, name: "" })} style={iS}><option value="game">Team Game</option><option value="athletic">Athletic</option></select></div>
                     <div><label style={lS}>Category</label><select value={gameForm.gender} onChange={e => setGameForm({ ...gameForm, gender: e.target.value })} style={iS}><option value="Boys">Boys</option><option value="Girls">Girls</option><option value="Mixed">Mixed</option></select></div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
                     <div><label style={lS}>Date</label><input type="date" value={gameForm.date} onChange={e => setGameForm({ ...gameForm, date: e.target.value })} style={iS} /></div>
-                    <div><label style={lS}>Time</label><input type="time" value={gameForm.time} onChange={e => setGameForm({ ...gameForm, time: e.target.value })} style={iS} /></div>
+                    <div><label style={lS}>Start Time</label><input type="time" value={gameForm.start || ""} onChange={e => setGameForm({ ...gameForm, start: e.target.value })} style={iS} /></div>
+                    <div><label style={lS}>End Time</label><input type="time" value={gameForm.end || ""} onChange={e => setGameForm({ ...gameForm, end: e.target.value })} style={iS} /></div>
                 </div>
                 <div style={{ marginBottom: 12 }}><label style={lS}>{gameForm.type === "game" ? "Max Players per Team" : "Max Entries per House"}</label><input type="number" value={gameForm.maxPerTeam} onChange={e => setGameForm({ ...gameForm, maxPerTeam: Number(e.target.value) })} style={iS} placeholder="Leave blank for unlimited" min={1} /></div>
                 <div style={{ marginBottom: 12 }}><label style={lS}>Venue / Location</label><input value={gameForm.venue} onChange={e => setGameForm({ ...gameForm, venue: e.target.value })} placeholder="e.g. Main Ground" style={iS} /></div>

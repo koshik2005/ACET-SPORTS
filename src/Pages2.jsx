@@ -601,15 +601,21 @@ export function GalleryPage({ dark, gallery }) {
         </div>
     );
 }
-export function WinnersPage({ dark, results, houses, sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [] }) {
+export function WinnersPage({ dark, results, houses, sportGamesList = [], sportGamesListWomens = [], athleticsList = [], athleticsListWomens = [], staffGamesList = [], staffGamesListWomens = [], staffAthleticsList = [], staffAthleticsListWomens = [] }) {
     const [hFilter, setHFilter] = useState("All");
     const [eFilter, setEFilter] = useState("All");
+    const [gFilter, setGFilter] = useState("All");
+    const [pFilter, setPFilter] = useState("All");
     const isMobile = useIsMobile();
 
     const filtered = results.filter(r => {
         const matchesH = hFilter === "All" || Object.values(r.placements).some(p => p.house === hFilter);
         const matchesE = eFilter === "All" || r.eventType === eFilter || r.eventName === eFilter;
-        return matchesH && matchesE;
+        const normalizedGender = r.eventGender || (r.eventType === 'custom' ? 'custom' : 'men');
+        const matchesG = gFilter === "All" || normalizedGender === gFilter || (gFilter === 'men' && normalizedGender === 'custom'); // show custom in men/all arbitrarily or just filter
+        const normalizedParticipant = r.participantType || 'student';
+        const matchesP = pFilter === "All" || normalizedParticipant === pFilter;
+        return matchesH && matchesE && matchesG && matchesP;
     });
 
     return (
@@ -623,6 +629,16 @@ export function WinnersPage({ dark, results, houses, sportGamesList = [], sportG
             {/* ── Filters ── */}
             <div style={{ background: dark ? "rgba(255,255,255,.03)" : "#f9f9f9", padding: "12px 16px", borderRadius: 14, marginBottom: 24, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", border: `1px solid ${dark ? "#333" : "#eee"}` }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: dark ? "#888" : "#888", marginRight: 5 }}>FILTERS:</span>
+                <select value={pFilter} onChange={e => setPFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13 }}>
+                    <option value="All">All Participants</option>
+                    <option value="student">Students</option>
+                    <option value="staff">Staff</option>
+                </select>
+                <select value={gFilter} onChange={e => setGFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13 }}>
+                    <option value="All">All Genders</option>
+                    <option value="men">Men's Events</option>
+                    <option value="women">Women's Events</option>
+                </select>
                 <select value={hFilter} onChange={e => setHFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#fff", color: dark ? "#fff" : "#333", fontSize: 13 }}>
                     <option value="All">All Houses</option>
                     {houses.map(h => <option key={h.id} value={h.name}>{h.displayName || h.name} House</option>)}
@@ -645,6 +661,18 @@ export function WinnersPage({ dark, results, houses, sportGamesList = [], sportG
                     <optgroup label="Athletics (Women)">
                         {athleticsListWomens.map(a => <option key={a} value={a}>{a}</option>)}
                     </optgroup>
+                    <optgroup label="Staff Games (Men)">
+                        {staffGamesList.map(g => <option key={g} value={g}>{g}</option>)}
+                    </optgroup>
+                    <optgroup label="Staff Games (Women)">
+                        {staffGamesListWomens.map(g => <option key={g} value={g}>{g}</option>)}
+                    </optgroup>
+                    <optgroup label="Staff Athletics (Men)">
+                        {staffAthleticsList.map(a => <option key={a} value={a}>{a}</option>)}
+                    </optgroup>
+                    <optgroup label="Staff Athletics (Women)">
+                        {staffAthleticsListWomens.map(a => <option key={a} value={a}>{a}</option>)}
+                    </optgroup>
                 </select>
             </div>
 
@@ -653,7 +681,7 @@ export function WinnersPage({ dark, results, houses, sportGamesList = [], sportG
                     <div key={res.id} style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,.04)" }}>
                         <div style={{ background: dark ? "rgba(255,255,255,.02)" : "#fdfdfd", padding: "14px 20px", borderBottom: `1px solid ${dark ? "#222" : "#f0f0f0"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <div>
-                                <div style={{ fontSize: 10, fontWeight: 800, color: "#8B0000", letterSpacing: 1.5, textTransform: "uppercase" }}>{res.eventType}</div>
+                                <div style={{ fontSize: 10, fontWeight: 800, color: "#8B0000", letterSpacing: 1.5, textTransform: "uppercase" }}>{res.eventType !== 'custom' ? (res.participantType === 'staff' ? "STAFF " : "") : ""}{res.eventType !== 'custom' ? (res.eventGender === 'women' ? "WOMEN'S " : "MEN'S ") : ""}{res.eventType}</div>
                                 <div style={{ fontSize: 18, fontWeight: 900, color: dark ? "#fff" : "#1a1a1a" }}>{res.eventName}</div>
                             </div>
                             <div style={{ fontSize: 11, color: dark ? "#666" : "#aaa" }}>{res.time?.split(",")[0]}</div>
