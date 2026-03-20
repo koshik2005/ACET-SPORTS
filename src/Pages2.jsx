@@ -519,11 +519,36 @@ export function ScoreboardPage({ dark, houses, pointLog, registrationOpen = true
                 </div>
             ))}
             <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginTop: isMobile ? 24 : 48, marginBottom: 14, fontSize: isMobile ? 17 : 22 }}>📋 Points Log</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
                 {pointLog.map((p, i) => {
+                    const extractGame = (log) => {
+                        if (!log) return null;
+                        if (typeof log === "string") return null;
+                        if (log.game) return log.game;
+                        if (log.reason && log.reason.includes(" - ")) return log.reason.split(" - ")[1];
+                        return null;
+                    };
+                    const cg = extractGame(p);
+                    const pg = extractGame(pointLog[i - 1]);
+                    const ng = extractGame(pointLog[i + 1]);
+
+                    const isFirst = cg && cg !== pg;
+                    const isLast = cg && cg !== ng;
+                    const isLone = isFirst && isLast;
+
+                    let br = "9px";
+                    let bb = `1px solid ${dark ? "#333" : "#eee"}`;
+                    let mb = "8px";
+
+                    if (cg && !isLone) {
+                        if (isFirst) { br = "10px 10px 0 0"; bb = "none"; mb = "0px"; }
+                        else if (isLast) { br = "0 0 10px 10px"; mb = "8px"; }
+                        else { br = "0"; bb = "none"; mb = "0px"; }
+                    }
+
                     if (typeof p === "string") {
                         return (
-                            <div key={i} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 9, padding: isMobile ? "9px 11px" : "12px 16px", display: "flex", alignItems: "center", gap: 9 }}>
+                            <div key={i} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: br, borderBottom: bb, marginBottom: mb, padding: isMobile ? "9px 11px" : "12px 16px", display: "flex", alignItems: "center", gap: 9 }}>
                                 <div style={{ fontSize: isMobile ? 15 : 20, flexShrink: 0 }}>✨</div>
                                 <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: dark ? "#fff" : "#222" }}>{p}</div>
                             </div>
@@ -531,7 +556,7 @@ export function ScoreboardPage({ dark, houses, pointLog, registrationOpen = true
                     }
                     const hObj = houses.find(h => h.name === p.house);
                     return (
-                        <div key={i} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: 9, padding: isMobile ? "9px 11px" : "12px 16px", display: "flex", alignItems: "center", gap: 9 }}>
+                        <div key={i} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `1px solid ${dark ? "#333" : "#eee"}`, borderRadius: br, borderBottom: bb, marginBottom: mb, padding: isMobile ? "9px 11px" : "12px 16px", display: "flex", alignItems: "center", gap: 9 }}>
                             <div style={{ fontSize: isMobile ? 15 : 20, flexShrink: 0 }}>{p.type === "win" ? "🏆" : p.type === "bonus" ? "⭐" : "⚠️"}</div>
                             <div style={{ width: 24, height: 24, borderRadius: "50%", background: hObj?.color || "#888", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 9, fontWeight: 800, flexShrink: 0, overflow: "hidden", border: `1px solid ${dark ? "#444" : "#fff"}` }}>
                                 {hObj?.logo ? <img src={hObj.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : hi(hObj?.displayName || p.house)}

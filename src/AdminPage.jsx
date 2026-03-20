@@ -1861,9 +1861,10 @@ export function AdminPage({
                                 // Point Log
                                 const d = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                 const logs = [];
-                                if (winner.first) logs.push({ type: "win", house: winner.first, reason: `1st Place - ${winner.eventName}`, pts: ptsFirst, time: d });
-                                if (winner.second) logs.push({ type: "win", house: winner.second, reason: `2nd Place - ${winner.eventName}`, pts: ptsSecond, time: d });
-                                if (winner.third) logs.push({ type: "win", house: winner.third, reason: `3rd Place - ${winner.eventName}`, pts: ptsThird, time: d });
+                                const genderTxt = winner.eventGender && winner.eventGender !== "Open" ? ` (${winner.eventGender})` : "";
+                                if (winner.first) logs.push({ type: "win", house: winner.first, reason: `1st Place - ${winner.eventName}${genderTxt}`, pts: ptsFirst, time: d });
+                                if (winner.second) logs.push({ type: "win", house: winner.second, reason: `2nd Place - ${winner.eventName}${genderTxt}`, pts: ptsSecond, time: d });
+                                if (winner.third) logs.push({ type: "win", house: winner.third, reason: `3rd Place - ${winner.eventName}${genderTxt}`, pts: ptsThird, time: d });
                                 setPointLog([...logs, ...pointLog]);
 
                                 setWinnerSet(true); setTimeout(() => setWinnerSet(false), 3000);
