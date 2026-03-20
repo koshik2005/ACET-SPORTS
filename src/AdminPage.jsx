@@ -2314,7 +2314,7 @@ export function AdminPage({
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 10 }}>
                                     <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666" }}>
                                         {(() => {
-                                            const filteredCount = studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length;
+                                            const filteredCount = studentsDB.filter(s => s.role !== "Staff" && ((s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()))).length;
                                             const totalPages = Math.ceil(filteredCount / rowsPerPage);
                                             return `Page ${studentPage} of ${totalPages || 1} (${filteredCount} students total)`;
                                         })()}
@@ -2331,9 +2331,9 @@ export function AdminPage({
                                                 style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#f5f5f5", color: dark ? (studentPage === 1 ? "#555" : "#ccc") : (studentPage === 1 ? "#ccc" : "#333"), cursor: studentPage === 1 ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
                                             >Prev</button>
                                             <button 
-                                                disabled={studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage)} 
+                                                disabled={studentPage >= Math.ceil(studentsDB.filter(s => s.role !== "Staff" && ((s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()))).length / rowsPerPage)} 
                                                 onClick={() => setStudentPage(p => p + 1)}
-                                                style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#f5f5f5", color: dark ? (studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage) ? "#555" : "#ccc") : (studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage) ? "#ccc" : "#333"), cursor: studentPage >= Math.ceil(studentsDB.filter(s => (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase())).length / rowsPerPage) ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
+                                                style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222" : "#f5f5f5", color: dark ? (studentPage >= Math.ceil(studentsDB.filter(s => s.role !== "Staff" && ((s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()))).length / rowsPerPage) ? "#555" : "#ccc") : (studentPage >= Math.ceil(studentsDB.filter(s => s.role !== "Staff" && ((s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()))).length / rowsPerPage) ? "#ccc" : "#333"), cursor: studentPage >= Math.ceil(studentsDB.filter(s => s.role !== "Staff" && ((s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(studentSearch.toLowerCase()))).length / rowsPerPage) ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700 }}
                                             >Next</button>
                                         </div>
                                     </div>
@@ -2341,7 +2341,7 @@ export function AdminPage({
                             </div>
                         )}
                         {studentsDB.length > 0 && (
-                            <button onClick={() => { if (window.confirm(`Clear all ${studentsDB.length} students?`)) setStudentsDB([]); }} style={{ marginTop: 10, background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13 }}>🗑 Clear Database</button>
+                            <button onClick={() => { const onlyStudents = studentsDB.filter(s => s.role !== 'Staff'); if (window.confirm(`Clear all ${onlyStudents.length} students? (Staff data will be kept)`)) setStudentsDB(studentsDB.filter(s => s.role === 'Staff')); }} style={{ marginTop: 10, background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13 }}>🗑 Clear Students Only</button>
                         )}
                     </div>
                 )
@@ -2353,62 +2353,121 @@ export function AdminPage({
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
                             <div>
                                 <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: 18 }}>🧑🏫 Staff Management</h3>
-                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>Manage and view staff members grouped by house</div>
+                                <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888" }}>
+                                    {studentsDB.filter(s => s.role === "Staff").length} staff members in database
+                                </div>
                             </div>
-                            <div style={{ flex: 1, position: "relative", maxWidth: 300 }}>
-                                <input
-                                    value={staffSearch}
-                                    onChange={e => setStaffSearch(e.target.value)}
-                                    placeholder="🔍 Search Staff Name or ID..."
-                                    style={{ ...iS, marginBottom: 0, paddingLeft: 40 }}
-                                />
-                                <div style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>🔍</div>
+                            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                                <div style={{ position: "relative" }}>
+                                    <input
+                                        value={staffSearch}
+                                        onChange={e => setStaffSearch(e.target.value)}
+                                        placeholder="🔍 Search Staff Name or ID..."
+                                        style={{ ...iS, marginBottom: 0, paddingLeft: 40, width: 220 }}
+                                    />
+                                    <div style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>🔍</div>
+                                </div>
+                                {studentsDB.filter(s => s.role === "Staff").length > 0 && (
+                                    <button onClick={() => { if (window.confirm(`Clear all ${studentsDB.filter(s => s.role === 'Staff').length} staff members?`)) setStudentsDB(db => db.filter(s => s.role !== 'Staff')); }} style={{ background: "transparent", border: "1px solid #c00", color: "#c00", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>🗑 Clear Staff</button>
+                                )}
                             </div>
                         </div>
 
                         {(() => {
-                            const filteredStaff = studentsDB.filter(s => s.role === "Staff" && ((s.name || "").toLowerCase().includes(staffSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(staffSearch.toLowerCase())));
+                            const allStaff = studentsDB.filter(s => s.role === "Staff");
+                            const filteredStaff = allStaff.filter(s => (s.name || "").toLowerCase().includes(staffSearch.toLowerCase()) || (s.regNo || "").toLowerCase().includes(staffSearch.toLowerCase()));
+
+                            if (allStaff.length === 0) return (
+                                <div style={{ textAlign: "center", padding: 60, color: dark ? "#666" : "#aaa", background: dark ? "rgba(255,255,255,.02)" : "#fafafa", borderRadius: 16, border: `1px dashed ${dark ? "#444" : "#ccc"}` }}>
+                                    <div style={{ fontSize: 48, marginBottom: 12 }}>🧑‍🏫</div>
+                                    <div style={{ fontSize: 16, fontWeight: 700 }}>No Staff Imported Yet</div>
+                                    <p style={{ fontSize: 13, marginTop: 4 }}>Go to the <strong>Students</strong> tab → Bulk Import → Upload Staff Data</p>
+                                </div>
+                            );
+
+                            // Summary stats per house
                             const grouped = {};
                             houses.forEach(h => grouped[h.name] = []);
-                            filteredStaff.forEach(s => {
+                            allStaff.forEach(s => {
                                 if (grouped[s.house]) grouped[s.house].push(s);
-                                else {
-                                    if (!grouped["Other"]) grouped["Other"] = [];
-                                    grouped["Other"].push(s);
-                                }
+                                else { if (!grouped["Other"]) grouped["Other"] = []; grouped["Other"].push(s); }
                             });
 
                             return (
-                                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
-                                    {(Object.entries(grouped)).map(([house, members]) => (
-                                        <div key={house} style={{ ...cS, padding: 0, overflow: "hidden" }}>
-                                            <div style={{ background: dark ? "#1e1e2e" : "#8B0000", color: "#fff", padding: "12px 16px", fontWeight: 800, fontSize: 14, display: "flex", justifyContent: "space-between" }}>
-                                                <span>🏠 {house} Staff</span>
-                                                <span style={{ opacity: 0.8 }}>{members.length}</span>
-                                            </div>
-                                            <div style={{ padding: 12 }}>
-                                                {members.length === 0 ? (
-                                                    <div style={{ padding: 20, textAlign: "center", color: "#888", fontSize: 12 }}>No staff registered in this house</div>
-                                                ) : (
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                                        {members.map(m => (
-                                                            <div key={m.regNo} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: dark ? "rgba(255,255,255,0.03)" : "#f9f9f9", borderRadius: 8, border: `1px solid ${dark ? "#333" : "#eee"}` }}>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 700, color: dark ? "#fff" : "#222", fontSize: 13 }}>{m.name}</div>
-                                                                    <div style={{ fontSize: 11, color: dark ? "#888" : "#666" }}>{m.regNo} • {m.email || "No Email"}</div>
-                                                                </div>
-                                                                <button onClick={() => {
-                                                                    if (window.confirm(`Remove ${m.name} from staff database?`)) {
-                                                                        setStudentsDB(db => db.filter(x => x.regNo !== m.regNo));
-                                                                    }
-                                                                }} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 14 }}>🗑</button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                <div>
+                                    {/* House summary cards */}
+                                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
+                                        {Object.entries(grouped).map(([house, members]) => {
+                                            const hObj = houses.find(h => h.name === house);
+                                            return (
+                                                <div key={house} style={{ background: dark ? "rgba(255,255,255,.04)" : "#fff", border: `2px solid ${hObj?.color || "#8B0000"}22`, borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
+                                                    <div style={{ fontSize: 22, fontWeight: 900, color: hObj?.color || "#8B0000" }}>{members.length}</div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: dark ? "#aaa" : "#666", textTransform: "uppercase", letterSpacing: 0.5 }}>{house}</div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Flat staff table */}
+                                    <div style={{ overflowX: "auto", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
+                                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                            <thead><tr style={{ background: dark ? "#1e1e2e" : "#f5f5f5" }}>
+                                                {["S.No", "Name", "ID/Reg No", "Email", "Gender", "House", "Dept"].map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>{h}</th>)}
+                                                <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: dark ? "#ccc" : "#444", borderBottom: `1px solid ${dark ? "#333" : "#ddd"}` }}>Actions</th>
+                                            </tr></thead>
+                                            <tbody>
+                                                {filteredStaff.map((s, idx) => (
+                                                    <tr key={`${s.regNo}-${idx}`} style={{ borderBottom: `1px solid ${dark ? "#2a2a2a" : "#f0f0f0"}`, background: editingRegNo === s.regNo ? (dark ? "rgba(46,139,87,.08)" : "#f0fff4") : "transparent" }}>
+                                                        <td style={{ padding: "8px 12px", color: dark ? "#666" : "#aaa" }}>{idx + 1}</td>
+                                                        {editingRegNo === s.regNo ? (
+                                                            <>
+                                                                <td style={{ padding: "4px 6px" }}><input value={editStudentForm.name || ""} onChange={e => setEditStudentForm({ ...editStudentForm, name: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 6px" }}><input value={editStudentForm.regNo || ""} onChange={e => setEditStudentForm({ ...editStudentForm, regNo: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 6px" }}><input value={editStudentForm.email || ""} onChange={e => setEditStudentForm({ ...editStudentForm, email: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 6px" }}>
+                                                                    <select value={editStudentForm.gender || "Male"} onChange={e => setEditStudentForm({ ...editStudentForm, gender: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }}>
+                                                                        <option value="Male">Male</option>
+                                                                        <option value="Female">Female</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td style={{ padding: "4px 6px" }}>
+                                                                    <select value={editStudentForm.house || ""} onChange={e => setEditStudentForm({ ...editStudentForm, house: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }}>
+                                                                        {houses.map(h => <option key={h.name} value={h.name}>{h.name}</option>)}
+                                                                    </select>
+                                                                </td>
+                                                                <td style={{ padding: "4px 6px" }}><input value={editStudentForm.dept || ""} onChange={e => setEditStudentForm({ ...editStudentForm, dept: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "8px 12px" }}>
+                                                                    <div style={{ display: "flex", gap: 5 }}>
+                                                                        <button onClick={() => { setStudentsDB(db => db.map(x => x.regNo === s.regNo ? { ...editStudentForm, role: "Staff" } : x)); setEditingRegNo(null); }} style={{ background: "#2E8B57", color: "#fff", border: "none", borderRadius: 4, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Save</button>
+                                                                        <button onClick={() => setEditingRegNo(null)} style={{ background: dark ? "#333" : "#ddd", color: dark ? "#ccc" : "#333", border: "none", borderRadius: 4, padding: "4px 8px", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Cancel</button>
+                                                                    </div>
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <td style={{ padding: "8px 12px", fontWeight: 700, color: dark ? "#fff" : "#222" }}>{s.name}</td>
+                                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.regNo}</td>
+                                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.email || "—"}</td>
+                                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.gender || "—"}</td>
+                                                                <td style={{ padding: "8px 12px" }}><span style={{ background: houses.find(h => h.name === s.house)?.color || "#8B0000", color: "#fff", borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{s.house || "—"}</span></td>
+                                                                <td style={{ padding: "8px 12px", color: dark ? "#aaa" : "#555" }}>{s.dept || "—"}</td>
+                                                                <td style={{ padding: "8px 12px" }}>
+                                                                    <div style={{ display: "flex", gap: 5 }}>
+                                                                        <button onClick={() => { setEditStudentForm({ ...s }); setEditingRegNo(s.regNo); }} style={{ background: dark ? "#333" : "#eee", color: dark ? "#ccc" : "#444", border: "none", borderRadius: 4, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Edit</button>
+                                                                        <button onClick={() => { if (window.confirm(`Remove ${s.name} from staff database?`)) setStudentsDB(db => db.filter(x => x.regNo !== s.regNo)); }} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 13 }}>🗑</button>
+                                                                    </div>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                                {filteredStaff.length === 0 && (
+                                                    <tr><td colSpan={8} style={{ textAlign: "center", padding: 20, color: dark ? "#666" : "#aaa", fontSize: 13 }}>No staff match your search</td></tr>
                                                 )}
-                                            </div>
-                                        </div>
-                                    ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div style={{ marginTop: 10, fontSize: 12, color: dark ? "#666" : "#aaa" }}>Showing {filteredStaff.length} of {allStaff.length} staff members</div>
                                 </div>
                             );
                         })()}
