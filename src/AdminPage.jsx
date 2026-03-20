@@ -1927,7 +1927,33 @@ export function AdminPage({
                                                         <td style={{ padding: "10px 14px" }}><div style={{ color: "#C0C0C0", fontWeight: 800 }}>{res.placements?.second?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.second?.player}</div></td>
                                                         <td style={{ padding: "10px 14px" }}><div style={{ color: "#CD7F32", fontWeight: 800 }}>{res.placements?.third?.house}</div><div style={{ fontSize: 10, color: dark ? "#888" : "#999" }}>{res.placements?.third?.player}</div></td>
                                                         <td style={{ padding: "10px 14px", fontSize: 11, color: dark ? "#666" : "#999" }}>{res.time}</td>
-                                                        <td style={{ padding: "10px 14px" }}><button onClick={() => { if (window.confirm("Remove this result? Points will NOT be automatically deducted. You must manually deduct them via the Points tab.")) setResults(results.filter((_, idx) => idx !== (start + i))); }} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 16 }}>✕</button></td>
+                                                        <td style={{ padding: "10px 14px" }}><button onClick={() => {
+                                                            if (!window.confirm(`Delete result for "${res.eventName}" and automatically reverse all associated points from house scores?`)) return;
+                                                            
+                                                            const ptsFirst = res.eventType === "game" ? 7 : 5;
+                                                            const ptsSecond = res.eventType === "game" ? 5 : 3;
+                                                            const ptsThird = res.eventType === "game" ? 3 : 1;
+
+                                                            // Reverse house points
+                                                            setHouses(hs => hs.map(h => {
+                                                                let sub = 0;
+                                                                if (res.placements?.first?.house === h.name) sub += ptsFirst;
+                                                                if (res.placements?.second?.house === h.name) sub += ptsSecond;
+                                                                if (res.placements?.third?.house === h.name) sub += ptsThird;
+                                                                return sub > 0 ? { ...h, points: Math.max(0, (h.points || 0) - sub) } : h;
+                                                            }));
+
+                                                            // Remove associated point log entries
+                                                            setPointLog(pl => pl.filter(p => {
+                                                                if (typeof p === "string") return true;
+                                                                if (!p.reason) return true;
+                                                                // Remove if the log reason mentions this event name
+                                                                return !p.reason.toLowerCase().includes(res.eventName.toLowerCase());
+                                                            }));
+
+                                                            // Remove the result itself
+                                                            setResults(results.filter((_, idx) => idx !== (start + i)));
+                                                        }} style={{ background: "transparent", border: "1px solid #c00", color: "#c00", cursor: "pointer", fontSize: 11, fontWeight: 700, borderRadius: 5, padding: "4px 8px" }}>🗑 Delete &amp; Revert</button></td>
                                                     </tr>
                                                 ));
                                             })()}
