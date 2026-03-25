@@ -18,7 +18,23 @@ import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import compression from "compression";
 import bcrypt from "bcryptjs";
+import { v2 as cloudinary } from "cloudinary";
+import multer from "multer";
 import { State, Otp, Query, InvalidatedToken } from "./models.js";
+
+// Basic Memory Storage for Multer
+const storage = multer.memoryStorage();
+const uploadBuffer = multer({ 
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for videos
+});
+
+// Configure Cloudinary (keys will be provided later via .env)
+cloudinary.config({ 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+  api_key: process.env.CLOUDINARY_API_KEY, 
+  api_secret: process.env.CLOUDINARY_API_SECRET 
+});
 
 const app = express();
 app.set("trust proxy", 1); 
@@ -1598,6 +1614,45 @@ app.post("/api/send-event-announcement", authenticateAdmin, async (req, res) => 
     successCount: results.success,
     failedCount: results.failed
   });
+});
+
+// ─── Cloudinary Video Upload ───────────────────────────────────────────────
+// Admin provides MP4 file -> parsed by Multer -> sent directly to Cloudinary via buffer
+app.post("/api/upload-video", authenticateAdmin, uploadBuffer.single("video"), async (req, res) => {
+  try {
+    if (!process.env.CLOUDINARY_API_KEY) {
+      return res.status(503).json({ error: "Cloudinary not configured. Add CLOUDINARY credentials to .env" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No video file provided in the 'video' field." });
+    }
+
+    // Wrap Cloudinary's upload_stream in a promise
+    const uploadToCloudinary = (buffer) => {
+      return new Promise((resolve, reject) => {
+        const cldStream = cloudinary.uploader.upload_stream(
+          { resource_type: "video", folder: "acet_sports" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        cldStream.end(buffer);
+      });
+    };
+
+    const cldResponse = await uploadToCloudinary(req.file.buffer);
+
+    res.json({
+      success: true,
+      url: cldResponse.secure_url,
+      thumbnail: cldResponse.secure_url.replace(".mp4", ".jpg") // Cloudinary auto-generates a JPG thumbnail by changing ext
+    });
+  } catch (err) {
+    console.error("Cloudinary upload error:", err.message);
+    res.status(500).json({ error: "Video upload failed: " + err.message });
+  }
 });
 
 // ─── ImgBB Image Upload ──────────────────────────────────────────────────

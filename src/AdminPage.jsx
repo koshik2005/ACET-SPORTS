@@ -126,7 +126,7 @@ export function AdminPage({
     const [spUploading, setSpUploading] = useState(false);
 
     // Video upload state
-    const [videoForm, setVideoForm] = useState({ title: "", description: "", url: "", thumbnail: "", category: "current" });
+    const [videoForm, setVideoForm] = useState({ title: "", description: "", url: "", thumbnail: "", category: "current", file: null });
     const [videoUploadProgress, setVideoUploadProgress] = useState(0);
     const [videoUploading, setVideoUploading] = useState(false);
 
@@ -1273,19 +1273,57 @@ export function AdminPage({
                 const getThumbnail = (url, customThumb) => { if (customThumb) return customThumb; const ytId = extractYouTubeId(url); if (ytId) return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`; return null; };
                 const getEmbedUrl = (url) => { const ytId = extractYouTubeId(url); if (ytId) return `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`; return url; };
 
-                const handleAddVideo = () => {
-                    if (!videoForm.url.trim() || !videoForm.title.trim()) { alert("Title and Video URL are required."); return; }
+                const handleAddVideo = async () => {
+                    if ((!videoForm.url.trim() && !videoForm.file) || !videoForm.title.trim()) { alert("Title and either a Video URL or File are required."); return; }
                     if (videoUploading) return;
                     setVideoUploading(true); setVideoUploadProgress(0);
-                    const steps = [{ p: 15, d: 200 }, { p: 35, d: 500 }, { p: 60, d: 900 }, { p: 80, d: 1300 }, { p: 95, d: 1700 }, { p: 100, d: 2100 }];
-                    steps.forEach(({ p, d }) => setTimeout(() => setVideoUploadProgress(p), d));
-                    setTimeout(() => {
-                        const ytId = extractYouTubeId(videoForm.url);
-                        const thumb = getThumbnail(videoForm.url, videoForm.thumbnail);
-                        setVideos(prev => [{ id: Date.now().toString(), title: videoForm.title.trim(), description: videoForm.description.trim(), url: videoForm.url.trim(), thumbnail: thumb || "", category: videoForm.category, isYouTube: !!ytId, embedUrl: getEmbedUrl(videoForm.url), addedAt: new Date().toISOString() }, ...(prev || [])]);
-                        setVideoForm({ title: "", description: "", url: "", thumbnail: "", category: "current" });
-                        setVideoUploading(false); setVideoUploadProgress(0);
-                    }, 2400);
+                    
+                    try {
+                        let finalUrl = videoForm.url.trim();
+                        let finalThumb = videoForm.thumbnail;
+
+                        if (videoForm.file) {
+                            setVideoUploadProgress(10);
+                            const formData = new FormData();
+                            formData.append("video", videoForm.file);
+                            
+                            // Simulate upload progress before actual request completes
+                            const progressInterval = setInterval(() => {
+                                setVideoUploadProgress(p => (p < 85 ? p + 5 : p));
+                            }, 500);
+
+                            const res = await fetch(`${API_BASE}/api/upload-video`, {
+                                method: "POST",
+                                headers: { "Authorization": `Bearer ${localStorage.getItem("adminToken")}` },
+                                body: formData
+                            });
+                            
+                            clearInterval(progressInterval);
+                            const data = await res.json();
+                            
+                            if (!res.ok || !data.success) throw new Error(data.error || "Video upload failed");
+                            
+                            finalUrl = data.url;
+                            if (!finalThumb) finalThumb = data.thumbnail;
+                            setVideoUploadProgress(100);
+                        } else {
+                            const steps = [{ p: 15, d: 200 }, { p: 35, d: 500 }, { p: 60, d: 900 }, { p: 80, d: 1300 }, { p: 95, d: 1700 }, { p: 100, d: 2100 }];
+                            steps.forEach(({ p, d }) => setTimeout(() => setVideoUploadProgress(p), d));
+                            await new Promise(r => setTimeout(r, 2400));
+                        }
+
+                        const ytId = extractYouTubeId(finalUrl);
+                        const thumb = getThumbnail(finalUrl, finalThumb);
+                        const embed = ytId ? getEmbedUrl(finalUrl) : finalUrl;
+
+                        setVideos(prev => [{ id: Date.now().toString(), title: videoForm.title.trim(), description: videoForm.description.trim(), url: finalUrl, thumbnail: thumb || finalThumb || "", category: videoForm.category, isYouTube: !!ytId, embedUrl: embed, addedAt: new Date().toISOString() }, ...(prev || [])]);
+                        setVideoForm({ title: "", description: "", url: "", thumbnail: "", category: "current", file: null });
+                    } catch (err) {
+                        alert(err.message);
+                    } finally {
+                        setVideoUploading(false); 
+                        setVideoUploadProgress(0);
+                    }
                 };
 
                 return (
@@ -1302,7 +1340,24 @@ export function AdminPage({
                                         <option value="previous">🏆 Previous Years</option>
                                     </select>
                                 </div>
-                                <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}><label style={lS}>Video URL * (YouTube or direct .mp4)</label><input value={videoForm.url} onChange={e => setVideoForm(f => ({ ...f, url: e.target.value }))} placeholder="https://www.youtube.com/watch?v=... or https://example.com/video.mp4" style={iS} /></div>
+                                <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}>
+                                    <label style={lS}>Video Source * (YouTube URL OR direct .mp4 file)</label>
+                                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                        <input value={videoForm.url} disabled={!!videoForm.file} onChange={e => setVideoForm(f => ({ ...f, url: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." style={{ ...iS, flex: 1, minWidth: 200, opacity: videoForm.file ? 0.5 : 1 }} />
+                                        <span style={{ fontWeight: 800, color: dark ? "#888" : "#ccc" }}>OR</span>
+                                        <label style={{ background: videoForm.file ? "#2E8B57" : (dark ? "#333" : "#eee"), color: videoForm.file ? "#fff" : (dark ? "#ccc" : "#444"), padding: "10px 16px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, border: `1px solid ${dark ? "#444" : "#ddd"}`, whiteSpace: "nowrap" }}>
+                                            {videoForm.file ? "📁 " + (videoForm.file.name.length > 20 ? videoForm.file.name.slice(0, 17) + "..." : videoForm.file.name) : "📁 Upload .mp4 File"}
+                                            <input type="file" accept="video/mp4,video/x-m4v,video/*" style={{ display: "none" }} onChange={e => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    if (file.size > 50 * 1024 * 1024) { alert("Video too large. Max 50MB allowed."); return; }
+                                                    setVideoForm(f => ({ ...f, file: file, url: "" }));
+                                                }
+                                            }} />
+                                        </label>
+                                        {videoForm.file && <button onClick={() => setVideoForm(f => ({ ...f, file: null }))} style={{ background: "transparent", border: "none", color: "#c00", cursor: "pointer", fontSize: 16 }}>✖</button>}
+                                    </div>
+                                </div>
                                 <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}><label style={lS}>Description (optional)</label><input value={videoForm.description} onChange={e => setVideoForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description" style={iS} /></div>
                                 <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}><label style={lS}>Custom Thumbnail URL (optional — auto for YouTube)</label><input value={videoForm.thumbnail} onChange={e => setVideoForm(f => ({ ...f, thumbnail: e.target.value }))} placeholder="https://... (leave blank to auto-detect)" style={{ ...iS, marginBottom: 0 }} /></div>
                             </div>
@@ -1320,8 +1375,8 @@ export function AdminPage({
                                     </div>
                                 </div>
                             )}
-                            <button onClick={handleAddVideo} disabled={videoUploading || !videoForm.url.trim() || !videoForm.title.trim()} style={{ marginTop: 16, background: (!videoUploading && videoForm.url.trim() && videoForm.title.trim()) ? "linear-gradient(135deg,#1a1a2e,#8B0000)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "12px 28px", cursor: (!videoUploading && videoForm.url.trim() && videoForm.title.trim()) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 14 }}>
-                                {videoUploading ? `⏳ Saving... ${videoUploadProgress}%` : "🎬 Add Video"}
+                            <button onClick={handleAddVideo} disabled={videoUploading || (!videoForm.url.trim() && !videoForm.file) || !videoForm.title.trim()} style={{ marginTop: 16, background: (!videoUploading && (videoForm.url.trim() || videoForm.file) && videoForm.title.trim()) ? "linear-gradient(135deg,#1a1a2e,#8B0000)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "12px 28px", cursor: (!videoUploading && (videoForm.url.trim() || videoForm.file) && videoForm.title.trim()) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 14 }}>
+                                {videoUploading ? (videoForm.file ? `⏳ Uploading to Cloud... ${videoUploadProgress}%` : `⏳ Saving... ${videoUploadProgress}%`) : "🎬 Add Video"}
                             </button>
                         </div>
                         {["current", "previous"].map(cat => {
