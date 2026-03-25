@@ -105,7 +105,23 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
 
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: dark ? '#333' : '#eee', color: dark ? '#ccc' : '#444', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-                    <button onClick={() => onCropComplete(image)} style={{ flex: 1.5, padding: '12px', borderRadius: 10, border: `2px solid ${dark ? '#444' : '#ddd'}`, background: dark ? '#222' : '#f8f8f8', color: dark ? '#aaa' : '#555', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Skip Crop (Original)</button>
+                    <button onClick={async () => {
+                        try {
+                            const img = await createImage(image);
+                            const canvas = document.createElement('canvas');
+                            let w = img.width; let h = img.height;
+                            const MAX = 1920;
+                            if (w > MAX || h > MAX) {
+                                if (w > h) { h = Math.round((h * MAX) / w); w = MAX; }
+                                else { w = Math.round((w * MAX) / h); h = MAX; }
+                            }
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            onCropComplete(canvas.toDataURL('image/jpeg', 0.85));
+                        } catch (e) {
+                            onCropComplete(image);
+                        }
+                    }} style={{ flex: 1.5, padding: '12px', borderRadius: 10, border: `2px solid ${dark ? '#444' : '#ddd'}`, background: dark ? '#222' : '#f8f8f8', color: dark ? '#aaa' : '#555', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Skip Crop (Original)</button>
                     <button onClick={handleConfirm} style={{ flex: 2, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#8B0000,#C41E3A)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Crop & Upload</button>
                 </div>
             </div>
@@ -118,8 +134,16 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
+    let w = pixelCrop.width;
+    let h = pixelCrop.height;
+    const MAX = 1920;
+    if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round((h * MAX) / w); w = MAX; }
+        else { w = Math.round((w * MAX) / h); h = MAX; }
+    }
+
+    canvas.width = w;
+    canvas.height = h;
 
     ctx.drawImage(
         image,
@@ -129,11 +153,11 @@ async function getCroppedImg(imageSrc, pixelCrop) {
         pixelCrop.height,
         0,
         0,
-        pixelCrop.width,
-        pixelCrop.height
+        w,
+        h
     );
 
-    return canvas.toDataURL('image/jpeg', 0.9);
+    return canvas.toDataURL('image/jpeg', 0.85);
 }
 
 const createImage = (url) =>
