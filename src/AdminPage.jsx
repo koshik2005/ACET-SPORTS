@@ -36,6 +36,7 @@ export function AdminPage({
     registrationCloseTime, setRegistrationCloseTime,
     eventDate, setEventDate,
     starPlayers, setStarPlayers,
+    videos, setVideos,
     emptyGame,
     closedEvents, setClosedEvents,
     maxGames, setMaxGames,
@@ -124,7 +125,12 @@ export function AdminPage({
     const [starPlayerForm, setStarPlayerForm] = useState({ name: "", dept: "", year: "", game: "", house: "", img: null });
     const [spUploading, setSpUploading] = useState(false);
 
-    const TABS = ["Gallery", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "Staff", "T-Shirts", "Memorial", "About", "Settings", "Exports", "Config", "Resolver"];
+    // Video upload state
+    const [videoForm, setVideoForm] = useState({ title: "", description: "", url: "", thumbnail: "", category: "current" });
+    const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+    const [videoUploading, setVideoUploading] = useState(false);
+
+    const TABS = ["Gallery", "Videos", "Star Players", "Houses", "Authorities", "Management", "Committee", "Games", "Registrations", "Winners", "Points", "Students", "Staff", "T-Shirts", "Memorial", "About", "Settings", "Exports", "Config", "Resolver"];
     const [studentSearch, setStudentSearch] = useState("");
     const [staffSearch, setStaffSearch] = useState("");
     const [editingRegNo, setEditingRegNo] = useState(null);
@@ -1040,6 +1046,7 @@ export function AdminPage({
                         <>
                             <label style={lS}>Admin Email</label>
                             <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)}
+                                onBlur={(e) => { if (e.target.value && !e.target.value.includes('@')) setAdminEmail(e.target.value.trim() + '@gmail.com'); }}
                                 onKeyDown={e => e.key === "Enter" && handleEmailNext()}
                                 placeholder="Enter Admin Email" style={{ ...iS, marginBottom: 12 }} autoFocus />
                             {loginError && <div style={{ color: "#c00", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>⚠ {loginError}</div>}
@@ -1144,11 +1151,11 @@ export function AdminPage({
 
                         {galFiles.length > 0 ? (
                             <div style={{ marginBottom: 15 }}>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 8, marginBottom: 10, maxHeight: 200, overflowY: "auto", padding: 5 }}>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 10, maxHeight: 280, overflowY: "auto", padding: 5 }}>
                                     {galFiles.map((file, idx) => (
-                                        <div key={file.id} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#eee"}` }}>
-                                            <img src={file.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            {!galUploading && <button onClick={() => setGalFiles(prev => prev.filter(f => f.id !== file.id))} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
+                                        <div key={file.id} style={{ position: "relative", height: 100, borderRadius: 8, overflow: "hidden", border: `2px solid ${dark ? "#444" : "#eee"}`, background: dark ? "#333" : "#f0f0f0" }}>
+                                            <img src={file.src} alt="" style={{ height: "100%", width: "auto", display: "block" }} />
+                                            {!galUploading && <button onClick={() => setGalFiles(prev => prev.filter(f => f.id !== file.id))} style={{ position: "absolute", top: 4, right: 4, background: "rgba(220,0,0,0.8)", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
                                         </div>
                                     ))}
                                 </div>
@@ -1259,6 +1266,96 @@ export function AdminPage({
                     })}
                 </div>
             )}
+            {tab === "Videos" && (() => {
+                const extractYouTubeId = (url) => {
+                    try { const u = new URL(url); if (u.hostname.includes("youtu.be")) return u.pathname.slice(1).split("?")[0]; return u.searchParams.get("v") || null; } catch { return null; }
+                };
+                const getThumbnail = (url, customThumb) => { if (customThumb) return customThumb; const ytId = extractYouTubeId(url); if (ytId) return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`; return null; };
+                const getEmbedUrl = (url) => { const ytId = extractYouTubeId(url); if (ytId) return `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`; return url; };
+
+                const handleAddVideo = () => {
+                    if (!videoForm.url.trim() || !videoForm.title.trim()) { alert("Title and Video URL are required."); return; }
+                    if (videoUploading) return;
+                    setVideoUploading(true); setVideoUploadProgress(0);
+                    const steps = [{ p: 15, d: 200 }, { p: 35, d: 500 }, { p: 60, d: 900 }, { p: 80, d: 1300 }, { p: 95, d: 1700 }, { p: 100, d: 2100 }];
+                    steps.forEach(({ p, d }) => setTimeout(() => setVideoUploadProgress(p), d));
+                    setTimeout(() => {
+                        const ytId = extractYouTubeId(videoForm.url);
+                        const thumb = getThumbnail(videoForm.url, videoForm.thumbnail);
+                        setVideos(prev => [{ id: Date.now().toString(), title: videoForm.title.trim(), description: videoForm.description.trim(), url: videoForm.url.trim(), thumbnail: thumb || "", category: videoForm.category, isYouTube: !!ytId, embedUrl: getEmbedUrl(videoForm.url), addedAt: new Date().toISOString() }, ...(prev || [])]);
+                        setVideoForm({ title: "", description: "", url: "", thumbnail: "", category: "current" });
+                        setVideoUploading(false); setVideoUploadProgress(0);
+                    }, 2400);
+                };
+
+                return (
+                    <div>
+                        <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>🎬 Videos Management</h3>
+                        <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginBottom: 14 }}>{(videos || []).length} videos saved</div>
+                        <div style={{ ...cS, marginBottom: 20 }}>
+                            <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 14px", fontSize: 14 }}>➕ Add New Video</h4>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
+                                <div><label style={lS}>Title *</label><input value={videoForm.title} onChange={e => setVideoForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Football Final Highlights" style={iS} /></div>
+                                <div><label style={lS}>Category</label>
+                                    <select value={videoForm.category} onChange={e => setVideoForm(f => ({ ...f, category: e.target.value }))} style={iS}>
+                                        <option value="current">📅 Current Year</option>
+                                        <option value="previous">🏆 Previous Years</option>
+                                    </select>
+                                </div>
+                                <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}><label style={lS}>Video URL * (YouTube or direct .mp4)</label><input value={videoForm.url} onChange={e => setVideoForm(f => ({ ...f, url: e.target.value }))} placeholder="https://www.youtube.com/watch?v=... or https://example.com/video.mp4" style={iS} /></div>
+                                <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}><label style={lS}>Description (optional)</label><input value={videoForm.description} onChange={e => setVideoForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description" style={iS} /></div>
+                                <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}><label style={lS}>Custom Thumbnail URL (optional — auto for YouTube)</label><input value={videoForm.thumbnail} onChange={e => setVideoForm(f => ({ ...f, thumbnail: e.target.value }))} placeholder="https://... (leave blank to auto-detect)" style={{ ...iS, marginBottom: 0 }} /></div>
+                            </div>
+                            {videoUploading && (
+                                <div style={{ margin: "16px 0 4px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#aaa" : "#555" }}>{videoUploadProgress < 100 ? "⏳ Saving video..." : "✅ Saved successfully!"}</span>
+                                        <span style={{ fontSize: 13, fontWeight: 800, color: videoUploadProgress === 100 ? "#228B22" : "#8B0000" }}>{videoUploadProgress}%</span>
+                                    </div>
+                                    <div style={{ height: 10, background: dark ? "#333" : "#eee", borderRadius: 50, overflow: "hidden", boxShadow: "inset 0 1px 3px rgba(0,0,0,.15)" }}>
+                                        <div style={{ height: "100%", width: `${videoUploadProgress}%`, background: videoUploadProgress === 100 ? "linear-gradient(90deg,#228B22,#32CD32)" : "linear-gradient(90deg,#8B0000,#C41E3A,#FF6B35)", borderRadius: 50, transition: "width 0.4s ease, background 0.5s ease", boxShadow: "0 2px 8px rgba(139,0,0,.4)" }} />
+                                    </div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                                        {[0, 25, 50, 75, 100].map(m => <span key={m} style={{ fontSize: 9, color: videoUploadProgress >= m ? "#8B0000" : dark ? "#555" : "#ccc", fontWeight: 700 }}>{m}%</span>)}
+                                    </div>
+                                </div>
+                            )}
+                            <button onClick={handleAddVideo} disabled={videoUploading || !videoForm.url.trim() || !videoForm.title.trim()} style={{ marginTop: 16, background: (!videoUploading && videoForm.url.trim() && videoForm.title.trim()) ? "linear-gradient(135deg,#1a1a2e,#8B0000)" : "#ccc", color: "#fff", border: "none", borderRadius: 50, padding: "12px 28px", cursor: (!videoUploading && videoForm.url.trim() && videoForm.title.trim()) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 14 }}>
+                                {videoUploading ? `⏳ Saving... ${videoUploadProgress}%` : "🎬 Add Video"}
+                            </button>
+                        </div>
+                        {["current", "previous"].map(cat => {
+                            const catVideos = (videos || []).filter(v => v.category === cat);
+                            return (
+                                <div key={cat} style={{ marginBottom: 22 }}>
+                                    <h4 style={{ color: dark ? "#ccc" : "#444", marginBottom: 10, fontSize: 13 }}>{cat === "current" ? "📅 Current Year" : "🏆 Previous Years"} ({catVideos.length})</h4>
+                                    {catVideos.length === 0
+                                        ? <div style={{ padding: 16, color: dark ? "#666" : "#aaa", fontSize: 13, background: dark ? "rgba(255,255,255,.03)" : "#f9f9f9", borderRadius: 10, textAlign: "center" }}>No {cat} year videos yet</div>
+                                        : <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
+                                            {catVideos.map(v => (
+                                                <div key={v.id} style={{ ...cS, padding: 0, overflow: "hidden" }}>
+                                                    <div style={{ position: "relative", aspectRatio: "16/9", background: "#000", overflow: "hidden" }}>
+                                                        {v.thumbnail ? <img src={v.thumbnail} alt={v.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>🎬</div>}
+                                                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.35)" }}>
+                                                            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,.9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>▶</div>
+                                                        </div>
+                                                        {v.isYouTube && <div style={{ position: "absolute", bottom: 6, right: 6, background: "#FF0000", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4 }}>YT</div>}
+                                                    </div>
+                                                    <div style={{ padding: "10px 12px" }}>
+                                                        <div style={{ fontWeight: 700, fontSize: 13, color: dark ? "#fff" : "#222", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.title}</div>
+                                                        {v.description && <div style={{ fontSize: 11, color: dark ? "#aaa" : "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 8 }}>{v.description}</div>}
+                                                        <button onClick={() => setConfirmDelete({ message: `Remove video "${v.title}"?`, onConfirm: () => setVideos(prev => prev.filter(x => x.id !== v.id)) })} style={{ width: "100%", background: "#cc000018", color: "#c00", border: "none", borderRadius: 6, padding: "7px 0", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>🗑 Remove</button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    }
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            })()}
             {tab === "Star Players" && (
                 <div>
                     <h3 style={{ color: dark ? "#fff" : "#222", marginTop: 0, marginBottom: 4, fontSize: isMobile ? 15 : 18 }}>🌟 Star Players Management</h3>
@@ -1395,7 +1492,7 @@ export function AdminPage({
                                                         </div>
                                                     )}
                                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
-                                                        <input value={h[role]?.email || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], email: e.target.value } } : x))} placeholder="Email" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
+                                                        <input value={h[role]?.email || ""} onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], email: e.target.value } } : x))} onBlur={e => { if (e.target.value && !e.target.value.includes('@')) setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], email: e.target.value.trim() + '@gmail.com' } } : x)) }} placeholder="Email" style={{ ...iS, margin: 0, padding: "5px 8px", fontSize: 10, border: `1px solid ${dark ? "#333" : "#eee"}` }} />
                                                         <input 
                                                             value={(h[role]?.password?.startsWith("$2") ? "" : h[role]?.password) || ""} 
                                                             onChange={e => setHouses(hs => hs.map(x => x.id === h.id ? { ...x, [role]: { ...x[role], password: e.target.value } } : x))} 
@@ -2171,7 +2268,7 @@ export function AdminPage({
                                         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
                                             <div><label style={lS}>Full Name *</label><input value={addStudentForm.name} onChange={e => setAddStudentForm({ ...addStudentForm, name: e.target.value })} placeholder="Full Name" style={iS} /></div>
                                             <div><label style={lS}>Reg No *</label><input value={addStudentForm.regNo} onChange={e => setAddStudentForm({ ...addStudentForm, regNo: e.target.value })} placeholder="Registration Number" style={iS} /></div>
-                                            <div><label style={lS}>Email</label><input value={addStudentForm.email} onChange={e => setAddStudentForm({ ...addStudentForm, email: e.target.value })} placeholder="Email Address" style={iS} /></div>
+                                            <div><label style={lS}>Email</label><input value={addStudentForm.email} onChange={e => setAddStudentForm({ ...addStudentForm, email: e.target.value })} onBlur={e => { if (e.target.value && !e.target.value.includes('@')) setAddStudentForm({ ...addStudentForm, email: e.target.value.trim() + '@gmail.com' }) }} placeholder="Email Address" style={iS} /></div>
                                             <div>
                                                 <label style={lS}>Gender</label>
                                                 <select value={addStudentForm.gender} onChange={e => setAddStudentForm({ ...addStudentForm, gender: e.target.value })} style={iS}>
@@ -2235,7 +2332,7 @@ export function AdminPage({
                                                             <>
                                                                 <td style={{ padding: "4px 8px" }}><input value={editStudentForm.name} onChange={e => setEditStudentForm({ ...editStudentForm, name: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
                                                                 <td style={{ padding: "4px 8px" }}><input value={editStudentForm.regNo} onChange={e => setEditStudentForm({ ...editStudentForm, regNo: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
-                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.email} onChange={e => setEditStudentForm({ ...editStudentForm, email: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
+                                                                <td style={{ padding: "4px 8px" }}><input value={editStudentForm.email} onChange={e => setEditStudentForm({ ...editStudentForm, email: e.target.value })} onBlur={e => { if (e.target.value && !e.target.value.includes('@')) setEditStudentForm({ ...editStudentForm, email: e.target.value.trim() + '@gmail.com' }) }} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }} /></td>
                                                                 <td style={{ padding: "4px 8px" }}>
                                                                     <select value={editStudentForm.gender} onChange={e => setEditStudentForm({ ...editStudentForm, gender: e.target.value })} style={{ ...iS, margin: 0, padding: "4px 8px", fontSize: 12 }}>
                                                                         <option value="Male">Male</option>

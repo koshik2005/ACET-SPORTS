@@ -1,11 +1,22 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 
 export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
-    const [aspect, setAspect] = useState(1); // Default 1:1
+    const [aspect, setAspect] = useState(1); 
+    const [originalAspect, setOriginalAspect] = useState(null);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+    useEffect(() => {
+        const img = new window.Image();
+        img.src = image;
+        img.onload = () => {
+            const ratio = img.width / img.height;
+            setOriginalAspect(ratio);
+            setAspect(ratio); // Default to original ratio so vertical images aren't forced into squares
+        };
+    }, [image]);
 
     const onCropChange = (crop) => setCrop(crop);
     const onZoomChange = (zoom) => setZoom(zoom);
@@ -25,11 +36,12 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
     };
 
     const RATIOS = [
-        { label: "Free", val: undefined },
+        { label: "Original", val: originalAspect || 1 },
         { label: "1:1", val: 1 },
-        { label: "4:3", val: 4 / 3 },
-        { label: "16:9", val: 16 / 9 },
-        { label: "3:4", val: 3 / 4 }
+        { label: "3:4", val: 3 / 4 },
+        { label: "4:5", val: 4 / 5 },
+        { label: "9:16", val: 9 / 16 },
+        { label: "16:9", val: 16 / 9 }
     ];
 
     return (
@@ -39,7 +51,7 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
             alignItems: 'center', justifyContent: 'center', padding: 20
         }}>
             <div style={{
-                position: 'relative', width: '100%', maxWidth: 500, height: 400,
+                position: 'relative', width: '100%', maxWidth: 500, height: '60vh', minHeight: 400,
                 background: dark ? '#1a1a2e' : '#fff', borderRadius: 20, overflow: 'hidden'
             }}>
                 <Cropper
@@ -61,16 +73,16 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
             }}>
                 <div style={{ marginBottom: 15 }}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: dark ? '#aaa' : '#666', marginBottom: 8 }}>ASPECT RATIO</label>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 15 }}>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 15, flexWrap: "wrap", justifyContent: "center" }}>
                         {RATIOS.map(r => (
                             <button
                                 key={r.label}
                                 onClick={() => setAspect(r.val)}
                                 style={{
-                                    flex: 1, padding: '8px', borderRadius: 8, border: `2px solid ${aspect === r.val ? '#8B0000' : (dark ? '#333' : '#eee')}`,
+                                    flex: "1 1 calc(33.333% - 6px)", minWidth: 60, padding: '8px 4px', borderRadius: 8, border: `2px solid ${aspect === r.val ? '#8B0000' : (dark ? '#333' : '#eee')}`,
                                     background: aspect === r.val ? 'rgba(139,0,0,0.1)' : 'transparent',
                                     color: aspect === r.val ? (dark ? '#fff' : '#8B0000') : (dark ? '#aaa' : '#666'),
-                                    fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s'
+                                    fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center'
                                 }}
                             >
                                 {r.label}
@@ -92,8 +104,9 @@ export function ImageCropper({ image, onCropComplete, onCancel, dark }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: 12 }}>
-                    <button onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: dark ? '#333' : '#eee', color: dark ? '#ccc' : '#444', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                    <button onClick={handleConfirm} style={{ flex: 2, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#8B0000,#C41E3A)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Crop & Upload</button>
+                    <button onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: dark ? '#333' : '#eee', color: dark ? '#ccc' : '#444', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+                    <button onClick={() => onCropComplete(image)} style={{ flex: 1.5, padding: '12px', borderRadius: 10, border: `2px solid ${dark ? '#444' : '#ddd'}`, background: dark ? '#222' : '#f8f8f8', color: dark ? '#aaa' : '#555', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Skip Crop (Original)</button>
+                    <button onClick={handleConfirm} style={{ flex: 2, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#8B0000,#C41E3A)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Crop & Upload</button>
                 </div>
             </div>
         </div>

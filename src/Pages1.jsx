@@ -285,13 +285,18 @@ export function HomePage({ dark, houses, authorities, management = [], studentCo
 
 export function EventsPage({ dark, games }) {
     const isMobile = useIsMobile();
+    const [expandedId, setExpandedId] = useState(null);
     const sc = { Live: "#FF4500", Upcoming: "#1E90FF", Completed: "#228B22" };
 
     return (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: isMobile ? "16px 12px" : "40px 20px" }}>
-            <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", marginBottom: 6, fontSize: isMobile ? 21 : 28 }}>📅 Events & Schedule</h1>
-            <p style={{ color: dark ? "#aaa" : "#666", marginBottom: isMobile ? 14 : 32, fontSize: isMobile ? 13 : 15 }}>Live schedule with real-time updates</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 8 : 16 }}>
+            <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 40 }}>
+                <div style={{ fontSize: isMobile ? 40 : 54, marginBottom: 8, filter: "drop-shadow(0 4px 12px rgba(0,0,0,.2))" }}>📅</div>
+                <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: 0, fontSize: isMobile ? 24 : 36 }}>Events &amp; Schedule</h1>
+                <p style={{ color: dark ? "#aaa" : "#666", fontSize: 13, marginTop: 4 }}>Live schedule with real-time updates</p>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 12 : 16 }}>
                 {games.map(g => {
                     let cStatus = g.status || "Upcoming";
                     if (g.date && g.start && g.end) {
@@ -301,27 +306,87 @@ export function EventsPage({ dark, games }) {
                         if (now >= eStart && now <= eEnd) cStatus = "Live";
                         else if (now > eEnd) cStatus = "Completed";
                     }
+                    
+                    const isExpanded = expandedId === g.id;
+                    
                     return (
-                        <div key={g.id} style={{ background: dark ? "rgba(255,255,255,.05)" : "#fff", border: `2px solid ${sc[cStatus]}22`, borderLeft: `5px solid ${sc[cStatus]}`, borderRadius: 12, padding: isMobile ? 12 : 20, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, justifyContent: "space-between" }}>
+                        <div 
+                            key={g.id} 
+                            onClick={() => setExpandedId(isExpanded ? null : g.id)}
+                            style={{ 
+                                background: dark ? "rgba(255,255,255,.05)" : "#fff", 
+                                border: `2px solid ${isExpanded ? sc[cStatus] + "88" : sc[cStatus] + "22"}`, 
+                                borderLeft: `5px solid ${sc[cStatus]}`, 
+                                borderRadius: 14, 
+                                padding: 0, 
+                                cursor: "pointer",
+                                boxShadow: isExpanded ? `0 8px 24px ${sc[cStatus]}22` : "0 2px 8px rgba(0,0,0,.06)",
+                                transition: "all 0.3s ease",
+                                overflow: "hidden"
+                            }}
+                        >
+                            {/* Main Card Header */}
+                            <div style={{ padding: isMobile ? "14px 12px" : "20px 24px", display: "flex", alignItems: "flex-start", gap: 10, justifyContent: "space-between", background: isExpanded ? (dark ? "rgba(255,255,255,.02)" : "rgba(0,0,0,.01)") : "transparent" }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                                        <span style={{ background: sc[cStatus] + "22", color: sc[cStatus], fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>{cStatus === "Live" ? "🔴 LIVE" : cStatus.toUpperCase()}</span>
-                                        {g.delay && <span style={{ fontSize: 10, color: "#FF4500", background: "#FF450015", padding: "2px 7px", borderRadius: 20, fontWeight: 700 }}>⚠️ {g.delay}</span>}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+                                        <span style={{ background: sc[cStatus] + "22", color: sc[cStatus], fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>{cStatus === "Live" ? "🔴 LIVE NOW" : cStatus.toUpperCase()}</span>
+                                        {g.delay && <span style={{ fontSize: 10, color: "#FF4500", background: "#FF450015", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>⚠️ {g.delay}</span>}
                                     </div>
-                                    <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, color: dark ? "#fff" : "#222" }}>{g.name}</div>
-                                    <div style={{ fontSize: 12, color: dark ? "#aaa" : "#666", marginTop: 2 }}>📍 {g.venue} · {g.gender || g.participants || "Open"}</div>
+                                    <div style={{ fontSize: isMobile ? 17 : 22, fontWeight: 800, color: dark ? "#fff" : "#1a1a1a", transition: "color 0.2s" }}>{g.name}</div>
+                                    <div style={{ fontSize: 13, color: dark ? "#aaa" : "#666", marginTop: 4, fontWeight: 500 }}>📍 {g.venue || "TBA"}</div>
                                 </div>
-                                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                    <div style={{ fontSize: 10, color: dark ? "#aaa" : "#888" }}>Date</div>
-                                    <div style={{ fontSize: isMobile ? 15 : 18, fontWeight: 800, color: dark ? "#fff" : "#222" }}>{g.date ? new Date(g.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : "TBA"}</div>
-                                    <div style={{ fontSize: 12, color: dark ? "#aaa" : "#888", marginTop: 2 }}>{g.start ? `${g.start} - ${g.end}` : "TBA"}</div>
+                                <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                                    <div style={{ textAlign: "right" }}>
+                                        <div style={{ fontSize: 10, color: dark ? "#888" : "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Date</div>
+                                        <div style={{ fontSize: isMobile ? 15 : 18, fontWeight: 800, color: dark ? "#eee" : "#222" }}>{g.date ? new Date(g.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : "TBA"}</div>
+                                    </div>
+                                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: dark ? "rgba(255,255,255,.1)" : "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s ease", color: dark ? "#ccc" : "#555" }}>
+                                        ▼
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* Collapsible Details Area */}
+                            {isExpanded && (
+                                <div style={{ 
+                                    padding: isMobile ? "0 12px 14px" : "0 24px 20px", 
+                                    borderTop: `1px dashed ${dark ? "#333" : "#eee"}`,
+                                    background: isExpanded ? (dark ? "rgba(255,255,255,.02)" : "rgba(0,0,0,.01)") : "transparent"
+                                }}>
+                                    <div style={{ paddingTop: 14 }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
+                                            <div style={{ background: dark ? "rgba(0,0,0,.3)" : "#f8f8f8", padding: "10px 12px", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
+                                                <div style={{ fontSize: 10, color: dark ? "#888" : "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>⏰ Timing</div>
+                                                <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#333" }}>{g.start ? `${g.start} to ${g.end}` : "TBA"}</div>
+                                            </div>
+                                            
+                                            <div style={{ background: dark ? "rgba(0,0,0,.3)" : "#f8f8f8", padding: "10px 12px", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
+                                                <div style={{ fontSize: 10, color: dark ? "#888" : "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>👥 Category</div>
+                                                <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#333" }}>{g.gender || "Open"} • {g.type || "Event"}</div>
+                                            </div>
+
+                                            <div style={{ background: dark ? "rgba(0,0,0,.3)" : "#f8f8f8", padding: "10px 12px", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
+                                                <div style={{ fontSize: 10, color: dark ? "#888" : "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>📋 Rules</div>
+                                                <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#333" }}>{g.participants || "Standard Rules"}</div>
+                                            </div>
+
+                                            <div style={{ background: dark ? "rgba(0,0,0,.3)" : "#f8f8f8", padding: "10px 12px", borderRadius: 10, border: `1px solid ${dark ? "#333" : "#e5e5e5"}` }}>
+                                                <div style={{ fontSize: 10, color: dark ? "#888" : "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>👔 Official</div>
+                                                <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#ddd" : "#333" }}>{g.official || "Unassigned"}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
-                {games.length === 0 && <div style={{ textAlign: "center", padding: 48, color: dark ? "#666" : "#aaa" }}>No events scheduled yet.</div>}
+                {games.length === 0 && (
+                    <div style={{ textAlign: "center", padding: 60, color: dark ? "#555" : "#aaa", background: dark ? "rgba(255,255,255,.02)" : "#f9f9f9", borderRadius: 16, border: `1px dashed ${dark ? "#333" : "#ddd"}` }}>
+                        <div style={{ fontSize: 40, marginBottom: 12 }}>🏟️</div>
+                        <div style={{ fontSize: 16, fontWeight: 700 }}>No events scheduled yet.</div>
+                    </div>
+                )}
             </div>
         </div>
     );

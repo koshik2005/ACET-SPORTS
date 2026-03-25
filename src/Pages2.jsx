@@ -853,3 +853,113 @@ export function StarPlayersPage({ dark, starPlayers = [], houses = [] }) {
         </div>
     );
 }
+
+export function VideosPage({ dark, videos = [] }) {
+    const [sel, setSel] = useState(null);
+    const isMobile = useIsMobile();
+
+    const cur = videos.filter(v => v.category === "current");
+    const prev = videos.filter(v => v.category === "previous");
+
+    const VideoCard = ({ v }) => (
+        <div
+            onClick={() => setSel(v)}
+            style={{
+                borderRadius: 14, overflow: "hidden", cursor: "pointer",
+                background: dark ? "rgba(255,255,255,.04)" : "#fff",
+                border: `1px solid ${dark ? "#333" : "#eee"}`,
+                boxShadow: "0 4px 20px rgba(0,0,0,.07)",
+                transition: "transform .2s, box-shadow .2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 14px 40px rgba(0,0,0,.16)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.07)"; }}
+        >
+            <div style={{ position: "relative", aspectRatio: "16/9", background: dark ? "#1a1a2e" : "#111", overflow: "hidden" }}>
+                {v.thumbnail
+                    ? <img src={v.thumbnail} alt={v.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🎬</div>
+                }
+                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.28)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 4px 20px rgba(0,0,0,.3)" }}>▶</div>
+                </div>
+                {v.isYouTube && <div style={{ position: "absolute", bottom: 8, right: 8, background: "#FF0000", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 4 }}>▶ YouTube</div>}
+            </div>
+            <div style={{ padding: isMobile ? "10px 12px" : "14px 16px" }}>
+                <div style={{ fontWeight: 800, fontSize: isMobile ? 13 : 15, color: dark ? "#fff" : "#1a1a1a", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.title}</div>
+                {v.description && <div style={{ fontSize: 12, color: dark ? "#888" : "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>{v.description}</div>}
+                <div style={{ fontSize: 10, color: dark ? "#555" : "#bbb", fontWeight: 600 }}>{v.addedAt ? new Date(v.addedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""}</div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "16px 12px" : "40px 20px" }}>
+            <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 40 }}>
+                <div style={{ fontSize: isMobile ? 40 : 54, marginBottom: 8, filter: "drop-shadow(0 4px 12px rgba(0,0,0,.2))" }}>🎬</div>
+                <h1 style={{ fontFamily: "'Georgia',serif", color: dark ? "#fff" : "#8B0000", margin: 0, fontSize: isMobile ? 24 : 36 }}>Sports Videos</h1>
+                <p style={{ color: dark ? "#aaa" : "#666", fontSize: 13, marginTop: 4 }}>Highlights, moments &amp; memories from the field</p>
+            </div>
+
+            {videos.length === 0 ? (
+                <div style={{ textAlign: "center", padding: isMobile ? 60 : 100, color: dark ? "#444" : "#ccc" }}>
+                    <div style={{ fontSize: 64, marginBottom: 16 }}>📹</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>No videos yet</div>
+                    <p style={{ fontSize: 14, marginTop: 6 }}>Videos will appear here once the admin uploads them.</p>
+                </div>
+            ) : (
+                <>
+                    {cur.length > 0 && (
+                        <>
+                            <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#ccc" : "#444", marginBottom: 16, fontSize: isMobile ? 17 : 22 }}>📅 Current Year ({cur.length})</h2>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))", gap: isMobile ? 12 : 20, marginBottom: isMobile ? 28 : 48 }}>
+                                {cur.map(v => <VideoCard key={v.id} v={v} />)}
+                            </div>
+                        </>
+                    )}
+                    {prev.length > 0 && (
+                        <>
+                            <h2 style={{ fontFamily: "'Georgia',serif", color: dark ? "#ccc" : "#444", marginBottom: 16, fontSize: isMobile ? 17 : 22 }}>🏆 Previous Years ({prev.length})</h2>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))", gap: isMobile ? 12 : 20, marginBottom: isMobile ? 28 : 48 }}>
+                                {prev.map(v => <VideoCard key={v.id} v={v} />)}
+                            </div>
+                        </>
+                    )}
+                </>
+            )}
+
+            {/* Autoplay Modal Player */}
+            {sel && (
+                <div onClick={() => setSel(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.96)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 500, padding: isMobile ? 12 : 24 }}>
+                    <div style={{ width: "100%", maxWidth: 900 }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                            <div>
+                                <div style={{ color: "#fff", fontWeight: 800, fontSize: isMobile ? 14 : 19 }}>{sel.title}</div>
+                                {sel.description && <div style={{ color: "rgba(255,255,255,.55)", fontSize: 12, marginTop: 3 }}>{sel.description}</div>}
+                            </div>
+                            <button onClick={() => setSel(null)} style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 50, padding: "8px 20px", cursor: "pointer", fontWeight: 700, fontSize: 14, flexShrink: 0, marginLeft: 12 }}>✕ Close</button>
+                        </div>
+                        <div style={{ position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: 14, overflow: "hidden", background: "#000", boxShadow: "0 20px 60px rgba(0,0,0,.6)" }}>
+                            {sel.isYouTube ? (
+                                <iframe
+                                    src={sel.embedUrl}
+                                    title={sel.title}
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
+                                />
+                            ) : (
+                                <video
+                                    src={sel.url}
+                                    autoPlay
+                                    controls
+                                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", background: "#000" }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+

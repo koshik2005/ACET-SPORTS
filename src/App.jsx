@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import "./index.css";
 import { Header, Footer } from "./Layout.jsx";
 import { HomePage, EventsPage, AboutPage } from "./Pages1.jsx";
-import { RegistrationPage, ScoreboardPage, GalleryPage, WinnersPage, StarPlayersPage } from "./Pages2.jsx";
+import { RegistrationPage, ScoreboardPage, GalleryPage, WinnersPage, StarPlayersPage, VideosPage } from "./Pages2.jsx";
 import { AdminPage } from "./AdminPage.jsx";
 import { CaptainPortal } from "./CaptainPortal.jsx";
 import { LaunchScreen } from "./LaunchScreen.jsx";
@@ -33,6 +33,7 @@ export default function App() {
   const [studentsDB, setStudentsDB] = useState([]);
   const [results, setResults] = useState([]);
   const [starPlayers, setStarPlayers] = useState([]);
+  const [videos, setVideos] = useState([]);
   const [adminLogs, setAdminLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasLaunched, setHasLaunched] = useState(() => {
@@ -130,6 +131,7 @@ export default function App() {
         if (data.results) setIfReady("results", setResults);
         if (data.memorial) setIfReady("memorial", setMemorial);
         if (data.starPlayers) setIfReady("starPlayers", setStarPlayers);
+        if (data.videos) setIfReady("videos", setVideos);
 
         if (data.nav) setIfReady("nav", setNav);
         if (data.sportGamesList) setIfReady("sportGamesList", setSportGamesList);
@@ -260,6 +262,7 @@ export default function App() {
   const setStudentsDBSync = wrap(setStudentsDB, "studentsDB");
   const setResultsSync = wrap(setResults, "results");
   const setStarPlayersSync = wrap(setStarPlayers, "starPlayers");
+  const setVideosSync = wrap(setVideos, "videos");
   const setAdminLogsSync = wrap(setAdminLogs, "adminLogs");
   const setNavSync = wrap(setNav, "nav");
   const setSportGamesListSync = wrap(setSportGamesList, "sportGamesList");
@@ -346,6 +349,7 @@ export default function App() {
         {active === "Scoreboard" && <ScoreboardPage dark={dark} houses={houses} pointLog={pointLog} registrationOpen={registrationOpen} registrationCloseTime={registrationCloseTime} />}
         {active === "Star Players" && <StarPlayersPage dark={dark} starPlayers={starPlayers} houses={houses} />}
         {active === "Gallery" && <GalleryPage dark={dark} gallery={gallery} />}
+        {active === "Videos" && <VideosPage dark={dark} videos={videos} />}
         {active === "About" && <AboutPage dark={dark} about={about} />}
         {active === "Admin" && <AdminPage
           dark={dark}
@@ -360,6 +364,7 @@ export default function App() {
           studentsDB={studentsDB} setStudentsDB={setStudentsDBSync}
           results={results} setResults={setResultsSync}
           starPlayers={starPlayers} setStarPlayers={setStarPlayersSync}
+          videos={videos} setVideos={setVideosSync}
           adminLogs={adminLogs} setAdminLogs={setAdminLogsSync}
           nav={nav} setNav={setNavSync}
           sportGamesList={sportGamesList} setSportGamesList={setSportGamesListSync}

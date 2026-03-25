@@ -272,6 +272,7 @@ export function CaptainPortal({ dark, houses, registrations, studentsDB, setStud
                 <input
                     value={email}
                     onChange={e => setEmail(e.target.value)}
+                    onBlur={(e) => { if (e.target.value && !e.target.value.includes('@')) setEmail(e.target.value.trim() + '@gmail.com'); }}
                     onKeyDown={e => e.key === "Enter" && login()}
                     placeholder="Enter your email"
                     style={{ width: "100%", padding: "13px 14px", borderRadius: 8, fontSize: 15, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#2a2a3e" : "#f8f8f8", color: dark ? "#fff" : "#333", boxSizing: "border-box", marginBottom: 10 }}

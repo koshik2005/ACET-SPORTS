@@ -52,10 +52,11 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.ibb.co", "https://*.vercel.app"],
+      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.ibb.co", "https://*.vercel.app", "https://img.youtube.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'", "https://res.cloudinary.com", "https://*.vercel.app", "http://localhost:*", "http://127.0.0.1:*"],
       objectSrc: ["'none'"],
+      frameSrc: ["https://www.youtube.com", "https://www.youtube-nocookie.com"],
       upgradeInsecureRequests: [],
       frameAncestors: ["'none'"] // Prevent clickjacking
     },
@@ -681,7 +682,7 @@ app.post("/api/update-state", async (req, res) => {
       "athleticsListWomens", "staffAthleticsList", "staffAthleticsListWomens", "authorityRoles", "managementRoles", "nav", 
       "registrationOpen", "eventDate", "emptyGame", "starPlayers", "closedEvents",
       "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails", "memorial", "about",
-      "commonGamesMen", "commonAthleticsMen", "commonGamesWomen", "commonAthleticsWomen"
+      "commonGamesMen", "commonAthleticsMen", "commonGamesWomen", "commonAthleticsWomen", "videos"
     ];
 
     if (!allowedTypes.includes(type)) {
