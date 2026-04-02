@@ -486,6 +486,51 @@ async function robustSendMail(mailOptions, specificIndex = null) {
 const makeTransporter = getTransporter;
 
 // ─── Middleware ────────────────────────────────────────────────────────────
+
+// ─── Maintenance Mode Defender ─────────────────────────────────────────────────
+const enforceMaintenanceMode = async (req, res, next) => {
+  const safePaths = [
+      "/public-state", 
+      "/health",
+      "/admin-login", // Ensure generic login path names mismatch protect login correctly
+      "/login", 
+      "/verify-admin-password", 
+      "/verify-otp"
+  ];
+  
+  if (safePaths.some(p => req.path.includes(p))) {
+      return next();
+  }
+
+  try {
+      // Lightweight fetch to prevent overwhelming the DB with deep subdocument overhead
+      const state = await State.findOne({}, { maintenanceMode: 1 }).lean();
+      if (state && state.maintenanceMode) {
+          const token = req.headers.authorization?.split(" ")[1];
+          let isAdmin = false;
+
+          if (token) {
+              try {
+                  const decoded = jwt.verify(token, JWT_SECRET);
+                  if (decoded.role === "admin") {
+                      const activeToken = await loadAdminToken();
+                      if (token === activeToken) isAdmin = true;
+                  }
+              } catch (e) { }
+          }
+          if (!isAdmin) {
+              SecurityLogger.log("MAINTENANCE_BLOCK", { ip: req.ip, path: req.path });
+              return res.status(503).json({ error: "Platform is under maintenance. All operations are locked. Please try again later." });
+          }
+      }
+  } catch (err) {
+      console.error("Maintenance Defender Error:", err);
+  }
+  next();
+};
+
+app.use("/api/", enforceMaintenanceMode);
+
 const authenticateAdmin = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token provided" });
