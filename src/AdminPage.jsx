@@ -1935,6 +1935,16 @@ export function AdminPage({
                             Team Games: 1st (7), 2nd (5), 3rd (3) | Athletic: 1st (3), 2nd (2), 3rd (1)
                         </div>
 
+                        {/* House Points Quick View */}
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit, minmax(100px, 1fr))", gap: 10, marginBottom: 20 }}>
+                            {houses.map(h => (
+                                <div key={h.name} style={{ background: dark ? "rgba(255,255,255,.03)" : "#f9f9f9", border: `2px solid ${h.color || "#8B0000"}44`, borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                                    <div style={{ fontSize: 24, fontWeight: 900, color: h.color || "#8B0000" }}>{h.points || 0}</div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: dark ? "#ccc" : "#444", textTransform: "uppercase" }}>{h.name}</div>
+                                </div>
+                            ))}
+                        </div>
+
                         <div style={{ ...cS, marginBottom: 20 }}>
                             <h4 style={{ color: dark ? "#ccc" : "#444", margin: "0 0 12px", fontSize: 14 }}>Log Event Outcome</h4>
                             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
