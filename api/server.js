@@ -492,10 +492,9 @@ const enforceMaintenanceMode = async (req, res, next) => {
   const safePaths = [
       "/public-state", 
       "/health",
-      "/admin-login", // Ensure generic login path names mismatch protect login correctly
-      "/login", 
-      "/verify-admin-password", 
-      "/verify-otp"
+      "/admin-login", 
+      "/admin-verify-password", 
+      "/admin-send-otp"
   ];
   
   if (safePaths.some(p => req.path.includes(p))) {
