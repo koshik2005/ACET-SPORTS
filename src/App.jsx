@@ -347,9 +347,9 @@ export default function App() {
         )}
         {maintenanceMode && active !== "Admin" ? (
           <div style={{ minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20, textAlign: "center" }}>
-            <div style={{ fontSize: 60, marginBottom: 20 }}>🚧</div>
-            <h1 style={{ fontSize: 36, color: dark ? "#fff" : "#8B0000", margin: "0 0 10px" }}>Website Under Maintenance</h1>
-            <p style={{ fontSize: 18, color: dark ? "#aaa" : "#555", maxWidth: 500, margin: 0, lineHeight: 1.5 }}>We are currently updating the platform. Please check back shortly.</p>
+            <div style={{ fontSize: 60, marginBottom: 20 }}>⚠ ❌</div>
+            <h1 style={{ fontSize: 36, color: dark ? "#fff" : "#8B0000", margin: "0 0 10px", lineHeight: 1.2 }}>Platform is under maintenance.</h1>
+            <p style={{ fontSize: 18, color: dark ? "#aaa" : "#555", maxWidth: 500, margin: 0, lineHeight: 1.5, fontWeight: "bold" }}>All operations are locked. Please try again later.</p>
           </div>
         ) : (
           <>
