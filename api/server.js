@@ -698,7 +698,7 @@ app.post("/api/update-state", async (req, res) => {
       "athleticsListWomens", "staffAthleticsList", "staffAthleticsListWomens", "authorityRoles", "managementRoles", "nav", 
       "registrationOpen", "eventDate", "emptyGame", "starPlayers", "closedEvents",
       "maxGames", "maxAthletics", "registrationCloseTime", "launchConfig", "inaugurationDetails", "memorial", "about",
-      "commonGamesMen", "commonAthleticsMen", "commonGamesWomen", "commonAthleticsWomen", "videos"
+      "commonGamesMen", "commonAthleticsMen", "commonGamesWomen", "commonAthleticsWomen", "videos", "maintenanceMode"
     ];
 
     if (!allowedTypes.includes(type)) {

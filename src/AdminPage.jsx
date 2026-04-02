@@ -49,7 +49,8 @@ export function AdminPage({
     commonGamesMen, setCommonGamesMen,
     commonAthleticsMen, setCommonAthleticsMen,
     commonGamesWomen, setCommonGamesWomen,
-    commonAthleticsWomen, setCommonAthleticsWomen
+    commonAthleticsWomen, setCommonAthleticsWomen,
+    maintenanceMode, setMaintenanceMode
 }) {
     const [loggedIn, setLoggedIn] = useState(false);
     const [loginError, setLoginError] = useState("");
@@ -3076,6 +3077,23 @@ export function AdminPage({
 
                         <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "16px", background: dark ? "rgba(255,255,255,.05)" : "#f9f9f9", borderRadius: "12px", border: `1px solid ${dark ? "#333" : "#eee"}`, marginBottom: 20 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: dark ? "#fff" : "#333", marginBottom: 4 }}>🚧 Maintenance Mode</div>
+                                    <div style={{ fontSize: 11, color: dark ? "#aaa" : "#777" }}>Lock down the platform for updates. Admins bypass this automatically.</div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm(maintenanceMode ? "Disable Maintenance Mode and reopen the site?" : "Enable Maintenance Mode? The public will see a maintenance screen.")) {
+                                            setMaintenanceMode(!maintenanceMode);
+                                        }
+                                    }}
+                                    style={{
+                                        background: maintenanceMode ? "#c00" : "#2E8B57", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, minWidth: 100
+                                    }}>
+                                    {maintenanceMode ? "🔴 ACTIVE" : "🟢 OFF"}
+                                </button>
+                            </div>
+                            <div style={{ borderTop: `1px solid ${dark ? "#333" : "#ddd"}`, paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div>
                                     <div style={{ fontSize: 14, fontWeight: 700, color: dark ? "#fff" : "#333", marginBottom: 4 }}>Event Registration Status</div>
                                     <div style={{ fontSize: 11, color: dark ? "#aaa" : "#777" }}>Toggle whether students and staff can register for events.</div>

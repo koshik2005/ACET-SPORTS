@@ -39,6 +39,7 @@ const stateSchema = new mongoose.Schema({
     commonAthleticsWomen: { type: Array, default: [] },
     about: { type: Object, default: { sponsors: [], credits: "" } },
     videos: { type: Array, default: [] },
+    maintenanceMode: { type: Boolean, default: false },
 }, {
     timestamps: true,
     strict: false

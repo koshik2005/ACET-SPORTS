@@ -68,6 +68,7 @@ export default function App() {
   const [commonGamesWomen, setCommonGamesWomen] = useState([]);
   const [commonAthleticsWomen, setCommonAthleticsWomen] = useState([]);
   const [about, setAbout] = useState({ sponsors: [], credits: "" });
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
@@ -163,6 +164,7 @@ export default function App() {
         if (data.commonGamesWomen) setIfReady("commonGamesWomen", setCommonGamesWomen);
         if (data.commonAthleticsWomen) setIfReady("commonAthleticsWomen", setCommonAthleticsWomen);
         if (data.about) setIfReady("about", setAbout);
+        if (data.maintenanceMode !== undefined) setIfReady("maintenanceMode", setMaintenanceMode);
 
         if (isInitial) setLoading(false);
         if (!isInitial) setIsFetching(false);
@@ -289,6 +291,7 @@ export default function App() {
   const setInaugurationDetailsSync = wrap(setInaugurationDetails, "inaugurationDetails");
   const setMemorialSync = wrap(setMemorial, "memorial");
   const setAboutSync = wrap(setAbout, "about");
+  const setMaintenanceModeSync = wrap(setMaintenanceMode, "maintenanceMode");
 
   if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f0f1a" : "#f4f4f8", color: dark ? "#fff" : "#8B0000", fontSize: 24, fontWeight: 800 }}>⚡ Loading Achariya Sports...</div>;
 
@@ -342,6 +345,14 @@ export default function App() {
             ⚠️ CONNECTION ISSUE: {fetchError} | Please try refreshing the page.
           </div>
         )}
+        {maintenanceMode && active !== "Admin" ? (
+          <div style={{ minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20, textAlign: "center" }}>
+            <div style={{ fontSize: 60, marginBottom: 20 }}>🚧</div>
+            <h1 style={{ fontSize: 36, color: dark ? "#fff" : "#8B0000", margin: "0 0 10px" }}>Website Under Maintenance</h1>
+            <p style={{ fontSize: 18, color: dark ? "#aaa" : "#555", maxWidth: 500, margin: 0, lineHeight: 1.5 }}>We are currently updating the platform. Please check back shortly.</p>
+          </div>
+        ) : (
+          <>
         {active === "Home" && <HomePage dark={dark} houses={houses} authorities={authorities} management={management} studentCommittee={studentCommittee} games={games} gallery={gallery} eventDate={eventDate} memorial={memorial} />}
         {active === "Events" && <EventsPage dark={dark} games={games} />}
         {active === "Winners" && <WinnersPage dark={dark} results={results} houses={houses} sportGamesList={sportGamesList} sportGamesListWomens={sportGamesListWomens} athleticsList={athleticsList} athleticsListWomens={athleticsListWomens} staffGamesList={staffGamesList} staffGamesListWomens={staffGamesListWomens} staffAthleticsList={staffAthleticsList} staffAthleticsListWomens={staffAthleticsListWomens} />}
@@ -353,6 +364,7 @@ export default function App() {
         {active === "About" && <AboutPage dark={dark} about={about} />}
         {active === "Admin" && <AdminPage
           dark={dark}
+          maintenanceMode={maintenanceMode} setMaintenanceMode={setMaintenanceModeSync}
           houses={houses} setHouses={setHousesSync}
           authorities={authorities} setAuthorities={setAuthoritiesSync}
           management={management} setManagement={setManagementSync}
@@ -395,6 +407,8 @@ export default function App() {
         />}
         {active === "Button" && <GuestButtonPage dark={dark} launchConfig={launchConfig} onUpdateConfig={setLaunchConfigSync} syncing={syncing} />}
         {active === "Captain" && <CaptainPortal dark={dark} houses={houses} registrations={registrations} studentsDB={studentsDB} setStudentsDB={setStudentsDBSync} isFetching={isFetching} />}
+          </>
+        )}
       </main>
 
       <Footer dark={dark} nav={nav.filter(n => n !== "Admin" && n !== "Captain")} houses={houses} />
