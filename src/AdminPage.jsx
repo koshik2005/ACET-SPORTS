@@ -2095,8 +2095,8 @@ export function AdminPage({
                                                         <td style={{ padding: "10px 14px" }}><button onClick={() => {
                                                             if (!window.confirm(`Delete result for "${res.eventName}" and automatically reverse all associated points from house scores?`)) return;
                                                             
-                                                            const ptsFirst = res.eventType === "game" ? 7 : 5;
-                                                            const ptsSecond = res.eventType === "game" ? 5 : 3;
+                                                            const ptsFirst = res.eventType === "game" ? 7 : 3;
+                                                            const ptsSecond = res.eventType === "game" ? 5 : 2;
                                                             const ptsThird = res.eventType === "game" ? 3 : 1;
 
                                                             // Reverse house points
